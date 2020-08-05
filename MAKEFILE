@@ -1,0 +1,194 @@
+# 旼컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴커
+# � MAKEFILE                                         Copyright [tDR], 1999 �
+# 쳐컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴캑
+# �                                                                        �
+# 읕컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴켸
+
+HDIR   = $(TDLPATH)\h
+INCDIR = $(TDLPATH)\include
+DEFDIR = $(TDLPATH)\defaults
+
+.path.c = $(TDLPATH)\STDLIB;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\LOADER;
+.path.asm = $(TDLPATH)\STDLIB;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\BLITTER;$(TDLPATH)\SPUF!\LOADER;$(TDLPATH)\SPUF!;$(TDLPATH)\SPUF!\SLI;$(TDLPATH)\SPUF!\GFX;$(TDLPATH)\WUF!;$(TDLPATH)\WUF!\DEVICES;$(TDLPATH)\3D\RENDER;$(TDLPATH)\3D\LOADER;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\PLAYER;$(TDLPATH)\3D;$(TDLPATH)\WUF!\MIXER;$(TDLPATH)\WUF!\LOADER
+.path.obj = $(TDLPATH)\OBJS
+.path.mac = $(INCDIR)
+.path.inc = $(INCDIR)
+.path.def = $(HDIR);$(INCDIR)
+.path.h = $(HDIR)
+.path.lib = $(TDLPATH)\lib
+
+WLIBOPTS=/q
+
+#DEBUG = 1
+
+!if $d(DEBUG)
+
+CCOPTS = -db -d4 -w3 -fpi87 -fp5 -zdp -zu -bt=dos -i$(HDIR) -oneatx -s -zq -3r
+ASMOPTS = /m6 /mx /zi /w-aln /t /i. /i$(INCDIR) /i$(TDLPATH)\NEWSGL /d__DEBUG__=1
+LNKOPT = system tx32 debug all op q
+
+!else
+
+CCOPTS = -w3 -fpi87 -fp5 -zdp -zu -bt=dos -i$(HDIR) -oneatx -s -zq -3r -wcd=302
+ASMOPTS = /m6 /mx /w-aln /t /i. /i$(INCDIR) /i$(DEFDIR) /i$(TDLPATH)\NEWSGL /d__DEBUG__=0
+LNKOPT = system tx32 op q
+
+!endif
+
+.asm.obj:
+        @echo Compiling ASM [$?]
+        @tasm @&&!
+        $?
+        $@
+        $(ASMOPTS)
+!
+
+.c.obj:
+        @echo Compiling C   [$?]
+        @wcc386 @&&!
+        $(CCOPTS)
+        $?
+        -fo=$@
+!
+
+#.asm.obj:
+#        tasm $? $@ $(ASMOPTS)
+
+#.c.obj:
+#        wcc386 $? $(CCOPTS) -fo=$@
+
+
+# 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+all:            tdl.lib         $(TDLPATH)\lib\c0tt.obj         c0tt.obj
+
+# 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+$(TDLPATH)\lib\c0tt.obj:        c0tt.obj
+        @echo Copying ... [$?]
+        @copy $(TDLPATH)\objs\c0tt.obj $(TDLPATH)\lib\c0tt.obj >nul
+
+c0tt.obj:       c0tt.asm        utils.inc       dpmi.asm        alloc.inc       dma.inc         dma.asm memmgr.asm
+stdc.obj:       stdc.asm
+stdio.obj:      stdio.c         stdio.h         string.h
+
+count.obj:      count.asm
+dpmi.obj:       dpmi.asm        dpmi.inc
+litt32.obj:      litt32.asm    littable.inc
+litt16.obj:      litt16.asm    littable.inc
+utils.obj:      utils.asm       utils.inc
+vga.obj:        vga.asm         vga.inc
+filesys.obj:    filesys.asm     filesys.inc     alloc.inc       memmgr.asm
+memmgr.obj:     memmgr.asm      alloc.inc
+
+#gfiles.obj:     gfiles.c        ttl.h
+
+pcxread.obj:    pcxread.asm     pcxread.inc     memmgr.asm      alloc.inc       filesys.inc     filesys.asm
+coolpal.obj:    coolpal.asm     coolpal.inc
+random.obj:     random.asm      random.inc
+soften.obj:     soften.asm      soften.inc
+fonts.obj:      fonts.asm       fonts.inc       pcxread.asm     pcxread.inc     filesys.asm     filesys.inc     memmgr.asm      alloc.inc
+timer.obj:      timer.asm       timer.inc
+keyb.obj:       keyb.asm        keyb.inc
+framerat.obj:   framerat.asm    framerat.inc    utils.inc       utils.asm
+sync.obj:       sync.asm        sync.inc        sync.def        timer.asm       timer.inc       sglmain.asm     newsgl.inc      utils.asm       utils.inc
+list.obj:       list.asm        list.inc        alloc.inc       memmgr.asm      stderror.inc
+dma.obj:        dma.asm         dma.inc         alloc.inc       memmgr.asm      stderror.inc    list.asm        list.inc
+
+memcpy.obj:     memcpy.asm      memcpy.inc
+
+#------------ newSGL ---------------
+sglmain.obj:    sglmain.asm     drvga.asm newsgl.inc  drvbe.asm dpmi.inc dpmi.asm
+initg.obj:      initg.c         tdl.h
+#------------ SPUF! ----------------
+sli.obj:        sli.asm         sli.inc         alloc.inc       memmgr.asm
+
+alpha.obj:      alpha.asm       memmgr.asm      alloc.inc       stderror.inc
+
+blt8-8.obj:     blt8-8.asm      blt8-8.inc      blitter.inc     blitter.asm     sli.inc      sli.asm
+blt8-16.obj:    blt8-16.asm     blt8-16.inc     blitter.inc     blitter.asm     sli.inc         sli.asm
+blt8-24.obj:    blt8-24.asm     blt8-24.inc     blitter.inc     blitter.asm     sli.inc         sli.asm
+blt8-32.obj:    blt8-32.asm     blt8-32.inc     blitter.inc     blitter.asm     sli.inc         sli.asm
+
+blt24-32.obj:    blt24-32.asm     blt24-32.inc     blitter.inc     blitter.asm     sli.inc      sli.asm
+
+blt32-16.obj:    blt32-16.asm     blt32-16.inc     blitter.inc     blitter.asm     sli.inc      sli.asm
+blt32-24.obj:    blt32-24.asm     blt32-24.inc     blitter.inc     blitter.asm     sli.inc      sli.asm
+blt32-32.obj:    blt32-32.asm     blt32-32.inc     blitter.inc     blitter.asm     sli.inc      sli.asm
+
+blitter.obj:    blitter.asm       blitter.inc      blt8-16.asm     blt8-16.inc     blt8-24.asm     blt8-24.inc\
+                blt8-32.asm       blt8-32.inc      blt24-32.asm    blt24-32.inc    blt32-16.asm     blt32-16.inc\
+                blt32-24.asm      blt32-24.inc     blt32-32.asm    blt32-32.inc    clip.asm        clip.inc
+
+clip.obj:        clip.asm         clip.inc         blitter.inc     blitter.asm     sli.inc      sli.asm
+
+loader.obj:      loader.asm       loader.inc       pcx.inc         pcx.asm      blitter.inc     blitter.asm     sli.inc         sli.asm
+pcx.obj:         pcx.asm          pcx.inc          alloc.inc       memmgr.asm   filesys.inc     filesys.asm
+fli.obj:         fli.asm          fli.inc          alloc.inc       memmgr.asm   filesys.inc     filesys.asm
+
+line.obj:        line.asm         gfx.inc          sli.inc
+
+draw8x8g.obj:   draw8x8g.asm    sli.inc
+draw4x4g.obj:   draw4x4g.asm    sli.inc
+grid.obj:       grid.asm        grid.inc alloc.inc stderror.inc
+
+mglc.obj:       mglc.c          tdl.h               video.h
+
+polyint.obj:    polyint.asm     polyint.inc
+
+#------------- 3D -----------------
+
+3ds.obj:         3ds.asm          3ds.inc          memmgr.asm      alloc.inc    filesys.inc     filesys.asm     stderror.inc    3d.inc
+uniload.obj:    uniload.asm      uniload.inc      3ds.inc         3ds.asm      stderror.inc
+render.obj:      render.asm       render.inc       gfx.inc         line.asm     3d.inc
+3dmath.obj:     3dmath.asm
+gentri.obj:      gentri.c         tdl.h            tinymath.h      sbuffer.asm
+sbuffer.obj:     sbuffer.asm      sbuffer.inc      alloc.inc        memmgr.asm      sli.inc      sli.asm         stderror.inc    utils.inc
+
+#------------ wUF! ----------------
+
+wuf!.obj:       wuf!.asm        wuf!.inc        stderror.inc    sounddev.asm    sounddev.inc    utils.inc       utils.asm
+sounddev.obj:   sounddev.inc    sb1x.inc        sb1x.asm
+sbhard.obj:     sbhard.asm      sbhard.inc      dma.inc         dma.asm         utils.inc       utils.asm
+sb1x.obj:       sb1x.inc        sb1x.asm        dma.inc         dma.asm         sounddev.asm    sounddev.inc    stderror.inc    snddev.def      utils.asm       utils.inc
+mixer.obj:      mixer.asm       mixer.inc       wuf!.inc
+waveload.obj:   waveload.asm    waveload.inc    wav.asm         wav.inc
+wav.obj:        wav.asm         wav.inc         memmgr.asm      alloc.inc       filesys.asm     filesys.inc     waveload.asm     waveload.inc
+
+#----------- Player ---------------
+#player.obj:     player.asm      player.inc      sb.inc
+#modload.obj:    modload.asm
+#load_mod.obj:   load_mod.asm
+#load_s3m.obj:   load_s3m.asm
+#load_xm.obj:    load_xm.asm
+#sb.obj:         sb.asm          sb.inc
+
+tdl.lib:        stdc.obj        stdio.obj       count.obj       dpmi.obj\
+                litt16.obj      framerat.obj    sglmain.obj\
+                utils.obj       vga.obj         draw8x8g.obj\
+                draw4x4g.obj    grid.obj\
+#                gfiles.obj\
+                filesys.obj     memmgr.obj      pcxread.obj\
+                coolpal.obj     random.obj      soften.obj\
+                fonts.obj       timer.obj       keyb.obj\
+                memcpy.obj      sync.obj        blt8-8.obj\
+                blitter.obj     blt8-16.obj     blt8-24.obj\
+                blt8-32.obj     blt24-32.obj    blt32-16.obj\
+                blt32-24.obj    blt32-32.obj    clip.obj\
+                loader.obj      sli.obj         pcx.obj         fli.obj\
+                sbuffer.obj     gentri.obj      line.obj\
+                wuf!.obj        sounddev.obj    sb1x.obj        mixer.obj       sbhard.obj      waveload.obj    wav.obj\
+                dma.obj         list.obj        alpha.obj\
+                loader.obj      pcx.obj         3ds.obj\
+                uniload.obj     stdc.obj        render.obj\
+                3dmath.obj\
+                litt32.obj\
+                polyint.obj\
+#                player.obj      modload.obj     load_mod.obj\
+#                load_s3m.obj    load_xm.obj     sb.obj\
+                initg.obj       mglc.obj
+
+ @&echo Adding to lib [$?]
+ @&wlib $(WLIBOPTS) $< +- "$?"
+
+
+# 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴

@@ -1,0 +1,708 @@
+Turbo Assembler	 Version 4.0	    13/07/99 17:30:34	    Page 1
+blt32-32.asm
+
+
+
+      1					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+      2					 ; Blitter for Nitro's SGL
+      3					 ;	 Makes normal and scaled copies	of 32bit images	to
+      4					 ;	 32 bits video buffers
+      5					 ;
+      6					 ; Author: Ignacio Mellado Bataller ( a.k.a. B52 / the D@rkRising )
+      7					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+      8
+      9					 .386p
+     10	00000000			 .model	flat
+     11	00000000			 .code
+     12					     INCLUDE blt32-32.inc
+1    13					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    14					 ; Blitter for Nitro's SGL
+1    15					 ;	 Makes normal and scaled copies	of 8bit	and 32bit images to
+1    16					 ;	 32 bits video buffers
+1    17					 ;
+1    18					 ; Author: Ignacio Mellado Bataller ( a.k.a. B52 / the D@rkRising )
+1    19					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    20
+1    21					 global	 BlitCopy_32_32: NEAR
+1    22					 global	 BlitAlpha_32_32: NEAR
+1    23
+1    24					 global	 BlitCopyMask_32_32: NEAR
+1    25
+     26					     INCLUDE clip.inc
+1    27					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    28					 ; Clipping between SLIs for normal and	scaled images in 8,16,24 & 32 bits
+1    29					 ;
+1    30					 ; Author: Ignacio Mellado Bataller ( a.k.a. B52 / the D@rkRising )
+1    31					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    32
+1    33					 ; Öndices a variables locales del bucle gen‚rico
+1    34		  =0054			 SOURCE_PTR_INIT	 EQU SLITemp.tmp1
+1    35		  =0058			 TARGET_PTR_INIT	 EQU SLITemp.tmp2
+1    36		  =005C			 SOURCE_SIZE_Y		 EQU SLITemp.tmp3
+1    37		  =0060			 SOURCE_SIZE_X		 EQU SLITemp.tmp4
+1    38		  =0064			 SOURCE_PTR_INC_X	 EQU SLITemp.tmp5
+1    39		  =0068			 SOURCE_PTR_INC_Y	 EQU SLITemp.tmp6
+1    40		  =006C			 TARGET_PTR_INC_Y	 EQU SLITemp.tmp7
+1    41					 ;TARGET_PTR_INC_Y1	  EQU SLITemp.tmp8	  ; X size in bytes
+1    42
+1    43
+1    44					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    45					 ; Performs clipping of	input buffer into output buffer
+1    46					 ;
+1    47					 ; INPUT  -> ESI -> Input SLI header
+1    48					 ;	     EDI -> Output SLI header
+1    49					 ;
+1    50					 ; OUTPUT -> CF	= 0 if some part of image is drawn
+1    51					 ;		  Input	SLI temporary variables	filled
+1    52					 ;	     CF	= 1 if image is	hidden
+1    53					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    54					 global	Clip: NEAR
+1    55
+     56					     INCLUDE sli.inc
+1    57					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Turbo Assembler	 Version 4.0	    13/07/99 17:30:34	    Page 2
+blt32-32.asm
+
+
+
+1    58					 ; Definitions for SPUF!
+1    59					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    60
+1    61		  =0008			 SLI_TEMP_VARS	 EQU 8	 ; No puede ser	0 (necesarias para rutinas de blitting)
+1    62
+1    63					 ; Blitting basic methodes
+1    64		  =0000			 SLIBlitCopy	  EQU 0
+1    65		  =0001			 SLIBlitAlpha	  EQU 1
+1    66		  =0002			 SLIBlitAlphaMap  EQU 2
+1    67
+1    68		  =0004			 SLIMaskedColor	  EQU 4
+1    69		  =0008			 SLIScaled	  EQU 4*2
+1    70
+1    71					 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    72					 ;³ CreateSLI:		 aloja una animaci¢n vacia en SLI
+1    73					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    74					 ;³	 Entrada:	 EAX : Size X
+1    75					 ;³			 EBX : Size Y
+1    76					 ;³			 ECX : ColorBits
+1    77					 ;³			 EDX : Number of frames
+1    78					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    79					 ;³	 Salida:	 EAX : puntero al SLI
+1    80					 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    81					 global	 CreateSLI : NEAR
+1    82
+1    83					 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    84					 ;³ CreateVoidSLI:	 aloja una animaci¢n vacia en SLI sin buffer
+1    85					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    86					 ;³	 Entrada:	 EAX : Size X
+1    87					 ;³			 EBX : Size Y
+1    88					 ;³			 ECX : ColorBits
+1    89					 ;³			 EDX : Number of frames
+1    90					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    91					 ;³	 Salida:	 EAX : puntero al SLI
+1    92					 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    93					 global	 CreateVoidSLI : NEAR
+1    94
+1    95					 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    96					 ;³ DestroySLI:		 Desaloja una imagen vacia en SLI
+1    97					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1    98					 ;³	 Entrada:	 EAX : puntero al SLI
+1    99					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   100					 ;³	 Salida:	 nada.
+1   101					 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   102					 global	 DestroySLI : NEAR
+1   103
+1   104					 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   105					 ;³ CreateVideoSLI:	 Crea la superficie de video SLI
+1   106					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   107					 ;³	 Entrada:	 EAX : Size X
+1   108					 ;³			 EBX : Size Y
+1   109					 ;³			 ECX : ColorBits
+1   110					 ;³	 Nota:		 Si ECX+SGL_MemoryBuffer se fuerza a un	buffer en
+1   111					 ;³			 memoria principal
+1   112					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   113					 ;³	 Salida:	 Error si hay Carry
+1   114					 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Turbo Assembler	 Version 4.0	    13/07/99 17:30:34	    Page 3
+blt32-32.asm
+
+
+
+1   115					 global	 CreateVideoSLI	: NEAR
+1   116
+1   117					 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   118					 ;³ GetVideoSLI:	 Obtiene la superficie de video	SLI
+1   119					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   120					 ;³	 Entrada:	 nada.
+1   121					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   122					 ;³	 Salida:	 EAX : ptr to Video SLI
+1   123					 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   124					 global	 GetVideoSLI : NEAR
+1   125
+1   126					 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   127					 ;³ DestroyVIdeoSLI:	      desaloja el VideoSLI
+1   128					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   129					 ;³	 Entrada:	 EAX <>	0 modo de video	a seleccionar
+1   130					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   131					 ;³	 Salida:	 nada.
+1   132					 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   133					 global	 DestroyVideoSLI : NEAR
+1   134
+1   135					 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   136					 ;³ SetPalette:		 Pone el puntero a una paleta B:G:R:0
+1   137					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   138					 ;³	 Entrada:	 EAX ->	SLI
+1   139					 ;³			 EBX ->	Palette
+1   140					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   141					 ;³	 Salida:	 nada.
+1   142					 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   143					 global	 SetPalette : NEAR
+1   144
+1   145					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   146					 ; Devuelve el n£mero de frame actual
+1   147					 ;
+1   148					 ; INPUT  : EAX	-> SLI
+1   149					 ;
+1   150					 ; OUTPUT : EAX	= Frame
+1   151					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   152					 global	 GetFrame : NEAR
+1   153
+1   154					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   155					 ; Pone	el n£mero de frame actual
+1   156					 ;
+1   157					 ; INPUT  : EAX	-> SLI
+1   158					 ;	    EBX	= Frame
+1   159					 ;
+1   160					 ; OUTPUT : CF = 0 si ok
+1   161					 ;		 EAX = NULL
+1   162					 ;	    CF = 1 si error
+1   163					 ;		 EAX = Error code (INVALID_FRAME)
+1   164					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   165					 global	 SetFrame : NEAR
+1   166
+1   167					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   168					 ; Devuelve el puntero a un frame determinado
+1   169					 ;
+1   170					 ; INPUT  : EAX	-> SLI
+1   171					 ;	    EBX	= Frame
+Turbo Assembler	 Version 4.0	    13/07/99 17:30:34	    Page 4
+blt32-32.asm
+
+
+
+1   172					 ;
+1   173					 ; OUTPUT : CF = 0 si ok
+1   174					 ;		 EAX = NULL
+1   175					 ;		 EBX ->	Frame
+1   176					 ;	    CF = 1 si el frame no existe
+1   177					 ;		 EAX = Error code
+1   178					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   179					 global	 GetFramePtr : NEAR
+1   180
+1   181					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   182					 ; Pone	el puntero a un	frame determinado
+1   183					 ;
+1   184					 ; INPUT  : EAX	-> SLI
+1   185					 ;	    EBX	= N£mero de frame
+1   186					 ;	    ECX	-> Frame
+1   187					 ;
+1   188					 ; OUTPUT : CF = 0 si ok
+1   189					 ;		 EAX = NULL
+1   190					 ;	    CF = 1 si el frame no existe
+1   191					 ;		 EAX = Error code
+1   192					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   193					 global	 SetFramePtr : NEAR
+1   194
+1   195					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   196					 ; Devuelve el puntero al frame	actual
+1   197					 ;
+1   198					 ; INPUT  : EAX	-> SLI
+1   199					 ;
+1   200					 ; OUTPUT : EAX	-> Frame actual
+1   201					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   202					 global	 GetCurrentFramePtr : NEAR
+1   203
+1   204					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   205					 ; Pone	el color de m scara
+1   206					 ;
+1   207					 ; INPUT : EAX -> SLI
+1   208					 ;	   EBX = Color de m scara en formato B:G:R:0
+1   209					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   210					 global	 SetMaskColor :	NEAR
+1   211
+1   212					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   213					 ; Pone	el m‚todo de blitting
+1   214					 ;
+1   215					 ; INPUT : EAX -> SLI
+1   216					 ;	   EBX = Tipo de blit ('SLIBlitCopy', 'SLIBlitAlpha', 'SLIBlitAlphaMap'
+1   217					 ;			       y los mismos con	'+ SLIMaskedColor' para	poner
+1   218					 ;			       con m scara)
+1   219					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   220					 global	 SetBlitType : NEAR
+1   221
+1   222					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   223					 ; Pone	el rect ngulo de clipping
+1   224					 ;
+1   225					 ; INTPUT : EAX	= x1
+1   226					 ;	    EBX	= y1
+1   227					 ;	    ECX	= x2
+1   228					 ;	    EDX	= y2
+Turbo Assembler	 Version 4.0	    13/07/99 17:30:34	    Page 5
+blt32-32.asm
+
+
+
+1   229					 ;	    EDI	-> SLI
+1   230					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   231					 global	 SetClip : NEAR
+1   232
+1   233					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   234					 ; Pone	la posicion
+1   235					 ;
+1   236					 ; INTPUT : EAX	= x1
+1   237					 ;	    EBX	= y1
+1   238					 ;	    EDI	-> SLI
+1   239					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   240					 global	 SetPos	: NEAR
+1   241
+1   242					 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   243					 ;³ ClearCurrentFrame:	 Borra el frame	actual al color	dado
+1   244					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   245					 ;³	 Entrada:	 EAX ->	SLI
+1   246					 ;³			 EBX ->	color en el formato del	SLI
+1   247					 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   248					 ;³	 Salida:	 nada.
+1   249					 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   250					 global	 ClearCurrentFrame : NEAR
+1   251
+1   252					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   253					 ; Pone	el campo de alpha
+1   254					 ;
+1   255					 ; INPUT : EAX -> SLI
+1   256					 ;	   EBX = Alpha constante o puntero al mapa de alphas
+1   257					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   258					 global	 SetAlpha : NEAR
+1   259
+1   260					 ;   Estructura	de punto
+1   261	00000000			 SLP struc
+1   262	00000000  01*(????????)		     SLPX    dd	?
+1   263	00000004  01*(????????)		     SLPY    dd	?
+1   264	00000008			     ends
+1   265
+1   266					 ;   Estructura	de rectangulo
+1   267	00000000			 SLR struc
+1   268	00000000  01*(08*(??))		     SLRR1   SLP ?
+1   269	00000008  01*(08*(??))		     SLRR2   SLP ?
+1   270	00000010			     ends
+1   271
+1   272	00000000			 SLI struc
+1   273	00000000  01*(????????)		     SLIMethode	     dd	 ?   ; M‚todos de la imagen
+1   274
+1   275	00000004  01*(08*(??))		     SLIPos	     SLP ?   ; Posicion	del sprite en destino
+1   276	0000000C  01*(08*(??))		     SLIRef	     SLP ?   ; Posicion	de referencia dentro del sprite
+1   277	00000014  01*(10*(??))		     SLIClip	     SLR ?   ; Zona de clipping	(en coordenadas	de pantalla)
+1   278
+1   279	00000024  01*(????????)		     SLIXSize	     dd	 ?   ; Ancho
+1   280	00000028  01*(????????)		     SLIYSize	     dd	 ?   ; Alto
+1   281
+1   282	0000002C  01*(????????)		     SLIPitch	     dd	 ?   ; ancho de	la imagen que la contiene
+1   283	00000030  01*(????????)		     SLIColorBits    dd	 ?   ; densidad	de color
+1   284								     ; para  8,	16, 24,	32 bits
+1   285								     ; valor 1,	 2,  3,	 4
+Turbo Assembler	 Version 4.0	    13/07/99 17:30:34	    Page 6
+blt32-32.asm
+
+
+
+1   286
+1   287	00000034  01*(????????)		     SLIBlitType     dd	 ?   ; 0 - SLIBlitCopy
+1   288								     ; 1 - SLIBlitAlpha
+1   289								     ; 2 - SLIBlitAlphaMap
+1   290								     ; 3 - Reserved
+1   291								     ;
+1   292								     ; 4 - SLIBlitCopy Masked
+1   293								     ; 5 - SLIBlitAlpha	Masked
+1   294								     ; 6 - SLIBlitAlphaMap Masked
+1   295								     ; 7 - Reserved
+1   296
+1   297	00000038  01*(????????)		     SLIAlpha	     dd	 ?   ; Puntero al canal	alpha o	al alpha constante
+1   298								     ; (Si es NULL con SLIBltAlphaMap, el alpha	est  como B:G:R:A)
+1   299
+1   300	0000003C  01*(????????)		     SLIMask	     dd	 ?   ; Color de	m scara
+1   301
+1   302	00000040  01*(????????)		     SLIFrame	     dd	 ?   ; Frame actual de la animacion 16.16
+1   303	00000044  01*(????????)		     SLITotalFrames  dd	 ?   ; Numero de frames	de la animacion	16.16
+1   304	00000048  01*(????????)		     SLIFrameRate    dd	 ?   ; Incremento de frames en 16.16
+1   305	0000004C  01*(????????)		     SLIFramePtr     dd	 ?   ; Puntero al frame	actual
+1   306
+1   307	00000050  01*(????????)		     SLIPImages	     dd	 ?   ; puntero a la lista de punteros de frames
+1   308
+1   309	00000054  01*(08*(????????))	     SLITemp	     dd	 SLI_TEMP_VARS dup(?)	 ; Espacio para	variables temporales	    +
+    310					 (reservado)
+1   311
+1   312	00000074  01*(0100*(????????))	     SLIPalette	     dd	 256 dup(?)   ;	paleta asociada	si no la tiene = NULL
+1   313	00000474  01*(????????)		     SLILitTable     dd	 ?	      ;	puntero	a una tabla de conversion si no	la tiene =  +
+    314					 NULL
+1   315	00000478  01*(????????)		     SLISBufferNfo   dd	 ?	      ;	Datos para los SbufferSLI
+1   316	0000047C			     ends
+1   317
+1   318					 ; Estructura para tratar temporales
+1   319	00000000			 TMP struc
+1   320	00000000  01*(????????)			 tmp1	 dd ?
+1   321	00000004  01*(????????)			 tmp2	 dd ?
+1   322	00000008  01*(????????)			 tmp3	 dd ?
+1   323	0000000C  01*(????????)			 tmp4	 dd ?
+1   324	00000010  01*(????????)			 tmp5	 dd ?
+1   325	00000014  01*(????????)			 tmp6	 dd ?
+1   326	00000018  01*(????????)			 tmp7	 dd ?
+1   327	0000001C  01*(????????)			 tmp8	 dd ?
+1   328	00000020			 ends
+1   329
+1   330
+1   331
+    332					     INCLUDE alpha.inc
+1   333					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   334					 ; Table for alpha routines
+1   335					 ;
+1   336					 ; Author: Ignacio Mellado Bataller ( a.k.a. B52 / the D@rkRising )
+1   337					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   338
+1   339					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   340					 ; Initializes tables for routines with	alpha calculation
+1   341					 ;
+1   342					 ; OUTPUT -> CF	= 0 if succes
+Turbo Assembler	 Version 4.0	    13/07/99 17:30:34	    Page 7
+blt32-32.asm
+
+
+
+1   343					 ;		 EAX = 0
+1   344					 ;	     CF	= 1 if error
+1   345					 ;		 EAX = Error code
+1   346					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1   347					 global	 InitAlphaFX: NEAR
+1   348
+1   349					 global	 ImgAlphaTable:	DWORD
+1   350					 global	 BackAlphaTable: DWORD
+1   351
+1   352
+    353
+    354					 ; Pseudo-c¢digo del bucle gen‚rico de blitting
+    355					 comment #
+    356						 SOURCE_PTR = SOURCE_PTR_INIT
+    357						 TARGET_PTR = TARGET_PTR_INIT			 ; Por clipping
+    358
+    359						 do (TARGET_SIZE_Y) times {
+    360
+    361							 do (TARGET_SIZE_X) times {
+    362								 [TARGET_PTR] =	[SOURCE_PTR]
+    363								 SOURCE_PTR += SOURCE_PTR_INC_X	 ; Por escalado
+    364								 TARGET_PTR++
+    365							 }
+    366
+    367							 SOURCE_PTR += SOURCE_PTR_INC_Y		 ; Por escalado
+    368							 TARGET_PTR += TARGET_PTR_INC_Y		 ; Por clipping
+    369						 }
+    370					 #
+    371
+    372					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+    373					 ; Makes a normal blit from a 32bit SLI	to a 32bit one with clipping
+    374					 ;
+    375					 ; INPUT : ESI -> Source 32bit SLI
+    376					 ;	   EDI -> Target 32bit SLI
+    377					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+    378	00000000			 BlitCopy_32_32	  proc
+    379	00000000  8B 7F	4C			 mov	 edi,[edi.SLIFramePtr]
+    380	00000003  03 7E	58			 add	 edi,[esi.TARGET_PTR_INIT]
+    381
+    382	00000006  8B 46	4C			 mov	 eax,[esi.SLIFramePtr]
+    383	00000009  03 46	54			 add	 eax,[esi.SOURCE_PTR_INIT]
+    384	0000000C  50				 push	 eax
+    385
+    386	0000000D  8B 6E	6C			 mov	 ebp,[esi.TARGET_PTR_INC_Y]
+    387
+    388	00000010  8B 46	5C			 mov	 eax,[esi.SOURCE_SIZE_Y]
+    389	00000013  A3 00000004r			 mov	 CopySourceSizeY,eax
+    390
+    391	00000018  8B 46	68			 mov	 eax,[esi.SOURCE_PTR_INC_Y]
+    392	0000001B  8B 5E	60			 mov	 ebx,[esi.SOURCE_SIZE_X]
+    393
+    394	0000001E  5E				 pop	 esi
+    395	0000001F				 copy_32_32_y:
+    396	0000001F  8B CB					 mov	 ecx,ebx
+    397							 ; (1 cycle!!)
+    398	00000021  F3> A5				 rep	 movsd
+    399	00000023  03 F0					 add	 esi,eax
+Turbo Assembler	 Version 4.0	    13/07/99 17:30:34	    Page 8
+blt32-32.asm
+
+
+
+    400	00000025  03 FD					 add	 edi,ebp
+    401	00000027  FF 0D	00000004r		 dec	 CopySourceSizeY
+    402	0000002D  75 F0				 jnz	 copy_32_32_y
+    403	0000002F  C3				 ret
+    404	00000030			 BlitCopy_32_32	  endp
+    405
+    406					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+    407					 ; Makes a normal blit from a 32bit SLI	to a 32bit one with clipping and
+    408					 ; color masking
+    409					 ;
+    410					 ; INPUT : ESI -> Source 32bit SLI
+    411					 ;	   EDI -> Target 32bit SLI
+    412					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+    413	00000030			 BlitCopyMask_32_32   proc
+    414	00000030  8B 7F	4C			 mov	 edi,[edi.SLIFramePtr]
+    415	00000033  03 7E	58			 add	 edi,[esi.TARGET_PTR_INIT]
+    416
+    417	00000036  8B 46	4C			 mov	 eax,[esi.SLIFramePtr]
+    418	00000039  03 46	54			 add	 eax,[esi.SOURCE_PTR_INIT]
+    419	0000003C  50				 push	 eax
+    420
+    421	0000003D  8B 6E	6C			 mov	 ebp,[esi.TARGET_PTR_INC_Y]
+    422	00000040  89 2D	00000010r		 mov	 CopyTargetIncY,ebp
+    423
+    424	00000046  8B 46	5C			 mov	 eax,[esi.SOURCE_SIZE_Y]
+    425	00000049  A3 00000004r			 mov	 CopySourceSizeY,eax
+    426
+    427	0000004E  8B 46	68			 mov	 eax,[esi.SOURCE_PTR_INC_Y]
+    428	00000051  8B 5E	60			 mov	 ebx,[esi.SOURCE_SIZE_X]
+    429
+    430	00000054  8B 6E	3C			 mov	 ebp,[esi.SLIMask]
+    431	00000057  5E				 pop	 esi
+    432	00000058				 copymask_32_32_y:
+    433	00000058  8B CB					 mov	 ecx,ebx
+    434	0000005A					 copymask_32_32_x:
+    435	0000005A  8B 16						 mov	 edx,[esi]
+    436	0000005C  3B D5						 cmp	 edx,ebp
+    437	0000005E  74 02						 jz	 dont_copymask
+    438	00000060  89 17							 mov	 [edi],edx
+    439	00000062						 dont_copymask:
+    440	00000062  83 C6	04					 add	 esi,4
+    441	00000065  83 C7	04					 add	 edi,4
+    442	00000068  49					 dec	 ecx
+    443	00000069  75 EF					 jnz	 copymask_32_32_x
+    444	0000006B  03 F0					 add	 esi,eax
+    445	0000006D  03 3D	00000010r			 add	 edi,CopyTargetIncY
+    446	00000073  FF 0D	00000004r		 dec	 CopySourceSizeY
+    447	00000079  75 DD				 jnz	 copymask_32_32_y
+    448	0000007B  C3				 ret
+    449	0000007C			 BlitCopyMask_32_32   endp
+    450
+    451					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+    452					 ; Makes a blit	with constant alpha from a 32bit SLI to	a 32bit	one with
+    453					 ; clipping
+    454					 ;
+    455					 ; INPUT : ESI -> Source 32bit SLI
+    456					 ;	   EDI -> Target 32bit SLI
+Turbo Assembler	 Version 4.0	    13/07/99 17:30:34	    Page 9
+blt32-32.asm
+
+
+
+    457					 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+    458	0000007C			 BlitAlpha_32_32 proc
+    459	0000007C  8B 7F	4C			 mov	 edi,[edi.SLIFramePtr]
+    460	0000007F  03 7E	58			 add	 edi,[esi.TARGET_PTR_INIT]
+    461
+    462	00000082  8B 46	4C			 mov	 eax,[esi.SLIFramePtr]
+    463	00000085  03 46	54			 add	 eax,[esi.SOURCE_PTR_INIT]
+    464	00000088  50				 push	 eax
+    465
+    466	00000089  8B 6E	6C			 mov	 ebp,[esi.TARGET_PTR_INC_Y]
+    467	0000008C  89 2D	00000010r		 mov	 CopyTargetIncY,ebp
+    468
+    469	00000092  8B 46	5C			 mov	 eax,[esi.SOURCE_SIZE_Y]
+    470	00000095  A3 00000004r			 mov	 CopySourceSizeY,eax
+    471
+    472	0000009A  8B 46	68			 mov	 eax,[esi.SOURCE_PTR_INC_Y]
+    473	0000009D  8B 5E	60			 mov	 ebx,[esi.SOURCE_SIZE_X]
+    474	000000A0  89 1D	00000000r		 mov	 CopySourceSizeX,ebx
+    475
+    476	000000A6  8B 5E	38			 mov	 ebx,[esi.SLIAlpha]	 ; Alpha level
+    477	000000A9  C1 E3	08			 shl	 ebx,8
+    478	000000AC  8B C3				 mov	 eax,ebx
+    479	000000AE  03 1D	00000000e		 add	 ebx,ImgAlphaTable
+    480	000000B4  89 1D	000000F5r		 mov	 red_img_table-4,ebx
+    481	000000BA  89 1D	0000010Br		 mov	 green_img_table-4,ebx
+    482	000000C0  89 1D	00000120r		 mov	 blue_img_table-4,ebx
+    483
+    484	000000C6  03 05	00000000e		 add	 eax,BackAlphaTable
+    485	000000CC  A3 00000100r			 mov	 red_back_table-4,eax
+    486	000000D1  A3 00000118r			 mov	 green_back_table-4,eax
+    487	000000D6  A3 00000130r			 mov	 blue_back_table-4,eax
+    488
+    489	000000DB  5E				 pop	 esi
+    490	000000DC				 alpha_32_32_y:
+    491	000000DC  A1 00000000r				 mov	 eax,CopySourceSizeX
+    492	000000E1  A3 00000008r				 mov	 x_iter,eax
+    493	000000E6					 alpha_32_32_x:
+    494	000000E6  33 C9						 xor	 ecx,ecx
+    495	000000E8  33 D2						 xor	 edx,edx
+    496	000000EA  8B 06						 mov	 eax,[esi]		 ; image point
+    497	000000EC  8B 2F						 mov	 ebp,[edi]		 ; back	point
+    498								 ; mixing red...
+    499	000000EE  8B D0						 mov	 edx,eax
+    500	000000F0  C1 EA	10					 shr	 edx,16			 ; image red
+    501	000000F3  8A 8A	12345678				 mov	 cl,[edx+12345678h]
+    502	000000F9						 red_img_table	 LABEL dword
+    503	000000F9  8B DD						 mov	 ebx,ebp
+    504	000000FB  C1 EB	10					 shr	 ebx,16			 ; back	red
+    505	000000FE  02 8B	12345678				 add	 cl,[ebx+12345678h]	 ; new image red + new back red
+    506	00000104						 red_back_table	 LABEL dword
+    507	00000104  C1 E1	10					 shl	 ecx,16
+    508								 ; mixing green...
+    509	00000107  8A D4						 mov	 dl,ah			 ; image green
+    510	00000109  8A AA	12345678				 mov	 ch,[edx+12345678h]
+    511	0000010F						 green_img_table  LABEL	dword
+    512	0000010F  8B DD						 mov	 ebx,ebp
+    513	00000111  C1 EB	08					 shr	 ebx,8
+Turbo Assembler	 Version 4.0	    13/07/99 17:30:34	    Page 10
+blt32-32.asm
+
+
+
+    514	00000114  32 FF						 xor	 bh,bh			 ; back	green
+    515	00000116  02 AB	12345678				 add	 ch,[ebx+12345678h]	 ; new image green + new back green
+    516	0000011C						 green_back_table LABEL	dword
+    517								 ; mixing blue...
+    518	0000011C  8A D0						 mov	 dl,al
+    519	0000011E  8A 8A	12345678				 mov	 cl,[edx+12345678h]	 ; image blue
+    520	00000124						 blue_img_table	 LABEL dword
+    521	00000124  81 E5	000000FF				 and	 ebp,0ffh		 ; back	blue
+    522	0000012A  83 C6	04					 add	 esi,4			 ; saving an AGI ;)
+    523	0000012D  3E: 02 8D 12345678				 add	 cl,ds:[ebp+12345678h]	 ; new image blue + new	back blue
+    524	00000134						 blue_back_table LABEL dword
+    525								 ; we set the point
+    526	00000134  89 0F						 mov	 [edi],ecx
+    527	00000136  83 C7	04					 add	 edi,4
+    528	00000139  FF 0D	00000008r			 dec	 x_iter
+    529	0000013F  75 A5					 jnz	 alpha_32_32_x
+    530	00000141  03 35	0000000Cr			 add	 esi,CopySourceIncY
+    531	00000147  03 3D	00000010r			 add	 edi,CopyTargetIncY
+    532	0000014D  FF 0D	00000004r		 dec	 CopySourceSizeY
+    533	00000153  75 87				 jnz	 alpha_32_32_y
+    534	00000155  C3				 ret
+    535	00000156			 BlitAlpha_32_32 endp
+    536
+    537
+    538	00000156			 .data?
+    539					 ; ---Blit copy	data---
+    540	00000000  ????????		 CopySourceSizeX dd ?
+    541	00000004  ????????		 CopySourceSizeY dd ?
+    542	00000008  ????????		 x_iter		 dd ?
+    543	0000000C  ????????		 CopySourceIncY	 dd ?
+    544	00000010  ????????		 CopyTargetIncY	 dd ?
+    545					 ; --------------------
+    546					 end
+Turbo Assembler	 Version 4.0	    13/07/99 17:30:34	    Page 11
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "13/07/99"
+??FILENAME			  Text	 "blt32-32"
+??TIME				  Text	 "17:30:33"
+??VERSION			  Number 0400
+@32BIT				  Text	 1
+@CODE				  Text	 FLAT
+@CODESIZE			  Text	 0
+@CPU				  Text	 0F8FH
+@CURSEG				  Text	 _BSS
+@DATA				  Text	 FLAT
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 BLT32-32
+@INTERFACE			  Text	 00H
+@MODEL				  Text	 1
+@STACK				  Text	 FLAT
+@WORDSIZE			  Text	 4
+ALPHA_32_32_X			  Near	 FLAT:00E6
+ALPHA_32_32_Y			  Near	 FLAT:00DC
+BACKALPHATABLE			  Dword	 FLAT:---- Extern
+BLITALPHA_32_32			  Near	 FLAT:007C
+BLITCOPYMASK_32_32		  Near	 FLAT:0030
+BLITCOPY_32_32			  Near	 FLAT:0000
+BLUE_BACK_TABLE			  Dword	 FLAT:0134
+BLUE_IMG_TABLE			  Dword	 FLAT:0124
+COPYMASK_32_32_X		  Near	 FLAT:005A
+COPYMASK_32_32_Y		  Near	 FLAT:0058
+COPYSOURCEINCY			  Dword	 FLAT:000C
+COPYSOURCESIZEX			  Dword	 FLAT:0000
+COPYSOURCESIZEY			  Dword	 FLAT:0004
+COPYTARGETINCY			  Dword	 FLAT:0010
+COPY_32_32_Y			  Near	 FLAT:001F
+DONT_COPYMASK			  Near	 FLAT:0062
+GREEN_BACK_TABLE		  Dword	 FLAT:011C
+GREEN_IMG_TABLE			  Dword	 FLAT:010F
+IMGALPHATABLE			  Dword	 FLAT:---- Extern
+RED_BACK_TABLE			  Dword	 FLAT:0104
+RED_IMG_TABLE			  Dword	 FLAT:00F9
+SLIBLITALPHA			  Number 0001
+SLIBLITALPHAMAP			  Number 0002
+SLIBLITCOPY			  Number 0000
+SLIMASKEDCOLOR			  Number 0004
+SLISCALED			  Number 0008
+SLI_TEMP_VARS			  Number 0008
+SOURCE_PTR_INC_X		  Number 0064
+SOURCE_PTR_INC_Y		  Number 0068
+SOURCE_PTR_INIT			  Number 0054
+SOURCE_SIZE_X			  Number 0060
+SOURCE_SIZE_Y			  Number 005C
+TARGET_PTR_INC_Y		  Number 006C
+TARGET_PTR_INIT			  Number 0058
+X_ITER				  Dword	 FLAT:0008
+Turbo Assembler	 Version 4.0	    13/07/99 17:30:34	    Page 12
+Symbol Table
+
+
+
+
+Structure Name			  Type	Offset
+
+SLI
+ SLIMETHODE			  Dword	 0000
+ SLIPOS				  Struct 0004 SLP
+ SLIREF				  Struct 000C SLP
+ SLICLIP			  Struct 0014 SLR
+ SLIXSIZE			  Dword	 0024
+ SLIYSIZE			  Dword	 0028
+ SLIPITCH			  Dword	 002C
+ SLICOLORBITS			  Dword	 0030
+ SLIBLITTYPE			  Dword	 0034
+ SLIALPHA			  Dword	 0038
+ SLIMASK			  Dword	 003C
+ SLIFRAME			  Dword	 0040
+ SLITOTALFRAMES			  Dword	 0044
+ SLIFRAMERATE			  Dword	 0048
+ SLIFRAMEPTR			  Dword	 004C
+ SLIPIMAGES			  Dword	 0050
+ SLITEMP			  Dword	 0054
+ SLIPALETTE			  Dword	 0074
+ SLILITTABLE			  Dword	 0474
+ SLISBUFFERNFO			  Dword	 0478
+SLP
+ SLPX				  Dword	 0000
+ SLPY				  Dword	 0004
+SLR
+ SLRR1				  Struct 0000 SLP
+ SLRR2				  Struct 0008 SLP
+TMP
+ TMP1				  Dword	 0000
+ TMP2				  Dword	 0004
+ TMP3				  Dword	 0008
+ TMP4				  Dword	 000C
+ TMP5				  Dword	 0010
+ TMP6				  Dword	 0014
+ TMP7				  Dword	 0018
+ TMP8				  Dword	 001C
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _BSS				  32  0014 Dword  Public  BSS
+  _DATA				  32  0000 Dword  Public  DATA
+FLAT				  Group
+_TEXT				  32  0156 Dword  Public  CODE
+

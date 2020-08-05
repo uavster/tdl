@@ -1,0 +1,61 @@
+mezcla_canal    macro n
+
+        CANAL=0
+
+        rept    n
+        macrocanal %CANAL
+        CANAL=CANAL+1
+        INC     ECX
+        endm
+
+        endm
+
+macrocanal      macro x
+
+        mov     edx, 12345678h          ; puntero al sample
+sptr&x:
+
+        CMP     EDX, 12345678H
+RETRIG&X:
+        JB      RETRIG2X&X
+
+        MOV     DWORD PTR [SPTR&X-4], 12345678H
+RETRIGX&X:
+        MOV     EDX, DWORD PTR [SPTR&X-4]
+RETRIG2X&X:
+
+        or      edx, edx
+        jz      nomezclar&x
+
+        mov     ebx, 12345678h
+contador&x:
+
+        add     ebx, 12345678h
+incr&x:
+        adc     edx, 12345678h
+decimales&x:
+
+        cmp     edx, 12345678h
+slen&x:
+        jb      mezclar&x
+
+        mov     dword ptr [sptr&x-4], 12345678h
+loop&x:
+        jmp     nomezclar&x
+mezclar&x:
+
+        mov     dword ptr [contador&x-4], ebx
+
+        mov     cl, byte ptr [edx]
+        mov     ch, 0                   ; volumen
+volume&x:
+        mov     cl, volumetable[ecx]
+        mov     ch, 0                   ; panning
+panning&x:
+        add     eax, panningtable[ecx*4]
+
+        mov     dword ptr [sptr&x-4], edx
+
+nomezclar&x:
+
+        endm

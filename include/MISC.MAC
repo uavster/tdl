@@ -1,0 +1,23 @@
+Verbose macro   msg
+        local   noverb, pepe
+
+.DATA
+        pepe    db msg
+                db 13,10,0
+.CODE
+        cmp     _verbose, 0
+        je      noverb
+
+        print   pepe
+
+noverb:
+        endm
+
+video   macro pos, char
+        if __DEBUG__ eq 1
+                push    edi
+                mov     edi, 0b8000h
+                mov     byte ptr [edi+pos], char
+                pop     edi
+        endif
+        endm

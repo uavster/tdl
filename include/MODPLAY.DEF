@@ -1,0 +1,6 @@
+        FREQ            equ 20000
+        _MIXBUFFERSIZE  equ 16384
+        MAX_NCHANNELS   equ 32
+        MAX_NINSTRS     equ 128
+        MAX_ORDERS      equ 256
+        MAX_PATTERNS    equ 256

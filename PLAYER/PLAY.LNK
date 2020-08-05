@@ -1,0 +1,12 @@
+system pmodew
+file play
+#file load_it
+#file load_s3m
+#file load_mod
+#file load_xm
+#file modload
+#file sb
+#file player
+file %TDLPATH%\lib\tdl.lib
+file %TDLPATH%\lib\c0tt.obj
+name play

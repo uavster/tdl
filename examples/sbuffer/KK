@@ -1,0 +1,52 @@
+DarkX - the DarkRising DOS Extender [ v0.98.1 ] (c) 1998
+Extender by B52 , Memory Manager and LE loader by Teknik
+< http://thedarkrising.home.ml.org >
+ ş CPU Family:  Pentium+
+ ş System Type: DPMI
+ ş DOS memory:  353 Kb
+ ş DPMI memory: 46460 Kb
+
+point 1
+[New!SGL] : New Shade Graphic Library      Version 1.10b      Coded by Nitro! 
+Copyright the DarkRising [tDR] : 1999      Aditional code by:  B52  &  Teknik 
+< http://fly.to/thedarkrising >            mail: group@thedarkrising.ddns.org 
+
+   ş Launching drivers...
+     ş VGA Driver 1.00b initialized Ok!
+     ş VBE Driver 1.00b initialized Ok!
+          ş VESA Version 3.0
+          ş Video memory in board 2048 Kb.
+          ş OEM Name: Universal VESA VBE 6.0a
+          ş Vendor Name: SciTech Software, Inc.
+          ş Product Name: SciTech Display Doctor(tm)
+          ş Product Revision: 6.0
+          ş VBE Protected Mode Extensions available
+   ş Library initialized with 44 modes.
+point 2
+point 3
+point 4
+point 5
+[New!SGL] : New Shade Graphic Library      Version 1.10b      Coded by Nitro! 
+Copyright the DarkRising [tDR] : 1999      Aditional code by:  B52  &  Teknik 
+< http://fly.to/thedarkrising >            mail: group@thedarkrising.ddns.org 
+
+   ş Shuting down drivers...
+     ş VGA Driver 1.00b uninstalled Ok!
+     ş VBE Driver 1.00b uninstalled Ok!
+   ş SGL uninstalled ok!
+ERROR: PAGE FAULT                
+32-bit protected mode exception number: 0Eh
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄCrash address  CS:EIP = 00AF:00000BC2h  ->  26 8A 03 E8 69 02 00 00
+
+Stack contents SS:ESP = 01EB:00000FCCh  ->  F000EABC 000000CF 00010246
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄEAX = F000EABCh ; EBX = F000EABCh ; ECX = 00000008h ; EDX = 19AD000Eh
+ESI = 00000000h ; EDI = 00000720h ; EBP = FFFFFFFEh ; ESP = 00000FCCh
+EFLAGS = 00010082h
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄSelectors:          Descriptors:
+CS = 00AFh    ->    FF FF 20 28 03 FB CF 00
+DS = 00C7h    ->    FF FF A0 0B 03 F3 00 00
+ES = 00B7h    ->    FF FF 00 00 00 F3 CF 00
+FS = 00D7h    ->    FF FF 00 00 00 F3 CF 00
+GS = 00D7h    ->    FF FF 00 00 00 F3 CF 00
+SS = 01EBh    ->    INVALID SELECTOR VALUE 
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ

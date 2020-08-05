@@ -1,0 +1,8 @@
+load_mod.asm Cargador de MOD's
+load_s3m.asm Cargador de S3M's
+load_xm.asm Cargador de XM's
+modload.asm Cargador de m¢dulos
+play.asm Player
+sb.asm Rutinas para la Sound Blaster
+test.asm Prueba para el Player
+xprint.asm Print de colores

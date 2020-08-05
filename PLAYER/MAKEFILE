@@ -1,0 +1,59 @@
+# 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+# Makefile per la llibreria de demos de #Trouble# Team
+# 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+# 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+INCDIR = .
+
+WLIBOPTS=/q
+
+CCOPTS = -w3 -fpi87 -fp5 -zdp -zu -bt=dos -i$(INCDIR) -oneatx -s -zq
+ASMOPTS = /m6 /mx /w-aln /t /i. /i$(TTLPATH) /i$(TTLPATH)\player
+LNKOPT = system darkx op q
+
+.asm.obj:
+        tasm $? $(ASMOPTS)
+.c.obj:
+        wcc386 $(CCOPTS) $?
+.obj.exe:
+        wlink $(LNKOPT) file $? , player.lib, $(TTLPATH)\ttl.lib
+# 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+all:            player.lib      play.exe
+
+# 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+player.obj:  player.asm  modplay.def modplay.inc \
+             sb.asm      sb.inc $(TTLPATH)\utils.inc $(TTLPATH)\utils.asm
+                                                                             
+load_xm.obj: load_xm.asm MODPLAY.DEF MODPLAY.INC \
+             FILES.INC $(TTLPATH)\filesys.inc MEM.INC \
+             $(TTLPATH)\utils.inc $(TTLPATH)\alloc.inc $(TTLPATH)\utils.asm
+
+load_mod.obj: load_mod.asm MODPLAY.DEF MODPLAY.INC \
+              FILES.INC $(TTLPATH)\filesys.inc MEM.INC \
+                    $(TTLPATH)\utils.inc $(TTLPATH)\alloc.inc $(TTLPATH)\utils.asm
+
+load_s3m.obj: load_s3m.asm MODPLAY.DEF MODPLAY.INC \
+              FILES.INC $(TTLPATH)\filesys.inc MEM.INC \
+              $(TTLPATH)\utils.inc $(TTLPATH)\alloc.inc $(TTLPATH)\utils.asm
+
+modload.obj: modload.asm MODPLAY.DEF
+
+sb.obj:      sb.asm   $(TTLPATH)\dpmi.inc
+
+
+
+play.exe:   play.obj    load_mod.obj    load_s3m.obj    load_xm.obj \
+            modload.obj sb.obj          player.obj
+
+
+
+player.lib:     player.obj      load_xm.obj     load_mod.obj \
+                load_s3m.obj    modload.obj     sb.obj
+
+                &wlib $(WLIBOPTS) $< +- $?
+
+
+# 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴

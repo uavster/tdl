@@ -1,0 +1,30 @@
+; ################################################# PLAYER.ASM
+EXTRN           C2SPD                   :DWORD
+EXTRN           filetype                :BYTE
+EXTRN           SongName                :BYTE
+EXTRN           NumOrders               :WORD
+EXTRN           NumPatts                :WORD
+EXTRN           NumInstrs               :WORD
+EXTRN           NumChannels             :WORD
+EXTRN           panning                 :BYTE
+EXTRN           channel_info            :BYTE
+EXTRN           orders                  :BYTE
+EXTRN           pattern                 :DWORD
+EXTRN           sample_dosfilename      :BYTE
+EXTRN           sample_name             :BYTE
+EXTRN           loopstart               :DWORD
+EXTRN           loopend                 :DWORD
+EXTRN           samples                 :DWORD
+EXTRN           sample_volume           :BYTE
+EXTRN           sample_fileptr          :DWORD
+EXTRN           sample_length           :DWORD
+EXTRN           samples_filesize        :DWORD
+EXTRN           sample_sign             :BYTE
+EXTRN           mem_patterns            :DWORD
+EXTRN           TEMPO                   :BYTE
+EXTRN           BPM                     :BYTE
+
+EXTRN           PattNRows               :WORD
+
+EXTRN           orig_patterns           :DWORD
+EXTRN           orig_ptr                :DWORD

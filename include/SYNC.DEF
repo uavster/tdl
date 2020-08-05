@@ -1,0 +1,9 @@
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+; Synchronism definitions
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+MUSIC   EQU 0   ; Sync will be driven by the music module
+KEYSYNC EQU 1   ; Sync will be driven by user with SPACE (only valid if MUSIC=0)
+
+; SRF limits to detect sync errors in systems like Windows 95+
+INCORRECT_SRF_LOWER   EQU 40  ; under this Screen Refresh Frequency we return error
+INCORRECT_SRF_UPPER   EQU 90  ; over this Screen Refresh Frequency we return error

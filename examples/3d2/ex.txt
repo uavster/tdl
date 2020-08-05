@@ -1,0 +1,65 @@
+Module: C:\TASM\TDL\EXAMPLES\3D2\example.cpp
+GROUP: 'DGROUP' CONST,CONST2,_DATA,_BSS
+
+Segment: _TEXT BYTE USE32 0000006B bytes
+0000                          main_:
+0000    68 20 00 00 00            push      0x00000020
+0005    E8 00 00 00 00            call      __CHK
+000A    53                        push      ebx
+000B    51                        push      ecx
+000C    52                        push      edx
+000D    56                        push      esi
+000E    57                        push      edi
+000F    55                        push      ebp
+0010    83 EC 04                  sub       esp,0x00000004
+0013    31 D2                     xor       edx,edx
+0015    89 14 24                  mov       [esp],edx
+0018    BA 01 00 00 00            mov       edx,0x00000001
+001D    B9 20 00 00 00            mov       ecx,0x00000020
+0022    BB C8 00 00 00            mov       ebx,0x000000c8
+0027    B8 40 01 00 00            mov       eax,0x00000140
+002C    E8 00 00 00 00            call      CreateSLI
+0031    B8 00 00 00 00            mov       eax,offset L$4
+0036    E8 00 00 00 00            call      LoadUniverse
+003B    A3 00 00 00 00            mov       _world,eax
+0040    8B 0C 24                  mov       ecx,[esp]
+0043    EB 05                     jmp       L$2
+0045                          L$1:
+0045    83 F9 FF                  cmp       ecx,0xffffffff
+0048    74 17                     je        L$3
+004A                          L$2:
+004A    B4 0B                     mov       ah,0x0b
+004C    CD 21                     int       0x00000021
+004E    0F BE C0                  movsx     eax,al
+0051    85 C0                     test      eax,eax
+0053    74 F0                     je        L$1
+0055    B4 08                     mov       ah,0x08
+0057    CD 21                     int       0x00000021
+0059    0F B6 C0                  movzx     eax,al
+005C    83 F8 1B                  cmp       eax,0x0000001b
+005F    75 E4                     jne       L$1
+0061                          L$3:
+0061    83 C4 04                  add       esp,0x00000004
+0064    5D                        pop       ebp
+0065    5F                        pop       edi
+0066    5E                        pop       esi
+0067    5A                        pop       edx
+0068    59                        pop       ecx
+0069    5B                        pop       ebx
+006A    C3                        ret       
+
+Routine Size: 107 bytes,    Routine Base: _TEXT + 0000
+
+No disassembly errors
+
+Segment: CONST DWORD USE32 0000000B bytes
+0000                          L$4:
+0000    70 72 75 65 62 61 2E 33 64 73 00                prueba.3ds.
+
+
+
+Segment: _BSS DWORD USE32 00000004 bytes
+0000                          _world:
+
+BSS Size: 4 bytes
+

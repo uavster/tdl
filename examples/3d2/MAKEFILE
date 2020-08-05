@@ -1,0 +1,46 @@
+# ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+# Makefile pel tunel amb reflexi¢ raytracejat.
+# ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+# ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+#DEBUG = 1
+INCDIR = $(TDLPATH)\h
+LIBDIR = $(TDLPATH)\lib
+
+!ifdef DEBUG
+
+        # -et
+
+CFLAGS = -5r -hw -db -d4 -fpi87 -fp5 -i$(INCDIR) -mf -w5 -ze -zp4 -zdp
+#AFLAGS = /mx /m2 /q /zi
+AFLAGS = -f obj
+LFLAGS = system DarkX
+#debug all
+
+!else
+
+#CFLAGS = -5r -fpi87 -fp5 -i$(INCDIR) -mf -otexan -w5 -ze -zp4 -zdp -s
+CFLAGS = -5r -fpi87 -fp5 -i$(INCDIR) -mf -w5 -ze -zdp
+#AFLAGS = /mx /m2 /q
+AFLAGS = -f obj
+LFLAGS = system DarkX
+
+!endif
+
+.asm.obj:
+        tasm $(AFLAGS) $?
+.c.obj:
+        wcc386 $(CFLAGS) $?
+.cpp.obj:
+        wcc386 $(CFLAGS) $?
+
+# ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+all: example.exe
+
+example.obj: example.cpp $(INCDIR)\tdl.h
+
+example.exe: example.obj $(LIBDIR)\tdl.lib
+        wlink $(LFLAGS) file $(LIBDIR)\c0tt, example library $(LIBDIR)\tdl.lib name example
+

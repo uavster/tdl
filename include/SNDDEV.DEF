@@ -1,0 +1,6 @@
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+; Default definitions for sound drivers
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+
+DMA_PLAY_BUFFER_LENGTH          EQU 8*1024      ; 8Kb (16Kb with double buffering)
+DMA_REC_BUFFER_LENGTH           EQU 8*1024      ; 8Kb (16Kb with double buffering)

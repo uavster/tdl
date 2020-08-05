@@ -1,0 +1,9 @@
+/*컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+ Little definition to avoid include mess ;b
+ Author: Ignacio Mellado Bataller a.k.a. B52 / the DarkRising
+컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴*/
+
+#ifndef SPAN_MAX_INTERPOLATE_VARS
+    #define SPAN_MAX_INTERPOLATE_VARS 4
+#endif
+
