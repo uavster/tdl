@@ -40,7 +40,7 @@ Clip    proc
         sub     ebp,[edi.SLIClip.SLRR1.SLPX]
         inc     ebp
         cmp     eax,ebp
-        jbe     X0_ok
+        jb      X0_ok
                 or      eax,eax
                 jns     leave_clipping
                 sub     [esi.SOURCE_PTR_INIT],eax
@@ -48,7 +48,7 @@ Clip    proc
                 xor     eax,eax
         X0_ok:
         cmp     ecx,ebp
-        jbe     X1_ok
+        jb      X1_ok
                 or      ecx,ecx
                 js      leave_clipping
                 add     [esi.SOURCE_PTR_INC_Y],ecx                
@@ -59,7 +59,7 @@ Clip    proc
         sub     ebp,[edi.SLIClip.SLRR1.SLPY]
         inc     ebp
         cmp     ebx,ebp
-        jbe     Y0_ok
+        jb      Y0_ok
                 or      ebx,ebx
                 jns     leave_clipping
                 imul    ebx,[esi.SLIXSize]
@@ -67,7 +67,7 @@ Clip    proc
                 xor     ebx,ebx
         Y0_ok:
         cmp     edx,ebp
-        jbe     Y1_ok
+        jb      Y1_ok
                 or      edx,edx
                 js      leave_clipping
                 mov     edx,ebp
