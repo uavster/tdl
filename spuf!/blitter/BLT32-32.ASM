@@ -115,7 +115,7 @@ BlitCopyMask_32_32   endp
 ; Makes a blit with constant alpha from a 32bit SLI to a 32bit one with
 ; clipping
 ;
-; INPUT : ESI -> Source 32bit SLI
+; INPUT : ESI -> Source 32bit SLI (pixel format 0:B:G:R)
 ;         EDI -> Target 32bit SLI
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 BlitAlpha_32_32 proc
