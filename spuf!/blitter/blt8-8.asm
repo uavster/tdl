@@ -68,7 +68,7 @@ BlitCopy_8_8   proc
                 ; (1 cycle!!)
                 rep     movsd
                 mov     ecx,ebx
-                and     ecx,111b
+                and     ecx,11b
                 rep     movsb
                 add     esi,eax
                 add     edi,ebp
