@@ -76,6 +76,7 @@ dpmi.obj:       dpmi.asm        dpmi.inc
 litt32.obj:      litt32.asm    littable.inc
 litt16.obj:      litt16.asm    littable.inc
 utils.obj:      utils.asm       utils.inc
+assert.obj:		assert.asm		assert.inc		utils.obj		utils.inc
 vga.obj:        vga.asm         vga.inc
 filesys.obj:    filesys.asm     filesys.inc     alloc.inc       memmgr.asm
 memmgr.obj:     memmgr.asm      alloc.inc
@@ -121,7 +122,7 @@ blitter.obj:    blitter.asm       blitter.inc      blt8-16.asm     blt8-16.inc  
 
 clip.obj:        clip.asm         clip.inc         blitter.inc     blitter.asm     sli.inc      sli.asm
 
-loader.obj:      loader.asm       loader.inc       pcx.inc         pcx.asm      blitter.inc     blitter.asm     sli.inc         sli.asm
+loader.obj:      loader.asm       loader.inc       pcx.inc         pcx.asm      fli.inc		fli.asm		blitter.inc     blitter.asm     sli.inc         sli.asm
 pcx.obj:         pcx.asm          pcx.inc          alloc.inc       memmgr.asm   filesys.inc     filesys.asm
 fli.obj:         fli.asm          fli.inc          alloc.inc       memmgr.asm   filesys.inc     filesys.asm
 
@@ -164,7 +165,7 @@ wav.obj:        wav.asm         wav.inc         memmgr.asm      alloc.inc       
 
 tdl.lib:        stdc.obj        stdio.obj       count.obj       dpmi.obj\
                 litt16.obj      framerat.obj    sglmain.obj\
-                utils.obj       vga.obj         draw8x8g.obj\
+                utils.obj       assert.obj		vga.obj         draw8x8g.obj\
                 draw4x4g.obj    grid.obj\
 #                gfiles.obj\
                 filesys.obj     memmgr.obj      pcxread.obj\
@@ -178,7 +179,7 @@ tdl.lib:        stdc.obj        stdio.obj       count.obj       dpmi.obj\
                 sbuffer.obj     gentri.obj      line.obj\
                 wuf!.obj        sounddev.obj    sb1x.obj        mixer.obj       sbhard.obj      waveload.obj    wav.obj\
                 dma.obj         list.obj        alpha.obj\
-                loader.obj      pcx.obj         3ds.obj\
+                3ds.obj\
                 uniload.obj     stdc.obj        render.obj\
                 3dmath.obj\
                 litt32.obj\
