@@ -97,6 +97,7 @@ Blit    proc
         call    eax
         no_blit_needed:
         pop     ebp
+        xor		eax, eax
         clc
         ret
 
