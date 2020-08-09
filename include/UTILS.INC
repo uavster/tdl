@@ -9,6 +9,10 @@ INCLUDE         dpmi.inc
 INCLUDE         alloc.inc
 INCLUDE         init.def
 
+extrn HandleError: near
+extrn HESMLAB001: near
+extrn EndOfProgram: near
+
 if STANDARD_INIT
         INCLUDE newsgl.inc
         INCLUDE alpha.inc
@@ -124,7 +128,7 @@ ENDM
 ;          '%us',dword puntero
 ;          Imprime una cadena, la u hace que el texto sea mostrado en
 ;          mayusculas.
-;          '%(d,w,b)[+,-][0][numero][h,o,i]n',dword puntero
+;          '%(d,w,b)[+,-][0][numero][h,o,i,c]n',dword puntero
 ;          Imprime el numero apuntado por el puntero. Seguido se debe
 ;          poner uno de los identificadores de tama¤o. El mas y el menos
 ;          indica que el numero es un numero con signo. El mas hace que
@@ -132,7 +136,8 @@ ENDM
 ;          El cero indica que los espacios de relleno que se indican a
 ;          continuacion se han de rellenar con ceros en vez de con espacios
 ;          Las letras h o i indican la base, si no se pone nada es en
-;          base decimal. La h es hexadecimal, la o octal y la i binario.
+;          base decimal. La h es hexadecimal, la o octal, la i binario y
+;		   la c decimal.
 ;       Salida:         Nada.
 
         extrn           PrintFormatted:near     ; B52 (C compatibility)
@@ -148,11 +153,15 @@ Print   macro   etiqueta
 
 LPrintS macro   cadena
 LOCAL   string, skip_cadena
+		pushf
+		pushad
         mov     esi,offset string
         call    printf
         jmp     skip_cadena
 string  db cadena,13,10,0
         skip_cadena:
+        popad
+        popf
         endm
 
 PrintS  macro   cadena
@@ -300,21 +309,6 @@ InitDPMI        macro
         jmp     short asmmain
         db      "WATCOM"        ; Esta linea es necesaria para poder ejecutar
                                 ; el programa con el DOS4GW y con el debugger
-ReturnCode      db 0
-; ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-;       Acaba el programa
-; ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-
-        HandleError:
-        mov     ax,3
-        int     10h
-        mov     esi, 12345678h
-HESMLAB001:
-        call    printf
-        EndOfProgram:
-        mov     ah,4ch
-        mov     al,ReturnCode
-        int     21h
 
         asmmain:
         cld
@@ -338,7 +332,23 @@ endm
 
 ; ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
-Exit    MACRO
+ErrorExit       MACRO ErrorMsg
+Local           ErrorTxt,no_error,ErrorCode,ErrorCodeOffset
+		mov		ErrorCode,eax
+        mov     dword ptr [HESMLAB001-4], offset ErrorTxt
+        jc      HandleError
+        jmp     no_error
+ErrorTxt        db ErrorMsg, " (error code: 0x%dhn"
+ErrorCodeOffset	dd offset ErrorCode
+				db ")"
+				db 0
+ErrorCode		dd ?
+        no_error:
+ENDM
+
+; ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+ExitAfterCall    MACRO FinalCall
         call    EndVirtualFrameRate
         ErrorExit "Error: Unable to uninitialize virtual frame-rate"
         call    disable_keyb
@@ -346,17 +356,16 @@ Exit    MACRO
         ErrorExit "Error: Unable to uninitialize DMA extensions"
         call    UnInitSGL
         ErrorExit "Error: Unable to uninitialize graphic system"
+        call	FinalCall
         jmp     EndOfProgram
 ENDM
 
+Exit	MACRO
+Local	empty_call
+		ExitAfterCall empty_call		
+empty_call:
+		ret
+ENDM		
+
 ; ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
-ErrorExit       MACRO ErrorMsg
-Local           ErrorTxt,no_error
-        mov     dword ptr [HESMLAB001-4], offset ErrorTxt
-        jc      HandleError
-        jmp     no_error
-ErrorTxt        db ErrorMsg,0
-        no_error:
-ENDM
-; ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ

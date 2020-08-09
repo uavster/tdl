@@ -21,7 +21,7 @@
         public  GetEnvironmentVar, SkipCharacters, GetHexInteger
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Gets an long integer from a hexadecimal string
+; Gets a long integer from a hexadecimal string
 ;
 ; INPUT  -> DS:ESI -> ASCIIZ hexadecimal string
 ;
@@ -478,6 +478,8 @@ PRFlab21:
         je      PRFlab24
         cmp     al,'F'          ; B52 - Salta a imprimir en float
         je      PRFlab52        ; B52
+        cmp		al,'C'
+        je		PRFlab25
         dec     esi
         jmp     PRFlab25
 PRFlab22:
@@ -790,4 +792,25 @@ PrintChar       proc
 PRCbuff db      ?
         endp
 
+; ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;       Acaba el programa
+; ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+public HandleError, HESMLAB001, EndOfProgram
+
+HandleError:
+        mov     ax,3
+        int     10h
+        mov     esi, 12345678h
+HESMLAB001:
+        call    PrintFormatted
+EndOfProgram:
+        mov     ah,4ch
+        mov     al,ReturnCode
+        int     21h
+
+.data
+ReturnCode      db 0
+        
 end
+
