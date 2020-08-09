@@ -9,7 +9,7 @@
         JUMPS
         .386p
         .model flat
-
+		
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
 
 ;DBG_NFO     equ     1                   ; comment out to avoid debug info
@@ -23,16 +23,17 @@ ifdef   DBG_NFO
 dbginfo macro title                     ; print debug info
         local txt
 
+		pushfd
         pushad
         mov     ah, 9
         mov     edx, offset txt
         int     21h
         call    show_heap
         popad
+		popfd
 
         .data
 txt     db      13, 10, "***** [", title, "] *****", 13, 10, "$"
-
         .code
 
         endm
@@ -105,10 +106,9 @@ ifdef   DOS4G   ; --------------------------------
             shr     ebx, 1                  ; to allow debugging with
             add     ebx, dword ptr [dpminfo];  fucking DOS@#$&%!!! >:-(
             shr     ebx, 1
-            cmp     ebx, 4096               ; si < 4 kb => 0
-            jae     ich_DOS4G
-            xor     ebx, ebx
-        ich_DOS4G:
+            cmp     ebx, 4096               ; if < 4 kb, leave
+			jb		ich_end
+         ich_DOS4G:
             mov     dword ptr [dpminfo], ebx
 
 endif           ; --------------------------------
@@ -257,7 +257,6 @@ addheap endp
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
 
 malloc  proc
-
 ;-------B52-------
 if      MEM_STATS        
         add     mem_needed,ecx
