@@ -46,14 +46,6 @@ common_key_handler      proc far
 ; ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ-ÄÄ-Ä---ú-úú-úúúúúú ú  ú
 ;   Nitro! Nitro! Nitro! Nitro! Nitro! Nitro! Nitro! Nitro! Nitro! Nitro!
 ;                          ú  ú úúúú-úú-ú--Ä-Ä-ÄÄ-ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-        push    eax
-        ; keyboard controller acknowledge
-        in al,61h
-        or al,1 SHL 7
-        out 61h,al
-        and al,127
-        out 61h,al
-        pop     eax
 
         mov     ebx,[eax*4+key_array]
         cmp     ebx,-1
@@ -61,17 +53,18 @@ common_key_handler      proc far
                 call    ebx
         no_reaction:
 
-        ; master irq controller acknowledge
-        mov     al,20h
-        out     20h,al
-
-        popad
-        pop     gs fs es ds
-        iretd
+		popad
+		pop		gs fs es ds
+		; Chain with previous keyboard irq handler.
+		; Previous handler should acknowledge the keyboard controller and the master irq controller.
+		jmp fword ptr cs:old_handler
 common_key_handler      endp
 
+old_handler				dd ?
+						dw ?
+
 ; offsets to call with each keyboard event
-key_array       dd 102+128 dup(-1)
+key_array				dd 102+128 dup(-1)
 
 lock_end:       ; memory will be locked until here...
 
@@ -167,8 +160,6 @@ remove_key      proc
 remove_key      endp
 
 .data?
-old_handler     dd ?
-                dw ?
 keyb_map        db 128 dup (?)
 end
 
