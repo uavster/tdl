@@ -63,7 +63,9 @@ ENDS
 ;               EAX = Frame X size
 ;               EBX = Frame Y size
 ;               ECX = Bytes per pixel
-;               EDX = Frames (1)
+;               EDX = Total frames to decode (1)
+;               ESI = Actual image frames (1)
+;				EBP = Frames per second in fixed point (16.16) (0)
 ;          CF = 1 if not
 ;               EAX = Error code (MALLOC_ERROR, FREE_ERROR, INVALID_FORMAT or any FILE_ERROR)
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
@@ -118,14 +120,13 @@ PCXTestFile     proc
         call    free
         pop     ecx ebx eax
         ErrorCode FREE_ERROR
-        mov     edx,1           ; 1 frame
+        mov     edx,1           ; 1 frame to decode
+        mov		esi,1			; 1 visual frame
+        xor		ebp,ebp			; 0 fps
         clc
         ret
 
         sig_error:
-        mov     ebx,TestPool
-        call    free
-        ErrorCode FREE_ERROR
         stc
         mov     eax,INVALID_FORMAT
         ret
@@ -280,11 +281,12 @@ DecodeImage     endp
 ; NOTE: 8 bits files are stored as 8 bits + palette (B:G:R:0)
 ;       24 bits (3 planes) files are stored as 24 bits (B:G:R:0)
 ;
-; INPUT  : ECX = Number of frame to decompress
+; INPUT  -> ECX = Number of frame to decompress
 ;
 ; OUTPUT : CF = 0 if success
 ;               EAX -> Image data buffer (Image+Palette)
 ;               EBX = Pointer to 8 bit palette or NULL if image is true-color
+;				ECX = Skipped frames
 ;          CF = 1 if error
 ;               EAX = Error code
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
@@ -345,6 +347,7 @@ LoadPCXFile     proc
                 jnz     convert_colors
                 pop     eax
         no_pal:
+        xor	ecx,ecx
         clc
         ret
 

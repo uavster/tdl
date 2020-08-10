@@ -78,6 +78,8 @@ InitVirtualFrameRate    proc
         call    add_timer
         mov     al,1
         jc      init_error
+        movf	eax,DEFAULT_TIMMING
+        call	SetSyncTimerBaseFreqFloat
         ret
 
         init_error:
@@ -114,8 +116,11 @@ ForceVirtualFrameRate   proc
         dont_wait_vr:
         mov     time,0
         mov     ebx,offset frame_count
+        push	eax
         call    add_timer
+        pop		eax
         jc      force_error
+        call	SetSyncTimerBaseFreqFloat
         xor     eax,eax
         clc
         ret
@@ -169,9 +174,56 @@ IncFloat        proc
         ret
 IncFloat        endp
 
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Gets the frequency of the internal VFR timer.
+;
+; OUTPUT : EAX -> Timer frequency (float)
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+GetSyncTimerBaseFreqFloat	proc
+		movf	eax,VFRFreqFloat
+		ret
+GetSyncTimerBaseFreqFloat	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Stores the frequency of the internal VFR timer in float (VFRFreqFloat), and
+; fixed point 16.16 format (VFRFreqFixedPoint).
+;
+; INPUT : EAX -> Timer frequency (float)
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetSyncTimerBaseFreqFloat	proc
+		mov		VFRFreqFloat,eax
+		fld		VFRFreqFloat
+		mov		VFRFreqFixedPoint,010000h
+		fimul	VFRFreqFixedPoint
+		fistp	VFRFreqFixedPoint
+		ret
+SetSyncTimerBaseFreqFloat	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Gets the frequency of the internal VFR timer.
+;
+; OUTPUT : EAX -> Timer frequency (fixed point 16.16)
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+GetSyncTimerBaseFreqFixedPoint	proc
+		mov		eax,VFRFreqFixedPoint
+		ret
+GetSyncTimerBaseFreqFixedPoint	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Gets the elapsed ticks since the internal VFR timer was started.
+;
+; OUTPUT : EAX -> Timer ticks
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+GetSyncTimerTicks	proc
+		mov		eax,time
+		ret
+GetSyncTimerTicks	endp
+
 .data
 TimeStamp       dd 0
 ElapsedTime     dd 0
+VFRFreqFloat	dd 0
+VFRFreqFixedPoint dd 0
 
 .data?
 trash           dd ?

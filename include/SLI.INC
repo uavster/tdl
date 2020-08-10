@@ -12,6 +12,11 @@ SLIBlitAlphaMap  EQU 2
 SLIMaskedColor   EQU 4
 SLIScaled        EQU 4*2
 
+; Animation modes
+SLIAnimNormal		EQU 0
+SLIAnimForwardLoop	EQU 1
+SLIAnimPingPongLoop EQU 2
+
 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ;³ CreateSLI:           aloja una animaci¢n vacia en SLI
 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -118,6 +123,34 @@ global  GetFrame : NEAR
 global  SetFrame : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Sets the frame rate of a multiframe SLI.
+;
+; INPUT  : ESI -> SLI
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global	AnimateSLI : NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Sets the frame rate of a multiframe SLI.
+;
+; INPUT  : ESI -> SLI
+;		   EAX = Timer ticks
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global	AnimateSLIWithTicks : NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Sets the frame rate of a multiframe SLI.
+;
+; INPUT  : EAX -> SLI
+;          EBX = Fixed point (16.16) frame rate in frames per second
+;
+; OUTPUT : CF = 0 if ok
+;				EAX = NULL
+;		   CF = 1 if error
+;				EAX = Error code				
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global SetFrameRate : NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Devuelve el puntero a un frame determinado
 ;
 ; INPUT  : EAX -> SLI
@@ -220,6 +253,30 @@ global  ClearCurrentFrame : NEAR
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global  SetAlpha : NEAR
 
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Pone el modo de animación
+;
+; INPUT : EAX -> SLI
+;         BL = Modo de animación
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global  SetAnimMode : NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Pone el inicio del loop de animación
+;
+; INPUT : EAX -> SLI
+;         EBX = Frame inicial del loop
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global  SetAnimLoopStartFrame : NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Pone el final del loop de animación
+;
+; INPUT : EAX -> SLI
+;         EBX = Frame final del loop
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global  SetAnimLoopEndFrame : NEAR
+
 ;   Estructura de punto
 SLP struc
     SLPX    dd ?
@@ -265,6 +322,10 @@ SLI struc
     SLIFrame        dd  ?   ; Frame actual de la animacion 16.16
     SLITotalFrames  dd  ?   ; Numero de frames de la animacion 16.16
     SLIFrameRate    dd  ?   ; Incremento de frames en 16.16
+    SLIStartTicks	dd	?	; Valor del timer la última vez que se cambió el frame actual manualmente o la velocidad de reproducción
+    SLIStartFrame	dd	?	; Frame de inicio de animación en 16.16
+    SLILoopStart	dd  ?	; Frame de inicio del loop de animación
+    SLILoopEnd		dd	?	; Frame final del loop de animación
     SLIFramePtr     dd  ?   ; Puntero al frame actual
 
     SLIPImages      dd  ?   ; puntero a la lista de punteros de frames
@@ -274,6 +335,12 @@ SLI struc
     SLIPalette      dd  256 dup(?)   ; paleta asociada si no la tiene = NULL
     SLILitTable     dd  ?            ; puntero a una tabla de conversion si no la tiene = NULL
     SLISBufferNfo   dd  ?            ; Datos para los SbufferSLI
+	; Loops will not work well when the end of the loop in fixed point 16.16
+	; is above the range of a signed dword (2^31-1). That's 32,768 frames.
+	SLIAnimMode		db  ?   ; 0 - Normal
+							; 1 - Forward loop
+							; 2 - Ping pong loop							
+	SLIPlayingBackwards	db	?
     ends
 
 ; Estructura para tratar temporales

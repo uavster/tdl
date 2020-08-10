@@ -7,13 +7,14 @@
 .model flat
 .code
         INCLUDE loader.inc
-        INCLUDE pcx.inc
         INCLUDE stderror.inc
         INCLUDE sli.inc
         INCLUDE blitter.inc
+        INCLUDE pcx.inc
+        INCLUDE fli.inc
 
-GRAPHIC_FORMATS EQU 1
-LOAD_PROCS      EQU offset PCXProcs
+GRAPHIC_FORMATS EQU 2
+LOAD_PROCS      EQU offset PCXProcs, offset FLIProcs
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Loads a graphic file into a memory SLI
@@ -26,6 +27,7 @@ LOAD_PROCS      EQU offset PCXProcs
 ;               EBX -> Memory SLI
 ;          CF = 1 if error
 ;               EAX = Error code
+;               EBX = NULL
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 LoadGFX proc
         push    ebp
@@ -37,94 +39,132 @@ LoadGFX proc
                 mov     edx,eax
                 mov     edi,[LoadProcs+esi*4]
                 push    edi
-                call    [edi.TestProc]
+                call    [Loader ptr edi.TestProc]
                 mov     real_x,eax
                 mov     real_y,ebx
                 mov     real_c,ecx
-                mov     real_frames,edx
+                mov     real_frames,esi
+                mov		encoded_frames,edx
+                mov		real_fps,ebp
                 pop     edi
-                mov     ebp,eax
-                pop     esi eax ecx
+                pop     esi ebx ecx
                 jnc     found_format
-                cmp     ebp,INVALID_FORMAT
+                cmp     eax,INVALID_FORMAT
                 jnz     load_error
+				mov		eax,ebx
                 inc     esi
         loop    try_formats
-        stc
         mov     eax,INVALID_FORMAT
-        pop     ebp
-        ret
+		jmp		load_error
 
-        found_format:
+        found_format:       
         mov     format_handler,edi
-        mov     edx,eax
-        call    [edi.InitProc]
-        ErrorCodePOP eax, ebp
+        mov     edx,ebx
+        call    [Loader ptr edi.InitProc]
+        jc      load_error
 
         mov     eax,real_x
-        mov     ebx,real_Y
+        mov     ebx,real_y
         mov     ecx,real_c
         shl     ecx,3
         mov     edx,1
         call    CreateVoidSLI
-        ErrorCodePOP eax, ebp
+        jc      load_error
         mov     source_sli,ebx
 
         mov     eax,real_x
         mov     ebx,real_y
-        mov     ecx,sli_c
+        mov     ecx,sli_c        
         mov     edx,real_frames
         call    CreateSLI
-        ErrorCodePOP eax, ebp
+        jc      load_error
         mov     our_sli,ebx
 
-        xor     ecx,ecx
+        ; Set fps
+        mov		eax,our_sli
+        mov		ebx,real_fps
+        call	SetFrameRate
+        jc		load_error
+
+        mov		cur_frame, 0
+        mov		decoded_frame,0
         decompress_frames:
-                push    ecx
-                mov     edi,format_handler
-                call    [edi.LoadProc]
-                ErrorCodePOP eax, ebp
+				; Load image
+                mov     edi, format_handler
+                mov		ecx, cur_frame	; Frame number to decompress
+                call    [Loader ptr edi.LoadProc]
+                jc      load_error             
+                
+                ; If frame was skipped, don't do anything with it
+                test	ecx,ecx
+                jz		no_skipped_frames
+						add	cur_frame,ecx
+				        jmp	decode_next_frame
+				no_skipped_frames:
+				        
+                ; Set palette, if any
                 push    eax
-                mov     eax,source_sli
+                mov     eax, source_sli
                 call    SetPalette
                 pop     ecx
+                
+                ; Set frame pointer
                 mov     eax,source_sli
-                xor     ebx,ebx         ; Frame 0
+                xor		ebx, ebx	; Use frame 0 of temporary SLI
                 call    SetFramePtr
+				jc		load_error
+                
+                ; Set current frame for blitting
                 mov     eax,source_sli
-                xor     ebx,ebx
+                xor		ebx, ebx
                 call    SetFrame
-                mov     esi,source_sli
-                mov     edi,our_sli
-                call    Blit
-                pop     ebx
-                ErrorCodePOP eax, ebp
+				jc		load_error				
+                
+                ; Set frame number of destination SLI
                 mov     eax,our_sli
-                inc     ebx
-                push    ebx
+                mov		ebx, decoded_frame	; Current frame number
                 call    SetFrame
-                pop     ecx
-        cmp     ecx,real_frames
+				jc		load_error
+                
+                ; Blit source SLI to destination SLI
+                mov     esi, source_sli
+                mov     edi, our_sli
+                call    Blit
+                jc      load_error
+                
+                mov		eax,our_sli
+                mov		eax,[eax.SLIFramePtr]
+                inc		decoded_frame
+		        inc		cur_frame
+                
+        decode_next_frame:
+        mov		eax, encoded_frames
+        cmp     cur_frame, eax
         jnz     decompress_frames
-
+        
+		; Free temporary SLI
         mov     eax,source_sli
         call    DestroySLI
-        ErrorCodePOP eax, ebp
+        jc      load_error
+        
+        ; Set destination SLI to first frame
         mov     eax,our_sli
         xor     ebx,ebx
         call    SetFrame
 
+		; Cleanup 
         mov     edi,format_handler
-        call    [edi.EndProc]
-        ErrorCodePOP eax, ebp
+        call    [Loader ptr edi.EndProc]
+        jc      load_error
 
+		; Return values
         mov     ebx,our_sli
-        xor     eax,eax
         clc
         pop     ebp
         ret
 
         load_error:
+        xor     ebx,ebx
         stc
         pop     ebp
         ret
@@ -139,8 +179,12 @@ real_x          dd ?
 real_y          dd ?
 real_c          dd ?
 real_frames     dd ?
+encoded_frames  dd ?
+real_fps		dd ?
 source_sli      dd ?
 our_sli         dd ?
 format_handler  dd ?
+cur_frame		dd ?
+decoded_frame	dd ?
 
 end

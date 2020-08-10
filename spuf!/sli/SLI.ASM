@@ -28,6 +28,8 @@
     include     memcpy.inc
     include     stderror.inc
     include     sli.inc
+    include		sync.inc
+    include		assert.inc
 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ;³ AllocateSLI:         aloja una estructura SLI
@@ -47,9 +49,9 @@ AllocateSLI     proc
                 pop     ecx
                 ErrorCode MALLOC_ERROR
                 lea     eax,[ebx+size SLI]
-                mov     [ebx.SLIPImages],eax
+                mov     [SLI ptr ebx.SLIPImages],eax
                 shl     ecx,16
-                mov     [ebx.SLITotalFrames],ecx
+                mov     [SLI ptr ebx.SLITotalFrames],ecx
                 xor     eax,eax
                 ret
                 endp
@@ -100,6 +102,8 @@ SetDefProperties        proc
         mov     [SLI ptr edi.SLIPitch], eax
         shl     edx,16
         mov     [SLI ptr edi.SLITotalFrames], edx
+        mov		[SLI ptr edi.SLILoopEnd],edx
+		sub		[SLI ptr edi.SLILoopEnd],010000h
         shr     edx,16
         mov     [SLI ptr edi.SLIColorBits], ecx
         mov     [edi.SLIPos.SLRR1.SLPX],0
@@ -122,6 +126,9 @@ SetDefProperties        proc
         mov     [SLI ptr edi.SLIFrame], 0
         mov     [SLI ptr edi.SLIFrameRate], 1 SHL 16
         mov     [SLI ptr edi.SLILitTable], 0
+        mov		[SLI ptr edi.SLIAnimMode], 0
+        mov		[SLI ptr edi.SLILoopStart], 0
+        mov		[SLI ptr edi.SLIPlayingBackwards],0
         ret
 SetDefProperties        endp
 
@@ -174,6 +181,7 @@ SetFramePointers        endp
 ;³                      EAX = NULL
 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 CreateSLI       proc
+;mov cbits,ecx
                 push    ebp
                 call    NormalizeBits
                 ErrorCodePOP eax, ebp
@@ -189,17 +197,23 @@ CreateSLI       proc
                 shl     eax,2
                 add     ecx,eax         ; + size LISTA_PUNTEROS_FRAME
                 call    malloc
-                ErrorCodePOP MALLOC_ERROR, ebp
+                ErrorCodePOP MALLOC_ERROR, edx ecx ebx eax ebp
                 mov     edi, ebx
 
                 pop     edx ecx ebx eax
 
                 call    SetDefProperties
-
+				push	eax ebx ecx edx edi
                 call    SetFramePointers
-
+                pop		eax
+                push	eax
+                ; Start animation at frame 0      
+                xor		ebx,ebx 
+                call	SetFrame
+                pop		edi edx ecx ebx eax
                 push    edi
 
+				; Clear frame with zeros
                 mov     edi, esi
                 mul     edx
                 mul     ebx
@@ -222,7 +236,7 @@ CreateSLI       proc
                 clc
                 ret
                 endp
-
+;cbits dd ?
 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ;³ CreateVoidSLI:       aloja una animaci¢n vacia en SLI sin buffer
 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -240,9 +254,9 @@ CreateVoidSLI   proc
                 push    eax ebx ecx edx
                 mov     eax,edx
                 call    AllocateSLI
+                ErrorCodePOP eax, edx ecx ebx edi
                 mov     edi,ebx
                 pop     edx ecx ebx eax
-                ErrorCode edi
                 mov     [SLI ptr edi.SLIFramePtr], 0
 
                 call    SetDefProperties
@@ -385,7 +399,7 @@ SetPalette      proc
         test    ebx,ebx
         jz      no_palette
         mov     esi,ebx
-        lea     edi,[eax.SLIPalette]
+        lea     edi,[SLI ptr eax.SLIPalette]
         mov     ecx,256
         rep     movsd
         no_palette:
@@ -416,17 +430,35 @@ GetFrame        endp
 ;          CF = 1 si error
 ;               EAX = Error code (INVALID_FRAME)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-SetFrame        proc
+SetFrame		proc
+		shl		ebx,16
+		call	SetFrameFP16
+		ret
+		endp
+		
+SetFrameFP16	proc
+		; Reset animation start time
+		push	eax
+		call	GetSyncTimerTicks
+		mov		ecx,eax
+		pop		eax
+		mov		[eax.SLIStartTicks],ecx
+		; Call internal function
+		mov		[eax.SLIStartFrame],ebx
+		call	SetFrame_
+		ret
+		endp
+
+SetFrame_       proc
         mov     ecx,[eax.SLITotalFrames]
-        shr     ecx,16
         cmp     ebx,ecx
         jae     setframe_error
 
+        mov     [eax.SLIFrame],ebx
+        shr		ebx,16
         mov     ecx,[eax.SLIPImages]
         mov     edx,[ecx+ebx*4]
         mov     [eax.SLIFramePtr],edx
-        shl     ebx,16
-        mov     [eax.SLIFrame],ebx
         xor     eax,eax
         clc
         ret
@@ -437,6 +469,116 @@ SetFrame        proc
         ret
         endp
 
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Sets the frame rate of a multiframe SLI.
+;
+; INPUT  : EAX -> SLI
+;          EBX = Fixed point frame rate in frames per second
+;
+; OUTPUT : CF = 0 if ok
+;				EAX = NULL
+;		   CF = 1 if error
+;				EAX = Error code				
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetFrameRate    proc
+		mov		[eax.SLIFrameRate], ebx
+        xor     eax,eax
+        clc
+        ret
+        endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Sets the frame rate of a multiframe SLI.
+;
+; INPUT  : ESI -> SLI
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+AnimateSLI	proc
+		; cur_frame = start_frame + ((cur_ticks - start_ticks) * frames_per_second) / ticks_per_second
+		call	GetSyncTimerTicks
+		call	AnimateSLIWithTicks
+		ret
+		endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Sets the frame rate of a multiframe SLI.
+;
+; INPUT  : ESI -> SLI
+;		   EAX = Timer ticks
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+AnimateSLIWithTicks	proc
+		sub		eax,[esi.SLIStartTicks]		
+		mul		[esi.SLIFrameRate]	
+		push	eax edx	
+		call	GetSyncTimerBaseFreqFixedPoint
+		mov		ebx,eax
+		pop		edx eax
+		; EDX:EAX = (cur_ticks - start_ticks) * (frames_per_second << 16)
+		; EBX = ticks_per_second << 16
+		shld	edx,eax,16
+		shl		eax,16
+		; EDX:EAX = ((cur_ticks - start_ticks) * frames_per_second) << 32
+		div		ebx
+		; EDX:EAX = (((cur_ticks - start_ticks) * frames_per_second) / ticks_per_second) << 16
+		; We only take EAX. Therefore, the maximum frame span for 30 fps animation is 65535/30 = 36 min.
+		cmp		[esi.SLIPlayingBackwards],0
+		jne		play_backwards
+			add		eax,[esi.SLIStartFrame]	; Frame # in 16.16 fixed point
+			jmp		after_frame_update
+		play_backwards:
+			sub		eax,[esi.SLIStartFrame]
+			neg		eax
+		after_frame_update:
+		; Prepare EAX and EBX to call SetFrameFP16 and SetFrame_
+		mov		ebx,eax
+		mov		eax,esi
+		; If it's a loop, handle loop ends and resync with timer
+		cmp		[esi.SLIAnimMode],SLIAnimNormal
+		jne		no_anim_normal
+				cmp		ebx,[esi.SLITotalFrames]
+				jb		no_resync
+						mov	ebx,[esi.SLITotalFrames]
+						sub	ebx,010000h
+						call SetFrameFP16
+						ret
+		no_anim_normal:
+		cmp		[esi.SLIAnimMode],SLIAnimForwardLoop
+		jne		no_fw_loop
+				cmp		ebx,[esi.SLILoopEnd]
+				jbe		no_resync
+						sub	ebx,[esi.SLILoopEnd]
+						add ebx,[esi.SLILoopStart]
+						call SetFrameFP16												
+						ret
+		no_fw_loop:
+		cmp		[esi.SLIAnimMode],SLIAnimPingPongLoop
+		jne		no_resync
+				cmp		[esi.SLIPlayingBackwards],0
+				jne		pp_loop_bw
+						; Forward part of the loop
+						cmp		ebx,[esi.SLILoopEnd]
+						jle		no_resync
+								sub	ebx,[esi.SLILoopEnd]
+								neg	ebx
+								mov [esi.SLIPlayingBackwards],1
+								add ebx,[esi.SLILoopEnd]
+								call SetFrameFP16
+								ret										
+				pp_loop_bw:
+						; Backwards part of the loop
+						cmp		ebx,[esi.SLILoopStart]
+						jge		no_resync
+								sub	ebx,[esi.SLILoopStart]
+								neg	ebx
+								mov	[esi.SLIPlayingBackwards],0
+								add ebx,[esi.SLILoopStart]
+								call SetFrameFP16										
+								ret
+		no_resync:
+		; No loop ends: set the frame without resyncing with timer
+		call	SetFrame_
+		ret
+		endp
+        
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Devuelve el puntero a un frame determinado
 ;
@@ -525,7 +667,7 @@ SetMaskColor    endp
 ;                             con m scara)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetBlitType     proc
-        mov     [eax.SLIBlitType],ebx
+        mov     [SLI ptr eax.SLIBlitType],ebx
         ret
 SetBlitType     endp
 
@@ -593,9 +735,68 @@ GetDimensions   endp
 ;         EBX = Alpha constante o puntero al mapa de alphas
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetAlpha        proc
-        mov     [eax.SLIAlpha],ebx
+        mov     [SLI ptr eax.SLIAlpha],ebx
         ret
 SetAlpha        endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Pone el modo de animación
+;
+; INPUT : EAX -> SLI
+;         BL = Modo de animación
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetAnimMode proc
+		movzx	ebx,bl
+		AssertD ebx,_leu,SLIAnimPingPongLoop
+		mov		[eax.SLIAnimMode],bl
+		ret
+SetAnimMode endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Pone el inicio del loop de animación
+;
+; INPUT : EAX -> SLI
+;         EBX = Frame inicial del loop
+; OUTPUT: CF = 0 si ok
+;         CF = 1 si error
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetAnimLoopStartFrame	proc
+		shl	ebx,16
+		cmp	ebx,[eax.SLITotalFrames]
+		jb salsf_not_above_upper_limit
+			mov	ebx,[eax.SLITotalFrames]
+			sub	ebx,010000h
+			mov [eax.SLILoopStart],ebx
+			stc
+			ret
+		salsf_not_above_upper_limit:
+		mov [eax.SLILoopStart],ebx
+		clc
+		ret
+SetAnimLoopStartFrame	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Pone el final del loop de animación
+;
+; INPUT : EAX -> SLI
+;         EBX = Frame final del loop
+; OUTPUT: CF = 0 si ok
+;         CF = 1 si error
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetAnimLoopEndFrame	proc
+		shl	ebx,16
+		cmp	ebx,[eax.SLITotalFrames]
+		jb salef_not_above_upper_limit
+			mov	ebx,[eax.SLITotalFrames]
+			sub	ebx,010000h
+			mov [eax.SLILoopEnd],ebx
+			stc
+			ret
+		salef_not_above_upper_limit:
+		mov [eax.SLILoopEnd],ebx
+		clc
+		ret
+SetAnimLoopEndFrame	endp
 
 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ;³ ClearCurrentFrame:   Borra el frame actual al color dado
