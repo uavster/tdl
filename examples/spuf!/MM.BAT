@@ -1,0 +1,3 @@
+cd ...
+maker
+cd examples\spuf!
