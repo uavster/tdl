@@ -14,6 +14,8 @@
 start:
         InitDPMI
 
+        ErrorExit "InitDPMI"
+        
         xor     eax,eax
         int     33h
         sub     eax,1
@@ -30,17 +32,14 @@ start:
         ErrorExit "Unable to load universe!"
         mov     rw,eax
 
-;        call    InitSGL
-;        ErrorExit "Unable to init graphics library"
-
-        mov     eax,320
-        mov     ebx,200
+        mov     eax,640
+        mov     ebx,480
         mov     ecx,16
         call    CreateVideoSLI
         ErrorExit "Unable to set video mode"
 
-        mov     eax,320
-        mov     ebx,200
+        mov     eax,640
+        mov     ebx,480
         mov     ecx,32
         mov     edx,1
         call    CreateSLI
@@ -51,7 +50,7 @@ start:
         call    SLI2SBuffer
         ErrorExit "Error converting SLI to SBuffer"
 
-        mov     eax,RENDER_LINE
+        mov     eax,RMet
         call    SetRenderMethode
 
         mov     eax,offset cam_name
@@ -60,7 +59,7 @@ start:
         call    GetObjectByName
         ErrorExit "Couldn't find camera"
 
-;        call    SetActiveCamera
+        call    SetActiveCamera
 
         mov     eax,offset mesh_name
         mov     ebx,rw
@@ -99,7 +98,7 @@ start:
         movf    eax,0.0
         movf    ebx,0.0
         movf    ecx,0.0
-;        call    SetLightTarget
+        call    SetLightTarget
 
 ;fld [eax.LightVector.x]
 ;fistp trash
@@ -125,8 +124,6 @@ start:
         mov     zc,ecx
 
         main:
-;                mov     eax,our_sli
-;                xor     ebx,ebx
                 mov     esi,back_sli
                 mov     edi,our_sli
                 call    Blit
@@ -392,7 +389,7 @@ cam_gamma       dd 0.0
 xc              dd 0.0
 yc              dd 0.0
 zc              dd -256.0
-RMet            dd RENDER_LINE
+RMet            dd RENDER_SOLID
 
 fname           db "skulmask.3ds",0
 cam_name        db "Camera01",0
