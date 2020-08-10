@@ -5,7 +5,7 @@
 # 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
 
 #DEBUG = 1
-INCDIR = $(TDLPATH)\include
+INCDIR = $(TDLPATH)\h
 LIBDIR = $(TDLPATH)\lib
 
 !ifdef DEBUG

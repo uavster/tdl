@@ -19,6 +19,7 @@
         public  GetInteger,TransToBase,PushToString,CopyFilename
         public  SearchExtension,ReadLine,UpperCase,CompareString
         public  GetEnvironmentVar, SkipCharacters, GetHexInteger
+		public	ReturnCode
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Gets a long integer from a hexadecimal string
