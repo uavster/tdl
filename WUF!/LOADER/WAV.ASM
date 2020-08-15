@@ -14,6 +14,8 @@
         INCLUDE alloc.inc
         INCLUDE wuf!.inc
 
+FORMAT_TAG_PCM	EQU 1
+
 WAVFile STRUC
         rID             db "    "       ; "RIFF" signature
         rLen            dd ?
@@ -98,7 +100,14 @@ LoadWAV proc
         call    load_data_chunk
         pop     ebx
         ErrorCode eax
+		
+		cmp		TestBuffer.wFormatTag, FORMAT_TAG_PCM
+		jz		is_pcm
+				mov	eax,INVALID_FORMAT
+				stc
+				ret
 
+		is_pcm:
         lea     eax,[ebx+size TWave]
         mov     [ebx.WavePtr],eax
         mov     eax,TestBuffer.dLen
@@ -107,14 +116,18 @@ LoadWAV proc
         mov     [ebx.BaseRate],eax
 
         movzx   edi,TestBuffer.nChannels
-        mov     esi,edi
-        dec     edi
-        shl     edi,1
+		dec		edi
+		cmp		edi,1
+		jle		num_channels_ok
+				mov	eax,INVALID_FIELD
+				stc
+				ret
 
-        movzx   eax,TestBuffer.nBlockAlign
-        xor     edx,edx
-        div     esi
-        dec     eax
+		num_channels_ok:
+		shl		edi,1
+        movzx   eax,TestBuffer.FormatSpecific	; This is bits per sample, if PCM
+		shr		eax,3
+		dec		eax
         or      eax,edi
         mov     [ebx.WaveType],eax
 

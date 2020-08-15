@@ -149,26 +149,43 @@ MixChannels     proc
                                 add     edx,[ebx.CurrentSample]
                                 test    [ebx.WaveType],1
                                 jz      its_8_bits
+										; 16-bit signed samples
                                         test    [ebx.WaveType],10b
-                                        jz      mono16
+                                        jz      mono16					
+												; Stereo, 16 bits
                                                 mov     ecx,[edx]
-                                                mov     edx,ecx
-                                                and     edx,0ffffh
-                                                shr     ecx,16
+                                                movsx   edx,cx
+                                                shl		ecx,16
+												movsx	ecx,cx
                                                 add     edx,ecx
-                                                shr     edx,8+1 ; Make 8 bits with mixing
+												ror		edx,1
+												add		edx,32767
+                                                shr     edx,8 ; Make 8 bits with mixing
                                                 add     [ebx.CurrentSample],4
                                                 jmp     take_sample_done
                                         mono16:
-                                                mov     dx,[edx]
-                                                and     edx,0ffffh
+												; Mono, 16 bits												
+                                                movsx   edx,word ptr [edx]
+												add		edx,32767
                                                 shr     edx,8   ; Make 8 bits
                                                 add     [ebx.CurrentSample],2
                                                 jmp     take_sample_done
                                 its_8_bits:
-                                        mov     dl,[edx]
-                                        and     edx,0ffh
-                                        inc     [ebx.CurrentSample]
+										; 8-bit unsigned samples
+										test	[ebx.WaveType],10b
+										jz		mono8
+												; Stereo, 8 bits
+												mov		dx,[edx]
+												movzx	ecx,dh
+												movzx	edx,dl
+												add		edx,ecx
+												shr		edx,1
+												add		[ebx.CurrentSample],2
+												jmp		take_sample_done
+										mono8:
+												; Mono, 8 bits
+												movzx   edx,byte ptr [edx]
+												inc     [ebx.CurrentSample]
                                 take_sample_done:
                                 add     eax,edx
                                 inc     ActiveChannels

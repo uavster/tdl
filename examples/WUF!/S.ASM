@@ -76,7 +76,7 @@ wrate           dd ?
 
 .data
 
-fname   db "them.wav",0
+fname   db "demo16.wav",0
 
 comment #
 sound_struc     TWave <0,offset my_sound,50000,44000,?>

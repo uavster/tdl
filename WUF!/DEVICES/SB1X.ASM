@@ -210,8 +210,6 @@ PlayIRQ         proc
         mov     ds,ax
         mov     es,ax
 
-xor byte ptr ds:[0b8000h],'!'
-
         ; DSP Acknowledge
         mov     edx,DSPDataAvail
         in      al,dx
