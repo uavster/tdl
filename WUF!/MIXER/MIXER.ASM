@@ -121,6 +121,11 @@ PlaySound       proc
         call    SearchFreeChannel
         ErrorCode eax
         mov     [eax.ChanWave],ebx
+		xor		edx,edx
+		mov		eax,[ebx.BaseRate]
+		shl		eax,8
+		div		MixFreq
+		mov		[ebx.SampleIncrement],eax
         mov     [ebx.CurrentSample],0
         ret
 PlaySound       endp
@@ -146,52 +151,52 @@ MixChannels     proc
                         test    ebx,ebx
                         jz      no_wave_in_channel
                                 mov     edx,[ebx.WavePtr]
-                                add     edx,[ebx.CurrentSample]
+                                mov     ecx,[ebx.CurrentSample]
+								shr		ecx,8
                                 test    [ebx.WaveType],1
                                 jz      its_8_bits
 										; 16-bit signed samples
                                         test    [ebx.WaveType],10b
                                         jz      mono16					
 												; Stereo, 16 bits
-                                                mov     ecx,[edx]
+                                                mov     ecx,[edx+ecx*4]
                                                 movsx   edx,cx
                                                 shl		ecx,16
 												movsx	ecx,cx
                                                 add     edx,ecx
 												ror		edx,1
-												add		edx,32767
+												add		edx,32768
                                                 shr     edx,8 ; Make 8 bits with mixing
-                                                add     [ebx.CurrentSample],4
                                                 jmp     take_sample_done
                                         mono16:
 												; Mono, 16 bits												
-                                                movsx   edx,word ptr [edx]
-												add		edx,32767
+                                                movsx   edx,word ptr [edx+ecx*2]
+												add		edx,32768
                                                 shr     edx,8   ; Make 8 bits
-                                                add     [ebx.CurrentSample],2
                                                 jmp     take_sample_done
                                 its_8_bits:
 										; 8-bit unsigned samples
 										test	[ebx.WaveType],10b
 										jz		mono8
 												; Stereo, 8 bits
-												mov		dx,[edx]
+												mov		dx,[edx+ecx*2]
 												movzx	ecx,dh
 												movzx	edx,dl
 												add		edx,ecx
 												shr		edx,1
-												add		[ebx.CurrentSample],2
 												jmp		take_sample_done
 										mono8:
 												; Mono, 8 bits
-												movzx   edx,byte ptr [edx]
-												inc     [ebx.CurrentSample]
+												movzx   edx,byte ptr [edx+ecx]
                                 take_sample_done:
                                 add     eax,edx
                                 inc     ActiveChannels
-                                mov     edx,[ebx.CurrentSample]
-                                cmp     edx,[ebx.WaveLen]
-                                jnz     no_samp_end
+								mov		ecx,[ebx.SampleIncrement]
+                                add     [ebx.CurrentSample],ecx
+								mov		ecx,[ebx.WaveLen]
+								shl		ecx,8
+                                cmp     [ebx.CurrentSample],ecx
+                                jb      no_samp_end
                                         mov     [esi.ChanWave],0
                                 no_samp_end:
                         no_wave_in_channel:
