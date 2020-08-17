@@ -110,15 +110,13 @@ LoadWAV proc
 		is_pcm:
         lea     eax,[ebx+size TWave]
         mov     [ebx.WavePtr],eax
-        mov     eax,TestBuffer.dLen
-        mov     [ebx.WaveLen],eax
         mov     eax,TestBuffer.nSamplesPerSec
         mov     [ebx.BaseRate],eax
 
         movzx   edi,TestBuffer.nChannels
 		dec		edi
 		cmp		edi,1
-		jle		num_channels_ok
+		jbe		num_channels_ok
 				mov	eax,INVALID_FIELD
 				stc
 				ret
@@ -130,6 +128,15 @@ LoadWAV proc
 		dec		eax
         or      eax,edi
         mov     [ebx.WaveType],eax
+
+		xor		edx,edx
+		mov     eax,TestBuffer.dLen
+		movzx	ecx,TestBuffer.nChannels
+		div		ecx
+		movzx	ecx,TestBuffer.FormatSpecific
+		shr		ecx,3
+		div		ecx
+        mov     [ebx.WaveLen],eax
 
         mov     eax,ebx
         ret
