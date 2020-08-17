@@ -25,12 +25,16 @@ start:
 ;        call    SetWUFProperties
 ;        ErrorExit "Error setting sound properties"
 
-        mov     eax,offset fname
+        mov     eax,offset fname8mono
         call    LoadWAVE
         ErrorExit "Error: Can't load WAVE file"
+        mov     wave8m_ptr,eax
 
-        mov     wave_ptr,eax
-
+        mov     eax,offset fname16stereo
+        call    LoadWAVE
+        ErrorExit "Error: Can't load WAVE file"
+        mov     wave16s_ptr,eax
+		
         lea     ebx,[eax.WaveType]
         mov     wtype,ebx
         lea     ebx,[eax.BaseRate]
@@ -61,14 +65,22 @@ wrate           dd ?
 ;        mov     eax,offset sound_struc1
 ;        call    PlaySound
 
-        mov     eax,wave_ptr
+        mov     eax,wave16s_ptr
         call    PlaySound
-
-        wait_bucle:
+				
+        wait_bucle:		
         in      al,60h                
         dec     al
         jnz     wait_bucle
 
+		mov		eax,wave8m_ptr
+        call    PlaySound
+
+        wait_bucle2:		
+        in      al,60h
+        cmp		al,2
+        jnz     wait_bucle2
+		
         call    CloseWUF
         ErrorExit "Error closing wuF!"
 
@@ -76,7 +88,8 @@ wrate           dd ?
 
 .data
 
-fname   db "demo16.wav",0
+fname8mono   	db "demo8.wav",0
+fname16stereo	db "demo16.wav",0
 
 comment #
 sound_struc     TWave <0,offset my_sound,50000,44000,?>
@@ -97,6 +110,7 @@ I=I XOR -1
 ENDM
 #
 .data?
-wave_ptr        dd ?
+wave8m_ptr	dd ?
+wave16s_ptr	dd ?
 
 end start
