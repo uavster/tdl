@@ -1,5 +1,9 @@
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Digital signal multiplexor
+; Digital mixer
+;
+; All existing channels are added in 32 bits. A constant compression factor
+; is applied before converting to the device's bit depth to prevent clipping,
+; assuming that channels signals will be rarely correlated.
 ;
 ; Author: Ignacio Mellado Bataller (a.k.a. B52 / the DarkRising)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -12,6 +16,11 @@
         INCLUDE wuf!.inc
         INCLUDE mixer.inc
         INCLUDE stderror.inc
+		
+
+; Compression factor in fixed point 24.8.
+; 1/3 seems to give a good trade-off. It prevents clipping and samples don't sound too low.
+COMPRESSION_FACTOR	EQU	256/3
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Initializes mixer with a given channel number
@@ -145,7 +154,6 @@ MixChannels     proc
                 mov     ebp,NumChannels
                 mov     esi,ChannelPool
                 xor     eax,eax
-                mov     ActiveChannels,0
                 walk_channels:
                         mov     ebx,[esi.ChanWave]
                         test    ebx,ebx
@@ -190,7 +198,6 @@ MixChannels     proc
 												movzx   edx,byte ptr [edx+ecx]
                                 take_sample_done:
                                 add     eax,edx
-                                inc     ActiveChannels
 								mov		ecx,[ebx.SampleIncrement]
                                 add     [ebx.CurrentSample],ecx
 								mov		ecx,[ebx.WaveLen]
@@ -204,10 +211,9 @@ MixChannels     proc
                 dec     ebp
                 jnz     walk_channels
                 xor     edx,edx
-                cmp     ActiveChannels,edx
-                jz      no_channels_to_mix
-                        div     ActiveChannels
-                no_channels_to_mix:
+				mov		ecx,COMPRESSION_FACTOR
+				mul		ecx
+				shr		eax,8
                 mov     [edi],al
                 inc     edi
         dec     nsamples
@@ -225,7 +231,5 @@ MixFreq         dd ?    ; Mixing frequency
 MixFlags        dd ?    ; (bit 0 : 8/16 bits , bit 1 : Mono/Stereo)
 
 nsamples        dd ?
-
-ActiveChannels  dd ?
 
 end
