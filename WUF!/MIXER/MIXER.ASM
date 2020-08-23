@@ -16,11 +16,19 @@
         INCLUDE wuf!.inc
         INCLUDE mixer.inc
         INCLUDE stderror.inc
+		INCLUDE utils.inc
 		
-
 ; Compression factor in fixed point 24.8.
 ; 1/3 seems to give a good trade-off. It prevents clipping and samples don't sound too low.
 COMPRESSION_FACTOR	EQU	256/3
+
+DEBUG_MIXER_PERFORMANCE			EQU 1
+DEBUG_MIXER_TIME_RESOLUTION		EQU 10000.0
+
+ifdef DEBUG_MIXER_PERFORMANCE
+		INCLUDE timer.inc
+		INCLUDE utils.inc
+endif
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Initializes mixer with a given channel number
@@ -44,10 +52,67 @@ OpenMixer       proc
         cld
         rep     stosb
         mov     ChannelPool,ebx
+		
+ifdef DEBUG_MIXER_PERFORMANCE
+		xor		eax,eax
+		mov		DebugPerfCounter,eax
+		mov		MixerRunTicks,eax
+		mov		NumMixerRuns,eax
+		movf	eax,DEBUG_MIXER_TIME_RESOLUTION
+		mov		ebx,offset MixerDebugPerf
+		call add_timer
+endif
         mov     eax,NO_ERROR
         clc
         ret
 OpenMixer       endp
+
+ifdef DEBUG_MIXER_PERFORMANCE
+MixerDebugPerf	proc
+		inc		DebugPerfCounter
+		ret
+		endp
+
+GetBytesPerSample	proc
+		mov		eax,MixFlags
+		and		eax,1
+		inc		eax
+		mov		ecx,MixFlags
+		shr		ecx,1
+		and		ecx,1
+		shl		eax,cl
+		ret
+		endp
+		
+PrintMixerPerf	proc
+		pushfd
+		cli
+		; Average mixer run time per DMA buffer
+		fild	MixerRunTicks
+		fild	NumMixerRuns
+		fdivp
+		fldf	DEBUG_MIXER_TIME_RESOLUTION
+		fdivp
+		fst		AvgMixerExecTime
+		; Maximum mixer run time per DMA buffer to keep sampling rate
+		fild	DebugMixBufferBytes
+		call	GetBytesPerSample
+		mov		BytesPerSample,eax
+		fild	BytesPerSample
+		fdivp
+		fild	MixFreq
+		fdivp
+		fdivp
+		fldf	100.0
+		fmulp
+		fstp	AvgMixexPercentCPU
+		mov		esi,offset PerfDataMsg
+		call	printf
+		popfd
+		ret
+		endp
+BytesPerSample	dd ?
+endif
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets the mixing properties
@@ -75,6 +140,11 @@ CloseMixer      proc
         mov     ebx,ChannelPool
         call    free
         ErrorCode FREE_ERROR
+ifdef DEBUG_MIXER_PERFORMANCE
+		mov		ebx,offset MixerDebugPerf
+		call	remove_timer
+		call	PrintMixerPerf
+endif
         mov     eax,NO_ERROR
         clc
         ret
@@ -146,6 +216,11 @@ PlaySound       endp
 ;          ECX = Destination buffer size in bytes
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 MixChannels     proc
+ifdef DEBUG_MIXER_PERFORMANCE
+		mov		ebx,DebugPerfCounter
+		sub 	MixerRunTicks,ebx
+		mov		DebugMixBufferBytes,ecx
+endif
         cmp     NumChannels,0
         jz      dont_mix_anything
         mov     edi,eax
@@ -220,6 +295,11 @@ MixChannels     proc
         jnz     walk_samples
 
         dont_mix_anything:
+ifdef DEBUG_MIXER_PERFORMANCE
+		mov		ebx,DebugPerfCounter
+		add 	MixerRunTicks,ebx
+		inc		NumMixerRuns
+endif
         ret
 MixChannels     endp
 
@@ -231,5 +311,23 @@ MixFreq         dd ?    ; Mixing frequency
 MixFlags        dd ?    ; (bit 0 : 8/16 bits , bit 1 : Mono/Stereo)
 
 nsamples        dd ?
+
+ifdef DEBUG_MIXER_PERFORMANCE
+DebugPerfCounter	dd ?
+MixerRunTicks		dd ?
+NumMixerRuns		dd ?
+AvgMixerExecTime	dq ?
+DebugMixBufferBytes	dd ?
+AvgMixexPercentCPU	dq ?
+endif
+
+.data
+ifdef DEBUG_MIXER_PERFORMANCE
+PerfDataMsg		db "Average mixer execution time: %dfn"
+				dd offset AvgMixerExecTime
+				db "s ; %dfn"
+				dd offset AvgMixexPercentCPU
+				db "%% of CPU", 13, 10, 0
+endif
 
 end
