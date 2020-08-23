@@ -14,6 +14,9 @@
         .code
 
         INCLUDE dpmi.inc
+		INCLUDE assert.inc
+		
+		DOUBLE_STRING_NUM_DECIMAL_DIGITS	EQU 6
 
         public  GetCommandParam,PrintFormatted,PrintChar,CopyString,StringLength
         public  GetInteger,TransToBase,PushToString,CopyFilename
@@ -644,8 +647,24 @@ prflab41:       ; Si no hay justificacion
 
 ; -B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-
 PRFlab521:
-        push    ebx edx esi
-        ; Convert float to int format as entero.mantisa
+        push    eax ebx ecx edx esi
+        ; Convert double to int format as entero.mantisa
+		mov		eax,factor_decimal
+		test	eax,eax
+		jnz		factor_is_precalculated
+				push	ebx
+				mov		ebx,10
+				xor		edx,edx
+				xor		eax,eax
+				inc		eax
+				mov		ecx,DOUBLE_STRING_NUM_DECIMAL_DIGITS
+				AssertD	ecx,_gtu,0
+				factor_precalc_loop:
+						mul		ebx
+				loop	factor_precalc_loop
+				mov		factor_decimal,eax
+				pop		ebx
+		factor_is_precalculated:
         fld     qword ptr [ebx]
         fist    entero
         fisub   entero
@@ -673,18 +692,30 @@ PRFlab521:
         mov     esi,offset PRFbuff
         call    StringLength
         mov     esi,offset PRFbuff
+		cmp		ecx,6
+		jz		print_mantisa
+		push	ecx
+		sub		ecx,6
+		neg		ecx
+		mov		al,'0'		
+		print_zeros:
+			push	esi
+			call	PrintChar
+			pop		esi
+		loop	print_zeros
+		pop		ecx
         print_mantisa:
                 lodsb
                 push    esi
                 call    PrintChar
                 pop     esi
         loop    print_mantisa
-        pop     esi edx ebx
+        pop     esi edx ecx ebx eax
         jmp     PRFlab1
 
 entero                  dd ?
 mantisa                 dd ?
-factor_decimal          dd 1000000      ; 6 decimales
+factor_decimal          dd 0
 old_control_word        dw ?
 ; -B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-
 
