@@ -226,7 +226,6 @@ PlayIRQ         proc
                 add     eax,DMA_PLAY_BUFFER_LENGTH
         its_first_half:
         xor     FirstPlayBuff,1
-        mov     ecx,DMA_PLAY_BUFFER_LENGTH
         call    MixChannels
         pop     es ds
         popad

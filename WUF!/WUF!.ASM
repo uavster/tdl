@@ -11,7 +11,8 @@
         INCLUDE wuf!.inc
         INCLUDE utils.inc
         INCLUDE mixer.inc
-
+		INCLUDE snddev.def
+		
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Initializes all the stuff needed by wuF!
 ;
@@ -38,16 +39,31 @@ InitWUF         proc
         call    SDPlay
         ErrorCode eax
 
-        ; Start mixer
         mov     esi,offset mix_msg
         call    Printf
-        mov     eax,MAX_CHANNELS
-        call    OpenMixer
-        ErrorCode eax
         ; Set mix props. to the maximum available with the hardware
         call    SDGetPlayProperties
+        ; Start mixer
         push    eax ebx
-        call    SetMixingProperties
+		mov		bh,bl
+		and		bl,1
+		inc		bl
+		shl		bl,3
+		shr		bh,1
+		and		bh,1
+		inc		bh
+		pop		ecx
+		push	ecx
+		mov		ch,cl
+		and		cl,1
+		shr		ch,1
+		and		ch,1
+		add		cl,ch				
+        mov     edx,DMA_PLAY_BUFFER_LENGTH
+		shr		edx,cl
+        mov     cl,MAX_CHANNELS		
+        call    OpenMixer
+        ErrorCodePOP eax, ebx eax
         pop     ebx eax
         mov     mix_rate,eax
         push    ebx

@@ -3,7 +3,7 @@
 ;       Ignacio Mellado Bataller ( B52 / the DarkRising )
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
-MAX_CHANNELS    EQU 256
+MAX_CHANNELS    EQU 64
 
 BufferInfo      STRUC
         PlayBuffer      dd ?
