@@ -7,6 +7,7 @@
 .code
         PLAY_ON                 EQU 1
         PLAY_OFF                EQU 0
+        DSP_8_BIT_PLAYBACK      EQU 14h
 
         MAX_PLAY_SAMPLE_RATE    EQU 22050
         MAX_PLAY_PROPS          EQU 0           ; (8 bits, mono)
@@ -38,7 +39,7 @@ BuildDevName    proc
         mov     esi,offset DevName
         call    StringLength
         mov     [DevName+ecx],' '
-        mov     eax,SBdma
+        movzx   eax,byte ptr SBdma
         mov     esi,offset dma_str
         mov     ebx,10
         call    TransToBase
@@ -158,9 +159,10 @@ StartPlay       proc
         call    WriteDSP
         jc      splay_error
         ; Program DMA chip        
-        mov     eax,SBdma
+		mov		al,DMA_SINGLECYCLE
+        mov     ah,SBdma
         mov     ebx,PlayBuff
-        mov     ecx,DMA_PLAY_BUFFER_LENGTH*2    ; double buffering
+        mov     ecx,DMA_PLAY_BUFFER_LENGTH
         call    DMAWriteToDevice
         ; Turn speakers on
         mov     al,DSP_SPEAKER_ON
@@ -213,6 +215,17 @@ PlayIRQ         proc
         ; DSP Acknowledge
         mov     edx,DSPDataAvail
         in      al,dx
+		; Program DMA controller for the next buffer
+		mov		al,DMA_SINGLECYCLE
+        mov     ah,SBdma
+        mov     ebx,PlayBuff
+        test    FirstPlayBuff,1
+        jz     	play_first_buffer
+                add     ebx,DMA_PLAY_BUFFER_LENGTH
+        play_first_buffer:
+        mov     ecx,DMA_PLAY_BUFFER_LENGTH
+        call    DMAWriteToDevice
+		; Program DSP for the next block
         EnableDSP
         ; IRQ acknowledge
         mov     al,20h

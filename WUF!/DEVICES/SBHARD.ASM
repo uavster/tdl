@@ -140,7 +140,7 @@ DetectBLASTER   proc
         mov     byte ptr [esi+1],0
         call    GetInteger
         jc      wrong_env_var
-        mov     SBdma,ecx
+        mov   	SBdma,cl
         call    FixRegisters
         clc
         wrong_env_var:
@@ -208,7 +208,9 @@ SBRegs  LABEL
 
 SBbase          dd ?
 SBirq           dd ?
-SBdma           dd ?
+SBdma           db ?
+				db ?
+				dw ?
 IrqLength       dd ?
 
 irq_ack_port    dd ?

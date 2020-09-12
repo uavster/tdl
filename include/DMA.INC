@@ -9,6 +9,7 @@ DMA_SIGNAL      EQU 1 SHL 6
 DMA_BLOCK       EQU 2 SHL 6
 DMA_CASCADE     EQU 3 SHL 6
 
+DMA_SINGLECYCLE EQU 0 SHL 4
 DMA_AUTOINIT    EQU 1 SHL 4
 
 ; DMA operation bits
@@ -79,7 +80,8 @@ global  DMASetup : NEAR
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Programs DMA chip to write to a device
 ;
-; INPUT : EAX = DMA channel to use
+; INPUT : AL = DMA_AUTOINIT for autoinitialize transfer, or DMA_SINGLECYCLE for single-cycle transfer
+; 		  AH = DMA channel to use
 ;         EBX = Physical base address to make transfer from
 ;         ECX = Bytes to transfer
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -88,7 +90,8 @@ global  DMAWriteToDevice : NEAR
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Programs DMA chip to read from a device
 ;
-; INPUT : EAX = DMA channel to use
+; INPUT : AL = DMA_AUTOINIT for autoinitialize transfer, or DMA_SINGLECYCLE for single-cycle transfer
+; 		  AH = DMA channel to use
 ;         EBX = Physical base address to make transfer to
 ;         ECX = Bytes to transfer
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ

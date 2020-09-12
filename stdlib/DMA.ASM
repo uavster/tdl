@@ -264,13 +264,13 @@ DMASetup   Endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Programs DMA chip to write to a device
 ;
-; INPUT : EAX = DMA channel to use
+; INPUT : AL = DMA_AUTOINIT for autoinitialize transfer, or DMA_SINGLECYCLE for single-cycle transfer
+; 		  AH = DMA channel to use
 ;         EBX = Physical base address to make transfer from
 ;         ECX = Bytes to transfer
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 DMAWriteToDevice        proc
-        mov     ah,al
-        mov     al,DMA_READ OR DMA_SIGNAL OR DMA_AUTOINIT
+        or      al,DMA_READ OR DMA_SIGNAL
         call    DMASetup
         ret
 DMAWriteToDevice        endp
@@ -278,13 +278,13 @@ DMAWriteToDevice        endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Programs DMA chip to read from a device
 ;
-; INPUT : EAX = DMA channel to use
+; INPUT : AL = DMA_AUTOINIT for autoinitialize transfer, or DMA_SINGLECYCLE for single-cycle transfer
+; 		  AH = DMA channel to use
 ;         EBX = Physical base address to make transfer to
 ;         ECX = Bytes to transfer
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 DMAReadFromDevice       proc
-        mov     ah,al
-        mov     al,DMA_WRITE OR DMA_SIGNAL OR DMA_AUTOINIT
+        or      al,DMA_WRITE OR DMA_SIGNAL
         call    DMASetup
         ret
 DMAReadFromDevice       endp

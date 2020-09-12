@@ -16,7 +16,6 @@
         DSP_DMA_STOP            EQU 0D0h
         DSP_DMA_CONTINUE        EQU 0D4h
         DSP_WRITE_TIME_CT       EQU 40h
-        DSP_8_BIT_PLAYBACK      EQU 14h
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Reads a byte from the DSP
@@ -65,7 +64,7 @@ global  SBReset : NEAR
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 global  SBbase          : DWORD
 global  SBirq           : DWORD
-global  SBdma           : DWORD
+global  SBdma           : BYTE
 global  IrqLength       : DWORD
 global  irq_ack_port    : DWORD
 
