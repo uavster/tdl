@@ -7,7 +7,7 @@
 
 ; SB hardware constants
 
-        SB_TIMEOUT              EQU 1000000
+        SB_TIMEOUT              EQU 65536
         SB_REGISTERS            EQU 7
 
         ; DSP commands

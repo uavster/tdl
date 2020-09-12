@@ -183,7 +183,7 @@ SBReset proc
         call    ReadDSP
         jc      reset_error
         cmp     al, 0AAh
-        jne ÿ   reset_error
+        jne     reset_error
         clc
         ret
 
