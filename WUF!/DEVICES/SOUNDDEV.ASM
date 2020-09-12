@@ -8,13 +8,13 @@
 .model flat
 .code
 
-        INCLUDE sb1x.inc
+        INCLUDE sb1xx.inc
         INCLUDE sounddev.inc
 
 SOUND_DEVICES   EQU 1
 
 ; Devices will be scanned in left-right order
-SoundDevices    dd offset SB1xDevice
+SoundDevices    dd offset SB1xxDevice
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Looks for an active Sound Device

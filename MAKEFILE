@@ -148,9 +148,9 @@ sbuffer.obj:     sbuffer.asm      sbuffer.inc      alloc.inc        memmgr.asm  
 #------------ wUF! ----------------
 
 wuf!.obj:       wuf!.asm        wuf!.inc        stderror.inc    sounddev.asm    sounddev.inc    utils.inc       utils.asm
-sounddev.obj:   sounddev.inc    sb1x.inc        sb1x.asm
+sounddev.obj:   sounddev.inc    sb1xx.inc       sb1xx.asm
 sbhard.obj:     sbhard.asm      sbhard.inc      dma.inc         dma.asm         utils.inc       utils.asm
-sb1x.obj:       sb1x.inc        sb1x.asm        dma.inc         dma.asm         sounddev.asm    sounddev.inc    stderror.inc    snddev.def      utils.asm       utils.inc
+sb1xx.obj:       sb1xx.inc      sb1xx.asm       dma.inc         dma.asm         sounddev.asm    sounddev.inc    stderror.inc    snddev.def      utils.asm       utils.inc
 mixer.obj:      mixer.asm       mixer.inc       wuf!.inc
 waveload.obj:   waveload.asm    waveload.inc    wav.asm         wav.inc
 wav.obj:        wav.asm         wav.inc         memmgr.asm      alloc.inc       filesys.asm     filesys.inc     waveload.asm     waveload.inc
@@ -177,7 +177,7 @@ tdl.lib:        stdc.obj        stdio.obj       count.obj       dpmi.obj\
                 blt32-24.obj    blt32-32.obj    clip.obj\
                 loader.obj      sli.obj         pcx.obj         fli.obj\
                 sbuffer.obj     gentri.obj      line.obj\
-                wuf!.obj        sounddev.obj    sb1x.obj        mixer.obj       sbhard.obj      waveload.obj    wav.obj\
+                wuf!.obj        sounddev.obj    sb1xx.obj       mixer.obj       sbhard.obj      waveload.obj    wav.obj\
                 dma.obj         list.obj        alpha.obj\
                 3ds.obj\
                 uniload.obj     stdc.obj        render.obj\

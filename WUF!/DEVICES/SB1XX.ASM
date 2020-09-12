@@ -1,5 +1,5 @@
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; SoundBlaster 1.x routines for sound input/output
+; Sound Blaster DSP 1.xx routines for audio input/output
 ;       Ignacio Mellado Bataller ( B52 / the DarkRising )
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 .386p
@@ -12,7 +12,7 @@
         MAX_PLAY_PROPS          EQU 0           ; (8 bits, mono)
 
         INCLUDE sounddev.inc
-        INCLUDE sb1x.inc
+        INCLUDE sb1xx.inc
         INCLUDE utils.inc
         INCLUDE dma.inc
         INCLUDE stderror.inc
@@ -353,12 +353,12 @@ SetRecProps     endp
 ; OUTPUT : CF = 0 if SB 1.x detected
 ;          CF = 1 otherwise
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-DetectBLASTER1x proc
+DetectBLASTER1xx	proc
         call    DetectBLASTER
         ErrorCode eax
         call    BuildDevName
         ret
-DetectBLASTER1x endp
+DetectBLASTER1xx	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Detects SB 1.x with direct hardware access
@@ -366,12 +366,12 @@ DetectBLASTER1x endp
 ; OUTPUT : CF = 0 if SB 1.x detected
 ;          CF = 1 otherwise
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-DetectHard1x    proc
+DetectHard1xx   proc
         call    SBDetectHard
         ErrorCode eax
         call    BuildDevName
         ret
-DetectHard1x    endp
+DetectHard1xx   endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets SB 1.x hardware capabilities
@@ -381,17 +381,17 @@ DetectHard1x    endp
 ;          ECX = Max. recording sample        
 ;          EDX = Max. recording sound properties (bit 0: 16 bits, bit 1: Stereo)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-Get1xCaps       proc
+Get1xxCaps      proc
         mov     eax,MAX_PLAY_SAMPLE_RATE
         mov     ebx,MAX_PLAY_PROPS
         ret
-Get1xCaps       endp
+Get1xxCaps      endp
 
 .data
-SB1xDevice      SoundDevice <offset DevName, offset DetectBLASTER1x, offset DetectHard1x, offset Init, offset Terminate, offset SBReset, offset StartPlay, offset StopPlay, offset StartRec, offset StopRec, offset GetSndBuffers, offset GetPlayProps, offset SetPlayProps, offset GetRecProps, offset SetRecProps, offset Get1xCaps>
+SB1xxDevice     SoundDevice <offset DevName, offset DetectBLASTER1xx, offset DetectHard1xx, offset Init, offset Terminate, offset SBReset, offset StartPlay, offset StopPlay, offset StartRec, offset StopRec, offset GetSndBuffers, offset GetPlayProps, offset SetPlayProps, offset GetRecProps, offset SetRecProps, offset Get1xxCaps>
 
 ; Device name
-DevName         db "[ SoundBlaster 1.x - A:"
+DevName         db "[ SoundBlaster 1.xx - A:"
 address_str     db ?,?,?,"h I:"
 irq_str         db ?,?," D:"
 dma_str         db ?," ]",0
