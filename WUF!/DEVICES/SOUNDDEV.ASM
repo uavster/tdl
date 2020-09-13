@@ -90,7 +90,7 @@ CloseSoundDevice        endp
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 GetSoundDeviceName      proc
         mov     esi,SDev
-        mov     eax,[esi.SDDeviceName]
+        call	[esi.SDGetDeviceName]
         ret
 GetSoundDeviceName      endp
 

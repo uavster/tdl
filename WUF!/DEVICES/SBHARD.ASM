@@ -142,10 +142,34 @@ DetectBLASTER   proc
         jc      wrong_env_var
         mov   	SBdma,cl
         call    FixRegisters
+		call	GetDSPVersion
+		mov		DSPVersion,ax
         clc
         wrong_env_var:
         ret
 DetectBLASTER   endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Gets the Sound Blaster DSP version
+;
+; OUTPUT -> CF = 0 if DSP version detected
+;				AH:AL = Major:minor version
+;			CF = 1 if error
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+GetDSPVersion	proc
+	mov		al,DSP_GET_VERSION
+	call	WriteDSP
+	jc		get_version_error
+	call 	ReadDSP
+	jc		get_version_error
+	push	eax
+	call	ReadDSP
+	pop		ebx
+	mov		ah,al
+	mov		al,bl
+	get_version_error:
+	ret
+GetDSPVersion	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Tries to detect SoundBlaster parameters with direct hardware access
@@ -192,7 +216,31 @@ SBReset proc
         ret
 SBReset endp
 
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Builds the name string of the Sound Blaster device
+; OUTPUT -> EAX -> ASCIIZ string with device name
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SBGetDevName	proc
+		mov		esi,offset DevNameFormat
+		mov		edi,offset DevName
+		call	FormatString
+		mov		eax,offset DevName		
+        ret
+SBGetDevName	endp
+
 .data
+; Device name
+DevNameFormat   db "[ SoundBlaster DSP v%bn"
+				dd offset DSPVersion
+				db ".%b02n"
+				dd offset DSPVersion+1
+				db " - A:%dhn"
+				dd offset SBbase
+				db "h I:%dn"
+				dd offset SBirq
+				db " D:%bn"
+				dd offset SBdma
+				db " ]",0
 
 ; SB registers
 SBRegs  LABEL
@@ -210,11 +258,13 @@ SBbase          dd ?
 SBirq           dd ?
 SBdma           db ?
 				db ?
-				dw ?
+DSPVersion		dw ?
 IrqLength       dd ?
 
 irq_ack_port    dd ?
 
+
+DevName			db size DevNameFormat dup(?)
 TempBuffer      db 128 dup(?)
 
 end

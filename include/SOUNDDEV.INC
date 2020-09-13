@@ -5,7 +5,7 @@
 
 ; Sound device information structure
 SoundDevice STRUC
-        SDDeviceName            dd 0
+        SDGetDeviceName         dd 0
         SDEnvDetection          dd 0
         SDHardDetection         dd 0
         SDDeviceInit            dd 0

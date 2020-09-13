@@ -22,34 +22,6 @@
         INCLUDE mixer.inc
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Builds the name string of the device
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-BuildDevName    proc
-        mov     eax,SBbase
-        mov     esi,offset address_str
-        mov     ebx,16
-        call    TransToBase
-        mov     esi,offset DevName
-        call    StringLength
-        mov     [DevName+ecx],'h'
-        mov     eax,SBirq
-        mov     esi,offset irq_str
-        mov     ebx,10
-        call    TransToBase
-        mov     esi,offset DevName
-        call    StringLength
-        mov     [DevName+ecx],' '
-        movzx   eax,byte ptr SBdma
-        mov     esi,offset dma_str
-        mov     ebx,10
-        call    TransToBase
-        mov     esi,offset DevName
-        call    StringLength
-        mov     [DevName+ecx],' '
-        ret
-BuildDevName    endp
-
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Initializes SB 1.x driver
 ;
 ; OUTPUT : CF = 0 if ok
@@ -64,7 +36,7 @@ Init    proc
         add     bl,8
         int     31h
         mov     OldIRQ.IRQOffset,edx
-        mov     OldIRQ.IRQSegment,ecx
+        mov     OldIRQ.IRQSegment,cx
         ; Allocate IRQ
         mov     ax,205h
         mov     ebx,SBirq
@@ -112,7 +84,7 @@ Terminate       proc
         mov     ebx,SBirq
         add     bl,8
         mov     edx,OldIRQ.IRQOffset
-        mov     ecx,OldIRQ.IRQSegment
+        mov     cx,OldIRQ.IRQSegment
         int     31h
         ; Freeing buffers
         mov     ebx,PlayBuff
@@ -369,7 +341,6 @@ SetRecProps     endp
 DetectBLASTER1xx	proc
         call    DetectBLASTER
         ErrorCode eax
-        call    BuildDevName
         ret
 DetectBLASTER1xx	endp
 
@@ -382,7 +353,6 @@ DetectBLASTER1xx	endp
 DetectHard1xx   proc
         call    SBDetectHard
         ErrorCode eax
-        call    BuildDevName
         ret
 DetectHard1xx   endp
 
@@ -401,13 +371,7 @@ Get1xxCaps      proc
 Get1xxCaps      endp
 
 .data
-SB1xxDevice     SoundDevice <offset DevName, offset DetectBLASTER1xx, offset DetectHard1xx, offset Init, offset Terminate, offset SBReset, offset StartPlay, offset StopPlay, offset StartRec, offset StopRec, offset GetSndBuffers, offset GetPlayProps, offset SetPlayProps, offset GetRecProps, offset SetRecProps, offset Get1xxCaps>
-
-; Device name
-DevName         db "[ SoundBlaster 1.xx - A:"
-address_str     db ?,?,?,"h I:"
-irq_str         db ?,?," D:"
-dma_str         db ?," ]",0
+SB1xxDevice     SoundDevice <offset SBGetDevName, offset DetectBLASTER1xx, offset DetectHard1xx, offset Init, offset Terminate, offset SBReset, offset StartPlay, offset StopPlay, offset StartRec, offset StopRec, offset GetSndBuffers, offset GetPlayProps, offset SetPlayProps, offset GetRecProps, offset SetRecProps, offset Get1xxCaps>
 
 ; Current sample rate
 PlaySampRate    dd MAX_PLAY_SAMPLE_RATE
@@ -419,7 +383,7 @@ PlayStatus      db 0
 
 IRQVector       STRUC
         IRQOffset       dd ?
-        IRQSegment      dd ?
+        IRQSegment      dw ?
 ENDS
 
 OldIRQ          IRQVector <>
