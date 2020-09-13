@@ -141,7 +141,8 @@ ENDM
 ;       Salida:         Nada.
 
         extrn           PrintFormatted:near     ; B52 (C compatibility)
-                                                      
+        extrn			FormatString:near
+		
         printf          EQU printformatted      ; B52 (C compatibility)
 
 Print   macro   etiqueta

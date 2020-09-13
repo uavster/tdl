@@ -18,7 +18,7 @@
 		
 		DOUBLE_STRING_NUM_DECIMAL_DIGITS	EQU 6
 
-        public  GetCommandParam,PrintFormatted,PrintChar,CopyString,StringLength
+        public  GetCommandParam,PrintFormatted,FormatString,PrintChar,CopyString,StringLength
         public  GetInteger,TransToBase,PushToString,CopyFilename
         public  SearchExtension,ReadLine,UpperCase,CompareString
         public  GetEnvironmentVar, SkipCharacters, GetHexInteger
@@ -360,7 +360,22 @@ UPClab3:
         ret
         endp
 
-PrintFormatted  proc
+FormatString	proc
+		mov		WriteCharToString_offset,edi
+		mov		CharCallback,offset WriteCharToString
+		call 	PrintFormatted_
+		mov		edi,WriteCharToString_offset
+		mov		byte ptr [edi],0
+		ret
+		endp
+		
+PrintFormatted	proc
+		mov		CharCallback,offset PrintChar
+		call	PrintFormatted_
+		ret
+		endp
+		
+PrintFormatted_ proc
         push    eax ebx ecx edx esi
         fnstcw  word ptr entero                 ; B52 - Setting rounding methode for float conversion
         mov     ax,word ptr entero
@@ -376,7 +391,7 @@ PRFlab1:
 
 PRFlab16:
 
-        call    PrintChar
+        call    [CharCallback]
         jmp     PRFlab1
 PRFlab2:
         pop     esi edx ecx ebx eax
@@ -420,7 +435,7 @@ PRFlab5:
         cmp     al,0
         je      PRFlab1
         push    ebx
-        call    PrintChar
+        call    [CharCallback]
         pop     ebx
         jmp     PRFlab5
 PRFlab6:        ; Imprimir una cadena en Uppercase
@@ -434,7 +449,7 @@ PRFlab7:
         je      PRFlab1
         push    ebx
         call    UpperCase
-        call    PrintChar
+        call    [CharCallback]
         pop     ebx
         jmp     PRFlab7
 
@@ -533,13 +548,13 @@ PRFlab29:
         jz      PRFlab33
         push    eax
         mov     al,'+'
-        call    PrintChar
+        call    [CharCallback]
         pop     eax
         jmp     PRFlab33
 PRFlab31:
         push    eax
         mov     al,'-'
-        call    PrintChar
+        call    [CharCallback]
         pop     eax
         neg     eax
         jmp     PRFlab33
@@ -608,7 +623,7 @@ prflab43:
         jz      prflab42
         mov     al,'0'
 prflab42:
-        call    PrintChar
+        call    [CharCallback]
         loop    prflab42
 
         test    edx,100000b
@@ -616,7 +631,7 @@ prflab42:
         test    edx,10000000000b
         jz      prflab46
         mov     al,'0'
-        call    PrintChar
+        call    [CharCallback]
 prflab46:
 
 
@@ -628,7 +643,7 @@ PRFlab45:
         lodsb
         cmp     al,0
         je      PRFlab12
-        call    PrintChar
+        call    [CharCallback]
         jmp     PRFlab45
 
 PRFlab12:
@@ -641,7 +656,7 @@ prflab41:       ; Si no hay justificacion
         or      ecx,ecx
         jnz     prflab11
         mov     al,'0'
-        call    PrintChar
+        call    [CharCallback]
         pop     esi
         jmp     prflab1
 
@@ -680,11 +695,11 @@ PRFlab521:
         print_entero:
                 lodsb
                 push    esi
-                call    PrintChar
+                call    [CharCallback]
                 pop     esi
         loop    print_entero
         mov     al,'.'
-        call    PrintChar
+        call    [CharCallback]
         mov     eax,mantisa
         mov     ebx,10
         mov     esi,offset PRFbuff
@@ -700,14 +715,14 @@ PRFlab521:
 		mov		al,'0'		
 		print_zeros:
 			push	esi
-			call	PrintChar
+			call	[CharCallback]
 			pop		esi
 		loop	print_zeros
 		pop		ecx
         print_mantisa:
                 lodsb
                 push    esi
-                call    PrintChar
+                call    [CharCallback]
                 pop     esi
         loop    print_mantisa
         pop     esi edx ecx ebx eax
@@ -718,7 +733,7 @@ mantisa                 dd ?
 factor_decimal          dd 0
 old_control_word        dw ?
 ; -B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-
-
+CharCallback			dd ?
 PRFbuff db      33      dup (0)         ; buffer para la impresion interna
                                         ; de los numeros
         endp
@@ -823,6 +838,17 @@ PrintChar       proc
         ret
 PRCbuff db      ?
         endp
+
+WriteCharToString	proc
+		push	edi
+		mov		edi,WriteCharToString_offset
+		mov		[edi],al
+		inc		edi
+		mov		WriteCharToString_offset,edi
+		pop		edi
+		ret
+WriteCharToString_offset	dd ?
+		endp
 
 ; 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ;       Acaba el programa
