@@ -228,6 +228,39 @@ SBGetDevName	proc
         ret
 SBGetDevName	endp
 
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+; Returns the time constant and actual sampling frequency for a desired
+; sampling frequency
+;
+; INPUT  : EAX = Desired sampling frequency
+;		   BL = Number of channels
+; OUTPUT : AL = Time constant
+;		   EBX = Actual sampling frequency
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+SBGetTimeConstant	proc
+		movzx	ebx,bl
+		mov		ecx,ebx
+		imul	ecx,eax
+        mov     eax,256000000
+        xor     edx,edx
+        div     ecx
+        sub     eax,65536
+        neg     eax
+		shr		eax,8
+		push	eax
+		; Reconstruct frequency from constant to get actual value
+		shl		eax,8
+		sub		eax,65536
+		neg		eax
+		imul	ebx,eax
+		mov		eax,256000000
+		xor		edx,edx
+		div		ebx
+		mov		ebx,eax
+		pop		eax
+        ret
+SBGetTimeConstant	endp
+
 .data
 ; Device name
 DevNameFormat   db "[ SoundBlaster DSP v%bn"

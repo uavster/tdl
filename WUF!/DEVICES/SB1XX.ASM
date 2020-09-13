@@ -9,7 +9,7 @@
         PLAY_OFF                EQU 0
         DSP_8_BIT_PLAYBACK      EQU 14h
 
-        MAX_PLAY_SAMPLE_RATE    EQU 22050
+        MAX_PLAY_SAMPLE_RATE    EQU 23000
         MAX_PLAY_PROPS          EQU 0           ; (8 bits, mono)
 
         INCLUDE sounddev.inc
@@ -22,12 +22,16 @@
         INCLUDE mixer.inc
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Initializes SB 1.x driver
+; Initializes SB 1.xx driver
 ;
 ; OUTPUT : CF = 0 if ok
 ;          CF = 1 if error
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 Init    proc
+		mov		eax,MAX_PLAY_SAMPLE_RATE
+		mov		ebx,MAX_PLAY_PROPS
+		call	SetPlayProps
+		jc		init_error
         call    SBReset
         jc      init_error
         ; Save old IRQ
@@ -99,22 +103,6 @@ Terminate       proc
 Terminate       endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Returns the time constant for a given sample rate
-;
-; INPUT  : EAX = Sample rate
-; OUTPUT : AL = Time constant
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-GetTimeCt       proc
-        mov     ebx,eax
-        mov     eax,1000000
-        xor     edx,edx
-        div     ebx
-        sub     eax,256
-        neg     eax
-        ret
-GetTimeCt       endp
-
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Starts playing sound from the playback buffer
 ;
 ; OUTPUT : CF = 0 if ok
@@ -126,8 +114,11 @@ StartPlay       proc
         mov     al,DSP_WRITE_TIME_CT
         call    WriteDSP
         jc      splay_error
-        mov     eax,PlaySampRate
-        call    GetTimeCt
+		call	GetPlayProps
+		shr		bl,1
+		and		bl,1
+		inc		bl
+        call    SBGetTimeConstant
         call    WriteDSP
         jc      splay_error
         ; Program DMA chip        
@@ -289,9 +280,15 @@ GetPlayProps    endp
 SetPlayProps    proc
         test    ebx,11b
         jnz     spp_error
-        cmp     eax,22050
+        cmp     eax,MAX_PLAY_SAMPLE_RATE
         ja      spp_error
-        mov     PlaySampRate,eax
+		mov		PlayProps,ebx
+		; Get actual frequency due to time constant resolution
+		shr		bl,1
+		and		bl,1
+		inc		bl
+		call	SBGetTimeConstant
+        mov     PlaySampRate,ebx		
         cmp     PlayStatus,PLAY_OFF
         jz      dnts
         call    StopPlay
@@ -373,11 +370,11 @@ Get1xxCaps      endp
 .data
 SB1xxDevice     SoundDevice <offset SBGetDevName, offset DetectBLASTER1xx, offset DetectHard1xx, offset Init, offset Terminate, offset SBReset, offset StartPlay, offset StopPlay, offset StartRec, offset StopRec, offset GetSndBuffers, offset GetPlayProps, offset SetPlayProps, offset GetRecProps, offset SetRecProps, offset Get1xxCaps>
 
-; Current sample rate
-PlaySampRate    dd MAX_PLAY_SAMPLE_RATE
-PlayProps       dd MAX_PLAY_PROPS
+PlayStatus      db PLAY_OFF
 
-PlayStatus      db 0
+; Current sample rate
+PlaySampRate    dd 0
+PlayProps       dd 0
 
 .data?
 
