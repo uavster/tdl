@@ -20,7 +20,8 @@ SoundDevice STRUC
         SDSetPlayProps          dd 0
         SDGetRecProps           dd 0
         SDSetRecProps           dd 0
-        SDGetHardCaps           dd 0
+        SDGetPlayHardCaps       dd 0
+        SDGetRecHardCaps       	dd 0
 ENDS
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -76,7 +77,8 @@ global  SDPlay : NEAR
 ; Gets playback properties
 ;
 ; OUTPUT : EAX = Playback sample rate
-;          EBX = Flags  ( bit 0: 16 bits , bit 1: Stereo)
+;		   BL = Bits per sample
+;		   BH = Number of channels
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global  SDGetPlayProperties : NEAR
 
@@ -84,7 +86,8 @@ global  SDGetPlayProperties : NEAR
 ; Sets playback properties
 ;
 ; INPUT  : EAX = Playback sample rate
-;          EBX = Flags  ( bit 0: 16 bits , bit 1: Stereo)
+;		   BL = Bits per sample
+;		   BH = Number of channels
 ;
 ; OUTPUT : CF = 0 if ok
 ;          CF = 1 if hardware capabilities exceeded or it doesn't answer
@@ -95,7 +98,8 @@ global  SDSetPlayProperties : NEAR
 ; Gets recording properties
 ;
 ; OUTPUT : EAX = Recording sample rate
-;          EBX = Flags  ( bit 0: 16 bits , bit 1: Stereo)
+;		   BL = Bits per sample
+;		   BH = Number of channels
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global  SDGetRecProperties : NEAR
 
@@ -103,7 +107,8 @@ global  SDGetRecProperties : NEAR
 ; Sets recording properties
 ;
 ; INPUT  : EAX = Recording sample rate
-;          EBX = Flags  ( bit 0: 16 bits , bit 1: Stereo)
+;		   BL = Bits per sample
+;		   BH = Number of channels
 ;
 ; OUTPUT : CF = 0 if ok
 ;          CF = 1 if hardware capabilities exceeded or it doesn't answer
@@ -111,12 +116,23 @@ global  SDGetRecProperties : NEAR
 global  SDSetRecProperties : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Gets sound device hardware capabilities
+; Gets sound device hardware playback capabilities
 ;
-; OUTPUT : EAX = Max. playback sample
-;          EBX = Max. playback sound properties (bit 0: 16 bits, bit 1: Stereo)
-;          ECX = Max. recording sample        
-;          EDX = Max. recording sound properties (bit 0: 16 bits, bit 1: Stereo)
+; OUTPUT : EAX = Min. sampling frequency (low 16 bits) : Max. sampling frequency (high 16 bits)
+;		   ECX = Number of valid configurations of bits per sample
+;		   EBX -> List of valid configurations of bits per sample
+;		   DL = Min. number of channels
+;		   DH = Max. number of channels
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-global  SDGetHardCapabilities : NEAR
+global  SDGetPlayHardCapabilities : NEAR
 
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Gets sound device hardware recording capabilities
+;
+; OUTPUT : EAX = Min. sampling frequency (low 16 bits) : Max. sampling frequency (high 16 bits)
+;		   ECX = Number of valid configurations of bits per sample
+;		   EBX -> List of valid configurations of bits per sample
+;		   DL = Min. number of channels
+;		   DH = Max. number of channels
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global  SDGetRecHardCapabilities : NEAR

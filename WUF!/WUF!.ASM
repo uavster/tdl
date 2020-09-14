@@ -123,12 +123,14 @@ GetWUFBuffers   endp
 ; OUTPUT : EAX -> SoundProperties structure
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 GetWUFProperties        proc
-        call    SDGetRecProperties
-        mov     WUFProperties.RecRate,eax
-        mov     WUFProperties.RecFlags,ebx
         call    SDGetPlayProperties
         mov     WUFProperties.PlayRate,eax
-        mov     WUFProperties.PlayFlags,ebx
+        mov     WUFProperties.PlayBitsPerSample,bl
+		mov		WUFProperties.PlayNumChannels,bh
+        call    SDGetRecProperties
+        mov     WUFProperties.RecRate,eax
+        mov     WUFProperties.RecBitsPerSample,bl
+		mov		WUFProperties.RecNumChannels,bh
         mov     eax,offset WUFProperties
         ret
 GetWUFProperties        endp
@@ -145,13 +147,13 @@ GetWUFProperties        endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetWUFProperties        proc
         mov     eax,WUFProperties.PlayRate
-        mov     ebx,WUFProperties.PlayFlags
-        mov     ecx,WUFProperties.RecRate
-        mov     edx,WUFProperties.RecFlags
-        push    ecx edx
+        mov     bl,WUFProperties.PlayBitsPerSample
+		mov		bh,WUFProperties.PlayNumChannels
         call    SDSetPlayProperties
-        pop     ebx eax
         jc      ssp_error
+        mov     eax,WUFProperties.RecRate
+        mov     bl,WUFProperties.RecBitsPerSample
+		mov		bh,WUFProperties.RecNumChannels
         call    SDSetRecProperties
         jc      ssp_error
         mov     eax,NO_ERROR
@@ -168,11 +170,26 @@ SetWUFProperties        endp
 ; OUTPUT : EAX -> SoundHardCaps structure
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 GetWUFHardCaps  proc
-        call    SDGetHardCapabilities
-        mov     WUFHardCaps.MaxPlayRate,eax
-        mov     WUFHardCaps.MaxPlayFlags,ebx
-        mov     WUFHardCaps.MaxRecRate,ecx
-        mov     WUFHardCaps.MaxRecFlags,edx
+        call    SDGetPlayHardCapabilities
+		mov		esi,eax
+		and		eax,0ffffh
+        mov     WUFHardCaps.PlayMinRate,eax
+		shr		esi,16
+        mov     WUFHardCaps.PlayMaxRate,esi
+        mov     WUFHardCaps.PlayNumValidBitsPerSample,cl
+        mov     WUFHardCaps.PlayValidBitsPerSample,ebx
+		mov		WUFHardCaps.PlayMinNumChannels,dl
+		mov		WUFHardCaps.PlayMaxNumChannels,dh
+        call    SDGetRecHardCapabilities
+		mov		esi,eax
+		and		eax,0ffffh
+        mov     WUFHardCaps.RecMinRate,eax
+		shr		esi,16
+        mov     WUFHardCaps.RecMaxRate,esi
+        mov     WUFHardCaps.RecNumValidBitsPerSample,cl
+        mov     WUFHardCaps.RecValidBitsPerSample,ebx
+		mov		WUFHardCaps.RecMinNumChannels,dl
+		mov		WUFHardCaps.RecMaxNumChannels,dh
         mov     eax,offset WUFHardCaps
         ret
 GetWUFHardCaps  endp

@@ -9,8 +9,11 @@
         PLAY_OFF                EQU 0
         DSP_8_BIT_PLAYBACK      EQU 14h
 
+		MIN_PLAY_SAMPLE_RATE	EQU 4000
         MAX_PLAY_SAMPLE_RATE    EQU 23000
-        MAX_PLAY_PROPS          EQU 0           ; (8 bits, mono)
+		MIN_PLAY_NUM_CHANNELS	EQU 1
+		MAX_PLAY_NUM_CHANNELS	EQU 1
+		VALID_BITS_PER_SAMPLE	EQU 8	; Comma-separated list in descending order
 
         INCLUDE sounddev.inc
         INCLUDE sb1xx.inc
@@ -28,8 +31,10 @@
 ;          CF = 1 if error
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 Init    proc
+		; Set maximum play properties
 		mov		eax,MAX_PLAY_SAMPLE_RATE
-		mov		ebx,MAX_PLAY_PROPS
+		mov		bl,ValidPlaySampleBits	; First byte is the highest valid value
+		mov		bh,MAX_PLAY_NUM_CHANNELS
 		call	SetPlayProps
 		jc		init_error
         call    SBReset
@@ -258,8 +263,9 @@ GetSndBuffers   endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets playback properties
 ;
-; OUTPUT : EAX = Sample rate
-;          EBX = Flags  ( bit 0: 16 bits , bit 1: Stereo )
+; OUTPUT : EAX = Playback sample rate
+;		   BL = Bits per sample
+;		   BH = Number of channels
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 GetPlayProps    proc
         mov     eax,PlaySampRate
@@ -270,23 +276,34 @@ GetPlayProps    endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets playback properties
 ;
-; INPUT  : EAX = Sample rate
-;          EBX = Flags  ( bit 0: 16 bits , bit 1: Stereo )
+; INPUT  : EAX = Playback sample rate
+;		   BL = Bits per sample
+;		   BH = Number of channels
 ;
 ; OUTPUT : CF = 0 if ok
-;          CF = 1 if properties exceed hardware capabilities
-;                 or hardware doesn't answer
+;          CF = 1 if hardware capabilities exceeded or it doesn't answer
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetPlayProps    proc
-        test    ebx,11b
-        jnz     spp_error
+		cmp		bh,MIN_PLAY_NUM_CHANNELS
+		jb		spp_error
+		cmp		bh,MAX_PLAY_NUM_CHANNELS
+		ja		spp_error
+		cmp		eax,MIN_PLAY_SAMPLE_RATE
+		jb		spp_error
         cmp     eax,MAX_PLAY_SAMPLE_RATE
         ja      spp_error
+		mov		ecx,offset ValidPlaySampleBitsEnd - offset ValidPlaySampleBits
+		mov		edx,offset ValidPlaySampleBits
+		check_bits_per_sample:
+				cmp	bl,[edx]
+				je 	bits_per_sample_valid
+				inc	edx
+		loop	check_bits_per_sample
+		jmp		spp_error
+		bits_per_sample_valid:
 		mov		PlayProps,ebx
 		; Get actual frequency due to time constant resolution
-		shr		bl,1
-		and		bl,1
-		inc		bl
+		shr		ebx,8
 		call	SBGetTimeConstant
         mov     PlaySampRate,ebx		
         cmp     PlayStatus,PLAY_OFF
@@ -307,50 +324,84 @@ SetPlayProps    endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets recording properties
 ;
-; OUTPUT : EAX = Sample rate
-;          EBX = Flags  ( bit 0: 16 bits , bit 1: Stereo )
+; OUTPUT : EAX = Recording sample rate
+;		   BL = Bits per sample
+;		   BH = Number of channels
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-GetRecProps     proc        
+GetRecProps     proc
+		; Not yet supported
+		xor		eax,eax
+		xor		ebx,ebx
         ret
 GetRecProps     endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets recording properties
 ;
-; INPUT  : EAX = Sample rate
-;          EBX = Flags  ( bit 0: 16 bits , bit 1: Stereo )
+; INPUT  : EAX = Recording sample rate
+;		   BL = Bits per sample
+;		   BH = Number of channels
 ;
 ; OUTPUT : CF = 0 if ok
-;          CF = 1 if properties exceed hardware capabilities
-;                 or hardware doesn't answer
+;          CF = 1 if hardware capabilities exceeded or it doesn't answer
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetRecProps     proc
-        clc
+		; Not yet supported
+        stc
         ret
 SetRecProps     endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Gets SB 1.x hardware capabilities
+; Gets sound device hardware playback capabilities
 ;
-; OUTPUT : EAX = Max. playback sample
-;          EBX = Max. playback sound properties (bit 0: 16 bits, bit 1: Stereo)
-;          ECX = Max. recording sample        
-;          EDX = Max. recording sound properties (bit 0: 16 bits, bit 1: Stereo)
+; OUTPUT : EAX = Min. sampling frequency (low 16 bits) : Max. sampling frequency (high 16 bits)
+;		   CL = Number of valid configurations of bits per sample
+;		   EBX -> List of valid configurations of bits per sample
+;		   DL = Min. number of channels
+;		   DH = Max. number of channels
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-Get1xxCaps      proc
-        mov     eax,MAX_PLAY_SAMPLE_RATE
-        mov     ebx,MAX_PLAY_PROPS
+GetPlay1xxCaps	proc
+        mov     eax,(MAX_PLAY_SAMPLE_RATE SHL 16) OR MIN_PLAY_SAMPLE_RATE
+		mov		cl,offset ValidPlaySampleBitsEnd - offset ValidPlaySampleBits
+		mov		ebx,offset ValidPlaySampleBitsEnd
+		mov		dl,MIN_PLAY_NUM_CHANNELS
+		mov		dh,MAX_PLAY_NUM_CHANNELS
         ret
-Get1xxCaps      endp
+GetPlay1xxCaps  endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Gets sound device hardware recording capabilities
+;
+; OUTPUT : EAX = Max. sampling frequency
+;		   CL = Number of valid configurations of bits per sample
+;		   EBX -> List of valid configurations of bits per sample
+;		   DL = Min. number of channels
+;		   DH = Max. number of channels
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+GetRec1xxCaps	proc
+		; Not yet supported
+		xor		eax,eax
+		xor		ebx,ebx
+		xor		ecx,ecx
+		xor		edx,edx
+        ret
+GetRec1xxCaps	endp
 
 .data
-SB1xxDevice     SoundDevice <offset SBGetDevName, offset DetectBLASTER, offset SBDetectHard, offset Init, offset Terminate, offset SBReset, offset StartPlay, offset StopPlay, offset StartRec, offset StopRec, offset GetSndBuffers, offset GetPlayProps, offset SetPlayProps, offset GetRecProps, offset SetRecProps, offset Get1xxCaps>
+SB1xxDevice     SoundDevice <offset SBGetDevName, offset DetectBLASTER, offset SBDetectHard, offset Init, offset Terminate, offset SBReset, offset StartPlay, offset StopPlay, offset StartRec, offset StopRec, offset GetSndBuffers, offset GetPlayProps, offset SetPlayProps, offset GetRecProps, offset SetRecProps, offset GetPlay1xxCaps, offset GetRec1xxCaps>
 
-PlayStatus      db PLAY_OFF
+PlayStatus      		db PLAY_OFF
+ValidPlaySampleBits		db VALID_BITS_PER_SAMPLE
+ValidPlaySampleBitsEnd 	db ?
 
 ; Current sample rate
 PlaySampRate    dd 0
-PlayProps       dd 0
+PlayProperties	STRUC
+		BitsPerSample	db 0
+		NumChannels		db 0
+		Reserved		dw 0
+ENDS
+PlayProps       PlayProperties <>
 
 .data?
 

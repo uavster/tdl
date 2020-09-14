@@ -124,7 +124,8 @@ SDPlay  endp
 ; Gets playback properties
 ;
 ; OUTPUT : EAX = Playback sample rate
-;          EBX = Flags  ( bit 0: 16 bits , bit 1: Stereo)
+;		   BL = Bits per sample
+;		   BH = Number of channels
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SDGetPlayProperties     proc
         mov     esi,SDev
@@ -136,7 +137,8 @@ SDGetPlayProperties     endp
 ; Sets playback properties
 ;
 ; INPUT  : EAX = Playback sample rate
-;          EBX = Flags  ( bit 0: 16 bits , bit 1: Stereo)
+;		   BL = Bits per sample
+;		   BH = Number of channels
 ;
 ; OUTPUT : CF = 0 if ok
 ;          CF = 1 if hardware capabilities exceeded or it doesn't answer
@@ -151,7 +153,8 @@ SDSetPlayProperties     endp
 ; Gets recording properties
 ;
 ; OUTPUT : EAX = Recording sample rate
-;          EBX = Flags  ( bit 0: 16 bits , bit 1: Stereo)
+;		   BL = Bits per sample
+;		   BH = Number of channels
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SDGetRecProperties      proc
         mov     esi,SDev
@@ -163,7 +166,8 @@ SDGetRecProperties      endp
 ; Sets recording properties
 ;
 ; INPUT  : EAX = Recording sample rate
-;          EBX = Flags  ( bit 0: 16 bits , bit 1: Stereo)
+;		   BL = Bits per sample
+;		   BH = Number of channels
 ;
 ; OUTPUT : CF = 0 if ok
 ;          CF = 1 if hardware capabilities exceeded or it doesn't answer
@@ -175,18 +179,34 @@ SDSetRecProperties      proc
 SDSetRecProperties      endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Gets sound device hardware capabilities
+; Gets sound device hardware playback capabilities
 ;
-; OUTPUT : EAX = Max. playback sample
-;          EBX = Max. playback sound properties (bit 0: 16 bits, bit 1: Stereo)
-;          ECX = Max. recording sample        
-;          EDX = Max. recording sound properties (bit 0: 16 bits, bit 1: Stereo)
+; OUTPUT : EAX = Min. sampling frequency (low 16 bits) : Max. sampling frequency (high 16 bits)
+;		   CL = Number of valid configurations of bits per sample
+;		   EBX -> List of valid configurations of bits per sample
+;		   DL = Min. number of channels
+;		   DH = Max. number of channels
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-SDGetHardCapabilities   proc
+SDGetPlayHardCapabilities   proc
         mov     esi,SDev
-        call    [esi.SDGetHardCaps]
+        call    [esi.SDGetPlayHardCaps]
         ret        
-SDGetHardCapabilities   endp
+SDGetPlayHardCapabilities   endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Gets sound device hardware recording capabilities
+;
+; OUTPUT : EAX = Min. sampling frequency (low 16 bits) : Max. sampling frequency (high 16 bits)
+;		   CL = Number of valid configurations of bits per sample
+;		   EBX -> List of valid configurations of bits per sample
+;		   DL = Min. number of channels
+;		   DH = Max. number of channels
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SDGetRecHardCapabilities	proc
+		mov		esi,SDev
+		call	[esi.SDGetRecHardCaps]
+		ret
+SDGetRecHardCapabilities	endp
 
 .data?
 SDev            dd ?

@@ -13,17 +13,29 @@ BufferInfo      STRUC
 ENDS
 
 SoundProperties STRUC
-        PlayRate        dd ?
-        PlayFlags       dd ?    ; ( bit 0: 16 bits , bit 1: Stereo)
-        RecRate         dd ?
-        RecFlags        dd ?    ; ( bit 0: 16 bits , bit 1: Stereo)
+        PlayRate        	dd ?
+		PlayBitsPerSample	db ?
+		PlayNumChannels		db ?
+
+        RecRate         	dd ?
+		RecBitsPerSample	db ?
+		RecNumChannels		db ?
 ENDS
 
 SoundHardCaps   STRUC
-        MaxPlayRate     dd ?
-        MaxPlayFlags    dd ?    ; ( bit 0: 16 bits , bit 1: Stereo)
-        MaxRecRate      dd ?
-        MaxRecFlags     dd ?    ; ( bit 0: 16 bits , bit 1: Stereo)
+		PlayMinRate					dd ?
+        PlayMaxRate     			dd ?
+		PlayNumValidBitsPerSample	db ?
+		PlayValidBitsPerSample		dd ?	; Offset of array
+		PlayMinNumChannels			db ?
+		PlayMaxNumChannels			db ?
+
+		RecMinRate					dd ?
+        RecMaxRate     				dd ?
+		RecNumValidBitsPerSample	db ?
+		RecValidBitsPerSample		dd ?	; Offset of array
+		RecMinNumChannels			db ?
+		RecMaxNumChannels			db ?
 ENDS
 
 ; Wave structure
@@ -48,7 +60,7 @@ ENDS
 global  InitWUF : NEAR
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
-; Unibitializes wuF!
+; Unitializes wUf!
 ;
 ; OUTPUT : CF = 0 if ok
 ;              EAX = NULL
