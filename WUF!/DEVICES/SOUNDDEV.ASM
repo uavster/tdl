@@ -97,10 +97,8 @@ GetSoundDeviceName      endp
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Gets the address and size of the play and record buffers
 ;
-; OUTPUT : EAX -> Playback buffer
-;          EBX -> Record buffer
-;          ECX = Size of playback buffer
-;          EDX = Size of record buffer
+; OUTPUT : EAX -> Playback buffer (SoundBuffer structure)
+;          EBX -> Record buffer (SoundBuffer structure)
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 GetSDBuffers    proc
         mov     esi,SDev

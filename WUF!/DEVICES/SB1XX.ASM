@@ -62,18 +62,20 @@ Init    proc
         mov     ecx,DMA_PLAY_BUFFER_LENGTH*2    ; double buffering
         call    AllocDMABuffer
         jc      init_error
-        mov     PlayBuff,ebx
+        mov     PlayBuff.Pointer,ebx
+		mov		PlayBuff.NumBytes,DMA_PLAY_BUFFER_LENGTH
         mov     ecx,DMA_REC_BUFFER_LENGTH
         call    AllocDMABuffer
         jc      init_error
-        mov     RecBuff,ebx
+        mov     RecBuff.Pointer,ebx
+		mov		RecBuff.NumBytes,DMA_REC_BUFFER_LENGTH
         ; Clear play/rec buffers
-        mov     ecx,DMA_PLAY_BUFFER_LENGTH
+        mov     ecx,PlayBuff.NumBytes
         xor     eax,eax
-        mov     edi,PlayBuff
+        mov     edi,PlayBuff.Pointer
         rep     stosw   ; double buffering
-        mov     ecx,DMA_REC_BUFFER_LENGTH
-        mov     edi,RecBuff
+        mov     ecx,RecBuff.NumBytes
+        mov     edi,RecBuff.Pointer
         rep     stosb
         clc
         init_error:
@@ -101,10 +103,10 @@ Terminate       proc
         mov     cx,OldIRQ.IRQSegment
         int     31h
         ; Freeing buffers
-        mov     ebx,PlayBuff
+        mov     ebx,PlayBuff.Pointer
         call    FreeDMABuffer
         jc      terminate_error
-        mov     ebx,RecBuff
+        mov     ebx,RecBuff.Pointer
         call    FreeDMABuffer
         jc      terminate_error
         clc
@@ -133,8 +135,8 @@ StartPlay       proc
         ; Program DMA chip        
 		mov		al,DMA_SINGLECYCLE
         mov     ah,SBdma
-        mov     ebx,PlayBuff
-        mov     ecx,DMA_PLAY_BUFFER_LENGTH
+        mov     ebx,PlayBuff.Pointer
+        mov     ecx,PlayBuff.NumBytes
         call    DMAWriteToDevice
         ; Turn speakers on
         mov     al,DSP_SPEAKER_ON
@@ -145,7 +147,7 @@ StartPlay       proc
         call    WriteDSP
         jc      splay_error
         ; Set transfer size
-        mov     eax,DMA_PLAY_BUFFER_LENGTH
+        mov     eax,PlayBuff.NumBytes
         dec     eax
         push    eax
         call    WriteDSP
@@ -165,7 +167,7 @@ EnableDSP       MACRO
         mov     al,DSP_8_BIT_PLAYBACK
         call    WriteDSP
         ; Set transfer size
-        mov     eax,DMA_PLAY_BUFFER_LENGTH
+        mov     eax,PlayBuff.NumBytes
         dec     eax
         push    eax
         call    WriteDSP
@@ -190,12 +192,12 @@ PlayIRQ         proc
 		; Program DMA controller for the next buffer
 		mov		al,DMA_SINGLECYCLE
         mov     ah,SBdma
-        mov     ebx,PlayBuff
+        mov     ebx,PlayBuff.Pointer
         test    FirstPlayBuff,1
         jz     	play_first_buffer
-                add     ebx,DMA_PLAY_BUFFER_LENGTH
+                add     ebx,PlayBuff.NumBytes
         play_first_buffer:
-        mov     ecx,DMA_PLAY_BUFFER_LENGTH
+        mov     ecx,PlayBuff.NumBytes
         call    DMAWriteToDevice
 		; Program DSP for the next block
         EnableDSP
@@ -205,10 +207,10 @@ PlayIRQ         proc
         out     dx,al
         sti
         ; Mix all channels
-        mov     eax,PlayBuff
+        mov     eax,PlayBuff.Pointer
         test    FirstPlayBuff,1
         jnz     its_first_half
-                add     eax,DMA_PLAY_BUFFER_LENGTH
+                add     eax,PlayBuff.NumBytes
         its_first_half:
         xor     FirstPlayBuff,1
         call    MixChannels
@@ -251,16 +253,12 @@ StopRec         endp
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Returns information about the playback and record buffers
 ;
-; OUTPUT : EAX -> Playback buffer
-;          EBX -> Record buffer
-;          ECX = Size of playback buffer
-;          EDX = Size of record buffer
+; OUTPUT : EAX -> Playback buffer (SoundBuffer structure)
+;          EBX -> Record buffer (SoundBuffer structure)
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 GetSndBuffers   proc
-        mov     eax,PlayBuff
-        mov     ebx,RecBuff
-        mov     ecx,DMA_PLAY_BUFFER_LENGTH
-        mov     edx,DMA_REC_BUFFER_LENGTH
+        mov     eax,offset PlayBuff
+        mov     ebx,offset RecBuff
         ret
 GetSndBuffers   endp
 
@@ -409,8 +407,8 @@ ENDS
 
 OldIRQ          IRQVector <>
 
-PlayBuff        dd ?
-RecBuff         dd ?
+PlayBuff        SoundBuffer <>
+RecBuff         SoundBuffer <>
 
 FirstPlayBuff   dd ?
 

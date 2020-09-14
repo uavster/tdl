@@ -100,7 +100,7 @@ WUFClose        proc
 WUFClose        endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Gets the underlying hardware maximum capabilities
+; Gets the underlying hardware capabilities
 ;
 ; OUTPUT : EAX -> Playback capabilities (SoundHardwareCapabilities structure)
 ;		   EBX -> Recording capabilities (SoundHardwareCapabilities structure)
@@ -116,18 +116,11 @@ WUFGetHardwareCapabilities	endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets buffers used by wuF!
 ;
-; OUTPUT : EAX -> Playback buffer
-;          EBX -> Record buffer
-;          ECX = Size of playback buffer
-;          EDX = Size of record buffer
+; OUTPUT : EAX -> Playback buffer (SoundBuffer structure)
+;          EBX -> Record buffer (SoundBuffer structure)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 WUFGetBuffers   proc
         call    GetSDBuffers
-        mov     InternalBuffers.PlayBuffer,eax
-        mov     InternalBuffers.RecBuffer,ebx
-        mov     InternalBuffers.PlaySize,ecx
-        mov     InternalBuffers.RecSize,edx
-        mov     eax,offset InternalBuffers
         ret
 WUFGetBuffers   endp
 
@@ -179,12 +172,12 @@ mix_msg         db "  ş Opening mixer with %dn"
 
 set_mixp_msg    db "  ş Mixing properties set as %dn"
                 dd offset mix_rate
-                db " Hz %bn"
+                db " Hz, %bn"
                 dd offset mix_bits
-                db "bits ",0
+                db " bits, ",0
 
-mono_msg        db "Mono",13,10,0
-stereo_msg      db "Stereo",13,10,0
+mono_msg        db "mono",13,10,0
+stereo_msg      db "stereo",13,10,0
 n_channels_msg	db "%bn"
 				dd offset mix_output_channels
 				db " channels",13,10,0
@@ -193,7 +186,5 @@ n_channels_msg	db "%bn"
 mix_rate        	dd ?
 mix_bits        	db ?
 mix_output_channels	db ?
-
-InternalBuffers BufferInfo      <>
 
 end

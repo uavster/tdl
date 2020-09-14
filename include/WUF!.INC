@@ -5,11 +5,9 @@
 
 MAX_CHANNELS    EQU 64
 
-BufferInfo      STRUC
-        PlayBuffer      dd ?
-        PlaySize        dd ?
-        RecBuffer       dd ?
-        RecSize         dd ?
+SoundBuffer		STRUC
+        Pointer			dd ?
+        NumBytes	    dd ?
 ENDS
 
 SoundProperties STRUC
@@ -59,7 +57,7 @@ global  WUFInit : NEAR
 global  WUFClose : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Gets the underlying hardware maximum capabilities
+; Gets the underlying hardware capabilities
 ;
 ; OUTPUT : EAX -> Playback capabilities (SoundHardwareCapabilities structure)
 ;		   EBX -> Recording capabilities (SoundHardwareCapabilities structure)
@@ -69,10 +67,8 @@ global WUFGetHardwareCapabilities : NEAR
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets buffers used by wuF!
 ;
-; OUTPUT : EAX -> Playback buffer
-;          EBX -> Record buffer
-;          ECX = Size of playback buffer
-;          EDX = Size of record buffer
+; OUTPUT : EAX -> Playback buffer (SoundBuffer structure)
+;          EBX -> Record buffer (SoundBuffer structure)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global  WUFGetBuffers : NEAR
 
