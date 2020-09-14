@@ -21,7 +21,7 @@
 ;          CF = 1 if error
 ;              EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-InitWUF         proc
+WUFInit         proc
         LPrintS "Starting wuF! - Wave Buffer v0.99:"
 
         ; Start sound device
@@ -44,44 +44,41 @@ InitWUF         proc
         ; Set mix props. to the maximum available with the hardware
         call    SDGetPlayProperties
         ; Start mixer
-        push    eax ebx
-		mov		bh,bl
-		and		bl,1
-		inc		bl
-		shl		bl,3
-		shr		bh,1
-		and		bh,1
-		inc		bh
-		pop		ecx
-		push	ecx
-		mov		ch,cl
-		and		cl,1
-		shr		ch,1
-		and		ch,1
-		add		cl,ch				
-        mov     edx,DMA_PLAY_BUFFER_LENGTH
-		shr		edx,cl
-        mov     cl,MAX_CHANNELS		
+		mov		esi,eax
+		mov		bl,[esi.BitsPerSample]
+		mov		bh,[esi.NumChannels]
+		movzx	ecx,bl
+		shr		ecx,3	; bytes per sample
+        movzx   edx,bh
+		imul	ecx,edx
+		mov		eax,DMA_PLAY_BUFFER_LENGTH
+		xor		edx,edx
+		div		ecx
+		mov		edx,eax
+		mov		eax,[esi.SamplingRate]
+        mov     cl,MAX_CHANNELS
+		push	eax ebx
         call    OpenMixer
-        ErrorCodePOP eax, ebx eax
-        pop     ebx eax
+        ErrorCode eax, ebx ecx
+		pop		ebx eax
         mov     mix_rate,eax
-        push    ebx
-        and     ebx,1
-        shl     ebx,3
-        add     ebx,8
-        mov     mix_bits,ebx
+        mov     mix_bits,bl
         mov     esi,offset set_mixp_msg
+		push	ebx
         call    Printf
         pop     ebx
         mov     esi,offset mono_msg
-        test    ebx,10b
-        jz      only_mono
+        cmp    	bh,1
+        jz      num_channels_label_found
                 mov     esi,offset stereo_msg
-        only_mono:
+				cmp		bh,2
+				jz		num_channels_label_found
+						mov		mix_output_channels,bh
+						mov		esi,offset n_channels_msg						
+        num_channels_label_found:
         call    Printf
         ret
-InitWUF         endp
+WUFInit         endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Uninitializes wuF!
@@ -91,7 +88,7 @@ InitWUF         endp
 ;          CF = 1 if error
 ;              EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-CloseWUF        proc
+WUFClose        proc
         LPrintS "Closing wuF! - Wave Buffer v0.99:"
         LPrintS "  ş Closing mixer..."
         call    CloseMixer
@@ -100,14 +97,31 @@ CloseWUF        proc
         call    CloseSoundDevice
         ErrorCode SDEV_CLOSE_ERROR
         ret
-CloseWUF        endp
+WUFClose        endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Gets the underlying hardware maximum capabilities
+;
+; OUTPUT : EAX -> Playback capabilities (SoundHardwareCapabilities structure)
+;		   EBX -> Recording capabilities (SoundHardwareCapabilities structure)
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+WUFGetHardwareCapabilities	proc
+		call	SDGetPlayHardCapabilities
+		push	eax
+		call	SDGetRecHardCapabilities
+		pop		ebx
+		ret
+WUFGetHardwareCapabilities	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets buffers used by wuF!
 ;
-; OUTPUT : EAX -> BufferInfo structure
+; OUTPUT : EAX -> Playback buffer
+;          EBX -> Record buffer
+;          ECX = Size of playback buffer
+;          EDX = Size of record buffer
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-GetWUFBuffers   proc
+WUFGetBuffers   proc
         call    GetSDBuffers
         mov     InternalBuffers.PlayBuffer,eax
         mov     InternalBuffers.RecBuffer,ebx
@@ -115,45 +129,38 @@ GetWUFBuffers   proc
         mov     InternalBuffers.RecSize,edx
         mov     eax,offset InternalBuffers
         ret
-GetWUFBuffers   endp
+WUFGetBuffers   endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets playback and recording properties
 ;
-; OUTPUT : EAX -> SoundProperties structure
+; OUTPUT : EAX -> Playback properties (SoundProperties structure)
+;		   EBX -> Recording properties (SoundProperties structure)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-GetWUFProperties        proc
+WUFGetProperties        proc
         call    SDGetPlayProperties
-        mov     WUFProperties.PlayRate,eax
-        mov     WUFProperties.PlayBitsPerSample,bl
-		mov		WUFProperties.PlayNumChannels,bh
+		push	eax
         call    SDGetRecProperties
-        mov     WUFProperties.RecRate,eax
-        mov     WUFProperties.RecBitsPerSample,bl
-		mov		WUFProperties.RecNumChannels,bh
-        mov     eax,offset WUFProperties
+		pop		ebx
         ret
-GetWUFProperties        endp
+WUFGetProperties        endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets playback and recording properties
 ;
-; INPUT  : EAX -> SoundProperties structure
+; INPUT  : EAX -> Playback SoundProperties structure, or NULL
+;		   EBX -> Recording SoundProperties structure, or NULL
 ;
 ; OUTPUT : CF = 0 if ok
 ;               EAX = 0
-;          CF = 1 if hardware capabilities exceeded or it doesn't answer
+;          CF = 1 if hardware capabilities exceeded or device not responding
 ;               EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-SetWUFProperties        proc
-        mov     eax,WUFProperties.PlayRate
-        mov     bl,WUFProperties.PlayBitsPerSample
-		mov		bh,WUFProperties.PlayNumChannels
+WUFSetProperties        proc
+		push	eax
         call    SDSetPlayProperties
+		pop		eax
         jc      ssp_error
-        mov     eax,WUFProperties.RecRate
-        mov     bl,WUFProperties.RecBitsPerSample
-		mov		bh,WUFProperties.RecNumChannels
         call    SDSetRecProperties
         jc      ssp_error
         mov     eax,NO_ERROR
@@ -162,59 +169,31 @@ SetWUFProperties        proc
         ssp_error:
         mov     eax,HARDWARE_ERROR
         ret
-SetWUFProperties        endp
-
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Gets the underlying hardware maximum capabilities
-;
-; OUTPUT : EAX -> SoundHardCaps structure
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-GetWUFHardCaps  proc
-        call    SDGetPlayHardCapabilities
-		mov		esi,eax
-		and		eax,0ffffh
-        mov     WUFHardCaps.PlayMinRate,eax
-		shr		esi,16
-        mov     WUFHardCaps.PlayMaxRate,esi
-        mov     WUFHardCaps.PlayNumValidBitsPerSample,cl
-        mov     WUFHardCaps.PlayValidBitsPerSample,ebx
-		mov		WUFHardCaps.PlayMinNumChannels,dl
-		mov		WUFHardCaps.PlayMaxNumChannels,dh
-        call    SDGetRecHardCapabilities
-		mov		esi,eax
-		and		eax,0ffffh
-        mov     WUFHardCaps.RecMinRate,eax
-		shr		esi,16
-        mov     WUFHardCaps.RecMaxRate,esi
-        mov     WUFHardCaps.RecNumValidBitsPerSample,cl
-        mov     WUFHardCaps.RecValidBitsPerSample,ebx
-		mov		WUFHardCaps.RecMinNumChannels,dl
-		mov		WUFHardCaps.RecMaxNumChannels,dh
-        mov     eax,offset WUFHardCaps
-        ret
-GetWUFHardCaps  endp
+WUFSetProperties        endp
 
 .data
-NumChannels     dd MAX_CHANNELS
+mix_input_channels	dd MAX_CHANNELS
 mix_msg         db "  ş Opening mixer with %dn"
-                dd offset NumChannels
+                dd offset mix_input_channels
                 db " virtual channels...",13,10,0
 
 set_mixp_msg    db "  ş Mixing properties set as %dn"
                 dd offset mix_rate
-                db "Hz %dn"
+                db " Hz %bn"
                 dd offset mix_bits
                 db "bits ",0
 
 mono_msg        db "Mono",13,10,0
 stereo_msg      db "Stereo",13,10,0
+n_channels_msg	db "%bn"
+				dd offset mix_output_channels
+				db " channels",13,10,0
 
 .data?
-mix_rate        dd ?
-mix_bits        dd ?
+mix_rate        	dd ?
+mix_bits        	db ?
+mix_output_channels	db ?
 
 InternalBuffers BufferInfo      <>
-WUFProperties   SoundProperties <>
-WUFHardCaps     SoundHardCaps   <>
 
 end

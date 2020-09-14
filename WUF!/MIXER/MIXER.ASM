@@ -62,7 +62,7 @@ ClearMixingBuffer	endp
 OpenMixer       proc
 		; Store configuration
 		mov		MixFreq,eax
-		mov		BitsPerSample,bl
+		mov		MixBitsPerSample,bl
 		mov		NumOutputChannels,bh
         mov     MaxInputChannels,cl
 		mov		NumOutputSamples,edx
@@ -120,7 +120,7 @@ PrintMixerPerf	proc
 		; Maximum mixer run time per DMA buffer to keep sampling rate
 		fild	NumOutputBytes
 		xor		eax,eax
-		mov		al,BitsPerSample
+		mov		al,MixBitsPerSample
 		shr		al,3
 		mov		BytesPerSample,eax
 		fild	BytesPerSample
@@ -355,7 +355,7 @@ MixChannels     endp
 
 .data?
 MaxInputChannels		db ?
-BitsPerSample			db ?
+MixBitsPerSample		db ?
 NumOutputChannels		db ?
 nchannels       		db ?
 ChannelPool     		dd ?    ; Pointer to channel array

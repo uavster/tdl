@@ -123,9 +123,7 @@ SDPlay  endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets playback properties
 ;
-; OUTPUT : EAX = Playback sample rate
-;		   BL = Bits per sample
-;		   BH = Number of channels
+; OUTPUT : EAX -> Playback properties (SoundProperties structure)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SDGetPlayProperties     proc
         mov     esi,SDev
@@ -136,12 +134,10 @@ SDGetPlayProperties     endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets playback properties
 ;
-; INPUT  : EAX = Playback sample rate
-;		   BL = Bits per sample
-;		   BH = Number of channels
+; INPUT  : EAX -> Playback properties (SoundProperties structure), or NULL
 ;
 ; OUTPUT : CF = 0 if ok
-;          CF = 1 if hardware capabilities exceeded or it doesn't answer
+;          CF = 1 if hardware capabilities exceeded or device does not respond
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SDSetPlayProperties     proc
         mov     esi,SDev
@@ -152,9 +148,7 @@ SDSetPlayProperties     endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets recording properties
 ;
-; OUTPUT : EAX = Recording sample rate
-;		   BL = Bits per sample
-;		   BH = Number of channels
+; OUTPUT : EAX -> Recording properties (SoundProperties structure)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SDGetRecProperties      proc
         mov     esi,SDev
@@ -165,12 +159,10 @@ SDGetRecProperties      endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets recording properties
 ;
-; INPUT  : EAX = Recording sample rate
-;		   BL = Bits per sample
-;		   BH = Number of channels
+; INPUT  : EAX -> Recording properties (SoundProperties structure), or NULL
 ;
 ; OUTPUT : CF = 0 if ok
-;          CF = 1 if hardware capabilities exceeded or it doesn't answer
+;          CF = 1 if hardware capabilities exceeded or device does not respond
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SDSetRecProperties      proc
         mov     esi,SDev
@@ -181,11 +173,7 @@ SDSetRecProperties      endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets sound device hardware playback capabilities
 ;
-; OUTPUT : EAX = Min. sampling frequency (low 16 bits) : Max. sampling frequency (high 16 bits)
-;		   CL = Number of valid configurations of bits per sample
-;		   EBX -> List of valid configurations of bits per sample
-;		   DL = Min. number of channels
-;		   DH = Max. number of channels
+; OUTPUT : EAX -> Playback capabilities (SoundHardwareCapabilities structure)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SDGetPlayHardCapabilities   proc
         mov     esi,SDev
@@ -196,11 +184,7 @@ SDGetPlayHardCapabilities   endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets sound device hardware recording capabilities
 ;
-; OUTPUT : EAX = Min. sampling frequency (low 16 bits) : Max. sampling frequency (high 16 bits)
-;		   CL = Number of valid configurations of bits per sample
-;		   EBX -> List of valid configurations of bits per sample
-;		   DL = Min. number of channels
-;		   DH = Max. number of channels
+; OUTPUT : EAX -> Recording capabilities (SoundHardwareCapabilities structure)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SDGetRecHardCapabilities	proc
 		mov		esi,SDev

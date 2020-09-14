@@ -32,10 +32,15 @@
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 Init    proc
 		; Set maximum play properties
-		mov		eax,MAX_PLAY_SAMPLE_RATE
+		sub		esp,size SoundProperties
+		mov		eax,esp
+		mov		[SoundProperties ptr eax.SamplingRate],MAX_PLAY_SAMPLE_RATE
 		mov		bl,ValidPlaySampleBits	; First byte is the highest valid value
-		mov		bh,MAX_PLAY_NUM_CHANNELS
+		mov		[SoundProperties ptr eax.BitsPerSample],bl
+		mov		bl,MAX_PLAY_NUM_CHANNELS
+		mov		[SoundProperties ptr eax.NumChannels],bl
 		call	SetPlayProps
+		lea		esp,[esp+size SoundProperties]
 		jc		init_error
         call    SBReset
         jc      init_error
@@ -120,9 +125,8 @@ StartPlay       proc
         call    WriteDSP
         jc      splay_error
 		call	GetPlayProps
-		shr		bl,1
-		and		bl,1
-		inc		bl
+		mov		bl,[eax.NumChannels]
+		mov		eax,[eax.SamplingRate]
         call    SBGetTimeConstant
         call    WriteDSP
         jc      splay_error
@@ -263,35 +267,35 @@ GetSndBuffers   endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets playback properties
 ;
-; OUTPUT : EAX = Playback sample rate
-;		   BL = Bits per sample
-;		   BH = Number of channels
+; OUTPUT : EAX -> Playback properties (SoundProperties structure)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 GetPlayProps    proc
-        mov     eax,PlaySampRate
-        mov     ebx,PlayProps
+        mov     eax,offset PlayProps
         ret
 GetPlayProps    endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets playback properties
 ;
-; INPUT  : EAX = Playback sample rate
-;		   BL = Bits per sample
-;		   BH = Number of channels
+; INPUT  : EAX -> Playback properties (SoundProperties structure), or NULL
 ;
 ; OUTPUT : CF = 0 if ok
 ;          CF = 1 if hardware capabilities exceeded or it doesn't answer
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetPlayProps    proc
-		cmp		bh,MIN_PLAY_NUM_CHANNELS
+		; If NULL, leave
+		or		eax,eax
+		jz		dnts
+		; Check that requested properties are within bounds
+		cmp		[eax.SamplingRate],MIN_PLAY_SAMPLE_RATE
 		jb		spp_error
-		cmp		bh,MAX_PLAY_NUM_CHANNELS
-		ja		spp_error
-		cmp		eax,MIN_PLAY_SAMPLE_RATE
-		jb		spp_error
-        cmp     eax,MAX_PLAY_SAMPLE_RATE
+        cmp     [eax.SamplingRate],MAX_PLAY_SAMPLE_RATE
         ja      spp_error
+		cmp		[eax.NumChannels],MIN_PLAY_NUM_CHANNELS
+		jb		spp_error
+		cmp		[eax.NumChannels],MAX_PLAY_NUM_CHANNELS
+		ja		spp_error
+		mov		bl,[eax.BitsPerSample]
 		mov		ecx,offset ValidPlaySampleBitsEnd - offset ValidPlaySampleBits
 		mov		edx,offset ValidPlaySampleBits
 		check_bits_per_sample:
@@ -301,17 +305,24 @@ SetPlayProps    proc
 		loop	check_bits_per_sample
 		jmp		spp_error
 		bits_per_sample_valid:
-		mov		PlayProps,ebx
+		; Copy properties
+		mov		ecx,size SoundProperties
+		mov		edi,offset PlayProps
+		mov		esi,eax
+		rep		movsb
 		; Get actual frequency due to time constant resolution
-		shr		ebx,8
+		mov		bl,[eax.NumChannels]
+		mov		eax,[eax.SamplingRate]
 		call	SBGetTimeConstant
-        mov     PlaySampRate,ebx		
+		mov		eax,offset PlayProps
+		mov		[eax.SamplingRate],ebx
         cmp     PlayStatus,PLAY_OFF
         jz      dnts
-        call    StopPlay
-        jc      spp_error
-        call    StartPlay
-        jc      spp_error
+				; Restart, if it is playing
+				call    StopPlay
+				jc      spp_error
+				call    StartPlay
+				jc      spp_error
         dnts:
         clc
         ret
@@ -324,28 +335,26 @@ SetPlayProps    endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets recording properties
 ;
-; OUTPUT : EAX = Recording sample rate
-;		   BL = Bits per sample
-;		   BH = Number of channels
+; OUTPUT : EAX -> Recording properties (SoundProperties structure)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 GetRecProps     proc
 		; Not yet supported
 		xor		eax,eax
-		xor		ebx,ebx
         ret
 GetRecProps     endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets recording properties
 ;
-; INPUT  : EAX = Recording sample rate
-;		   BL = Bits per sample
-;		   BH = Number of channels
+; INPUT  : EAX -> Recording properties (SoundProperties structure), or NULL
 ;
 ; OUTPUT : CF = 0 if ok
-;          CF = 1 if hardware capabilities exceeded or it doesn't answer
+;          CF = 1 if hardware capabilities exceeded or device does not respond
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetRecProps     proc
+		; If NULL, leave
+		or		eax,eax
+		jz		dnts
 		; Not yet supported
         stc
         ret
@@ -354,36 +363,27 @@ SetRecProps     endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets sound device hardware playback capabilities
 ;
-; OUTPUT : EAX = Min. sampling frequency (low 16 bits) : Max. sampling frequency (high 16 bits)
-;		   CL = Number of valid configurations of bits per sample
-;		   EBX -> List of valid configurations of bits per sample
-;		   DL = Min. number of channels
-;		   DH = Max. number of channels
+; OUTPUT : EAX -> Playback capabilities (SoundHardwareCapabilities structure)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 GetPlay1xxCaps	proc
-        mov     eax,(MAX_PLAY_SAMPLE_RATE SHL 16) OR MIN_PLAY_SAMPLE_RATE
-		mov		cl,offset ValidPlaySampleBitsEnd - offset ValidPlaySampleBits
-		mov		ebx,offset ValidPlaySampleBitsEnd
-		mov		dl,MIN_PLAY_NUM_CHANNELS
-		mov		dh,MAX_PLAY_NUM_CHANNELS
+		mov		eax,offset PlayCaps
+		mov		[eax.MinSamplingRate],MIN_PLAY_SAMPLE_RATE
+		mov		[eax.MaxSamplingRate],MAX_PLAY_SAMPLE_RATE
+		mov		[eax.ValidBitsPerSampleArrayLen],offset ValidPlaySampleBitsEnd - offset ValidPlaySampleBits
+		mov		[eax.ValidBitsPerSampleArray],offset ValidPlaySampleBitsEnd
+		mov		[eax.MinNumChannels],MIN_PLAY_NUM_CHANNELS
+		mov		[eax.MaxNumChannels],MAX_PLAY_NUM_CHANNELS
         ret
 GetPlay1xxCaps  endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets sound device hardware recording capabilities
 ;
-; OUTPUT : EAX = Max. sampling frequency
-;		   CL = Number of valid configurations of bits per sample
-;		   EBX -> List of valid configurations of bits per sample
-;		   DL = Min. number of channels
-;		   DH = Max. number of channels
+; OUTPUT : EAX -> Recording capabilities (SoundHardwareCapabilities structure)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 GetRec1xxCaps	proc
 		; Not yet supported
 		xor		eax,eax
-		xor		ebx,ebx
-		xor		ecx,ecx
-		xor		edx,edx
         ret
 GetRec1xxCaps	endp
 
@@ -394,14 +394,11 @@ PlayStatus      		db PLAY_OFF
 ValidPlaySampleBits		db VALID_BITS_PER_SAMPLE
 ValidPlaySampleBitsEnd 	db ?
 
-; Current sample rate
-PlaySampRate    dd 0
-PlayProperties	STRUC
-		BitsPerSample	db 0
-		NumChannels		db 0
-		Reserved		dw 0
-ENDS
-PlayProps       PlayProperties <>
+; Device properties for playback
+PlayProps       SoundProperties <>
+
+; Device capabilities for playback
+PlayCaps		SoundHardwareCapabilities <>
 
 .data?
 

@@ -13,7 +13,7 @@
 start:
         InitDPMI
 
-        call    InitWUF
+        call    WUFInit
         ErrorExit "Error initializing wuF!"
 
 ;        mov     ecx,50000000
@@ -81,7 +81,7 @@ wrate           dd ?
         cmp		al,2
         jnz     wait_bucle2
 		
-        call    CloseWUF
+        call    WUFClose
         ErrorExit "Error closing wuF!"
 
         Exit

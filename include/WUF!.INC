@@ -13,29 +13,18 @@ BufferInfo      STRUC
 ENDS
 
 SoundProperties STRUC
-        PlayRate        	dd ?
-		PlayBitsPerSample	db ?
-		PlayNumChannels		db ?
-
-        RecRate         	dd ?
-		RecBitsPerSample	db ?
-		RecNumChannels		db ?
+        SamplingRate        dd ?
+		BitsPerSample		db ?
+		NumChannels			db ?
 ENDS
 
-SoundHardCaps   STRUC
-		PlayMinRate					dd ?
-        PlayMaxRate     			dd ?
-		PlayNumValidBitsPerSample	db ?
-		PlayValidBitsPerSample		dd ?	; Offset of array
-		PlayMinNumChannels			db ?
-		PlayMaxNumChannels			db ?
-
-		RecMinRate					dd ?
-        RecMaxRate     				dd ?
-		RecNumValidBitsPerSample	db ?
-		RecValidBitsPerSample		dd ?	; Offset of array
-		RecMinNumChannels			db ?
-		RecMaxNumChannels			db ?
+SoundHardwareCapabilities   STRUC
+		MinSamplingRate				dd ?
+        MaxSamplingRate    			dd ?
+		ValidBitsPerSampleArrayLen	db ?
+		ValidBitsPerSampleArray		dd ?	; Offset of array
+		MinNumChannels				db ?
+		MaxNumChannels				db ?
 ENDS
 
 ; Wave structure
@@ -57,7 +46,7 @@ ENDS
 ;           CF = 1 if error
 ;               EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-global  InitWUF : NEAR
+global  WUFInit : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Unitializes wUf!
@@ -67,7 +56,15 @@ global  InitWUF : NEAR
 ;          CF = 1 if error
 ;              EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-global  CloseWUF : NEAR
+global  WUFClose : NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Gets the underlying hardware maximum capabilities
+;
+; OUTPUT : EAX -> Playback capabilities (SoundHardwareCapabilities structure)
+;		   EBX -> Recording capabilities (SoundHardwareCapabilities structure)
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global WUFGetHardwareCapabilities : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets buffers used by wuF!
@@ -77,23 +74,25 @@ global  CloseWUF : NEAR
 ;          ECX = Size of playback buffer
 ;          EDX = Size of record buffer
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-global  GetWUFBuffers : NEAR
+global  WUFGetBuffers : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets playback and recording properties
 ;
-; OUTPUT : EAX -> SoundProperties structure
+; OUTPUT : EAX -> Playback properties (SoundProperties structure)
+;		   EBX -> Recording properties (SoundProperties structure)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-global  GetWUFProperties : NEAR
+global  WUFGetProperties : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets playback and recording properties
 ;
-; INPUT  : EAX -> SoundProperties structure
+; INPUT  : EAX -> Playback SoundProperties structure, or NULL
+;		   EBX -> Recording SoundProperties structure, or NULL
 ;
 ; OUTPUT : CF = 0 if ok
 ;               EAX = 0
-;          CF = 1 if hardware capabilities exceeded or it doesn't answer
+;          CF = 1 if hardware capabilities exceeded or device not responding
 ;               EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-global  SetWUFProperties : NEAR
+global  WUFSetProperties : NEAR
