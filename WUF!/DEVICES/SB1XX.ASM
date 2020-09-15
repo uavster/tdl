@@ -7,7 +7,7 @@
 .code
         PLAY_ON                 EQU 1
         PLAY_OFF                EQU 0
-        DSP_8_BIT_PLAYBACK      EQU 14h
+        DSP_8_BIT_PLAYBACK      EQU 14h	; Single-cycle transfer
 
 		MIN_PLAY_SAMPLE_RATE	EQU 4000
         MAX_PLAY_SAMPLE_RATE    EQU 23000
@@ -176,6 +176,8 @@ PlayIRQ         proc
         mov     ds,ax
         mov     es,ax
 
+        cmp     PlayStatus,PLAY_OFF
+        jz      irq_error
         ; DSP Acknowledge
         mov     edx,DSPDataAvail
         in      al,dx
@@ -217,6 +219,8 @@ PlayIRQ         endp
 ;          CF = 1 if hardware doesn't answer
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 StopPlay        proc
+		pushfd
+		cli
         cmp     PlayStatus,PLAY_OFF
         jz      stop_error
         ; Maybe SB didn't get acknowledge
@@ -230,6 +234,7 @@ StopPlay        proc
         jc      stop_error
         mov     PlayStatus,PLAY_OFF
         stop_error:
+		popfd
         ret
 StopPlay        endp
 
