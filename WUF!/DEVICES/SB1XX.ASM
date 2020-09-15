@@ -138,6 +138,7 @@ ENDM
 ;          CF = 1 if hardware doesn't answer
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 StartPlay       proc
+        mov     PlayStatus,PLAY_ON
         mov     FirstPlayBuff,1
         ; Send time constant
         mov     al,DSP_WRITE_TIME_CT
@@ -160,9 +161,11 @@ StartPlay       proc
         call    WriteDSP
         jc      splay_error
 		EnableDSP splay_error
-        mov     PlayStatus,PLAY_ON
         clc
+		ret
         splay_error:
+		call	StopPlay
+		stc
         ret
 StartPlay       endp
 
