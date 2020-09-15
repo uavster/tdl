@@ -12,8 +12,8 @@
 
         ; DSP commands
 		DSP_GET_VERSION			EQU 0E1h
-        DSP_SPEAKER_ON          EQU 0D1h
-        DSP_SPEAKER_OFF         EQU 0D3h
+        DSP_DAC_ON          	EQU 0D1h
+        DSP_DAC_OFF         	EQU 0D3h
         DSP_DMA_STOP            EQU 0D0h
         DSP_DMA_CONTINUE        EQU 0D4h
         DSP_WRITE_TIME_CT       EQU 40h

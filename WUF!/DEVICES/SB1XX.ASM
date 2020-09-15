@@ -114,6 +114,23 @@ Terminate       proc
         ret
 Terminate       endp
 
+EnableDSP       MACRO	ret_label
+        ; Set playback type (8 bits mono)
+        mov     al,DSP_8_BIT_PLAYBACK
+        call    WriteDSP
+        ; Set transfer size
+		jc		ret_label
+        mov     eax,PlayBuff.NumBytes
+        dec     eax
+        push    eax
+        call    WriteDSP
+		jc		ret_label
+        pop     eax
+        mov     al,ah
+        call    WriteDSP
+		jc		ret_label
+ENDM
+
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Starts playing sound from the playback buffer
 ;
@@ -138,43 +155,16 @@ StartPlay       proc
         mov     ebx,PlayBuff.Pointer
         mov     ecx,PlayBuff.NumBytes
         call    DMAWriteToDevice
-        ; Turn speakers on
-        mov     al,DSP_SPEAKER_ON
+        ; Turn DAC on
+        mov     al,DSP_DAC_ON
         call    WriteDSP
         jc      splay_error
-        ; Set playback type (8 bits mono)
-        mov     al,DSP_8_BIT_PLAYBACK
-        call    WriteDSP
-        jc      splay_error
-        ; Set transfer size
-        mov     eax,PlayBuff.NumBytes
-        dec     eax
-        push    eax
-        call    WriteDSP
-        pop     eax
-        jc      splay_error
-        mov     al,ah
-        call    WriteDSP
-        jc      splay_error
+		EnableDSP splay_error
         mov     PlayStatus,PLAY_ON
         clc
         splay_error:
         ret
 StartPlay       endp
-
-EnableDSP       MACRO
-        ; Set playback type (8 bits mono)
-        mov     al,DSP_8_BIT_PLAYBACK
-        call    WriteDSP
-        ; Set transfer size
-        mov     eax,PlayBuff.NumBytes
-        dec     eax
-        push    eax
-        call    WriteDSP
-        pop     eax
-        mov     al,ah
-        call    WriteDSP
-ENDM
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; IRQ handler to refresh DMA transfer
@@ -200,7 +190,7 @@ PlayIRQ         proc
         mov     ecx,PlayBuff.NumBytes
         call    DMAWriteToDevice
 		; Program DSP for the next block
-        EnableDSP
+        EnableDSP irq_error
         ; IRQ acknowledge
         mov     al,20h
         mov     edx,irq_ack_port
@@ -214,6 +204,7 @@ PlayIRQ         proc
         its_first_half:
         xor     FirstPlayBuff,1
         call    MixChannels
+		irq_error:
         pop     es ds
         popad
         iretd
@@ -234,7 +225,7 @@ StopPlay        proc
         mov     al,DSP_DMA_STOP
         call    WriteDSP
         jc      stop_error
-        mov     al,DSP_SPEAKER_OFF
+        mov     al,DSP_DAC_OFF
         call    WriteDSP
         jc      stop_error
         mov     PlayStatus,PLAY_OFF
@@ -278,7 +269,7 @@ GetPlayProps    endp
 ; INPUT  : EAX -> Playback properties (SoundProperties structure), or NULL
 ;
 ; OUTPUT : CF = 0 if ok
-;          CF = 1 if hardware capabilities exceeded or it doesn't answer
+;          CF = 1 if hardware capabilities exceeded or device does not respond
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetPlayProps    proc
 		; If NULL, leave
