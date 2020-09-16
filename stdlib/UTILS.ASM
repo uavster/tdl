@@ -663,7 +663,51 @@ prflab41:       ; Si no hay justificacion
 ; -B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-
 PRFlab521:
         push    eax ebx ecx edx esi
-        ; Convert double to int format as entero.mantisa
+		fld		qword ptr [ebx]
+		fxam
+		fstsw	ax
+		fwait
+		sahf
+		jz		c3_is_1
+		jpe		c2_is_1
+		jc		is_nan
+		jmp		finite_number
+		is_nan:
+				mov		esi,offset msg_nan
+				jmp		print_type_name
+		c2_is_1:
+				jnc		finite_number
+				mov		esi,offset msg_inf
+				test 	ah,2
+				jz		print_plus
+				jmp		print_minus				
+		c3_is_1:
+				jc		is_empty
+				jpe		is_denormal
+				jmp		print_type_name
+		is_empty:
+				mov		esi,offset msg_empty
+				jmp		print_type_name
+		is_denormal:
+				mov		esi,offset msg_denorm
+				test	ah,2
+				jz		print_plus
+		print_minus:
+				mov		al,'-'
+				call	[CharCallback]
+				jmp		print_type_name
+		print_plus:
+				mov		al,'+'
+				call	[CharCallback]
+		print_type_name:
+				mov		al,[esi]
+				test	al,al
+				jz		float_done
+				call	[CharCallback]
+				inc		esi
+				jmp		print_type_name
+		finite_number:
+        ; Convert double to int format as integer.decimals
 		mov		eax,factor_decimal
 		test	eax,eax
 		jnz		factor_is_precalculated
@@ -725,6 +769,7 @@ PRFlab521:
                 call    [CharCallback]
                 pop     esi
         loop    print_mantisa
+		float_done:
         pop     esi edx ecx ebx eax
         jmp     PRFlab1
 
@@ -732,8 +777,12 @@ entero                  dd ?
 mantisa                 dd ?
 factor_decimal          dd 0
 old_control_word        dw ?
-; -B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-
 CharCallback			dd ?
+msg_nan					db "NaN",0
+msg_inf					db "inf",0
+msg_empty				db "empty",0
+msg_denorm				db "denormalized",0
+; -B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-
 PRFbuff db      33      dup (0)         ; buffer para la impresion interna
                                         ; de los numeros
         endp
