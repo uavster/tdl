@@ -110,6 +110,18 @@ MixerDebugPerf	proc
 PrintMixerPerf	proc
 		pushfd
 		cli
+		fild	NumMixerRuns
+		fldz
+		fcompp
+		fstsw	ax
+		fwait
+		sahf
+		jnz		mixer_did_run
+				; The mixer was never run
+				mov 	esi,offset NoPerfDataMsg
+				call	printf
+				jmp		leave_print_mixer_perf
+		mixer_did_run:
 		; Average mixer run time per DMA buffer
 		fild	MixerRunTicks
 		fild	NumMixerRuns
@@ -133,6 +145,7 @@ PrintMixerPerf	proc
 		fstp	AvgMixexPercentCPU
 		mov		esi,offset PerfDataMsg
 		call	printf
+		leave_print_mixer_perf:
 		popfd
 		ret
 		endp
@@ -381,6 +394,7 @@ PerfDataMsg		db "Average mixer execution time: %dfn"
 				db "s ; %dfn"
 				dd offset AvgMixexPercentCPU
 				db "%% of CPU", 13, 10, 0
+NoPerfDataMsg	db "Unable to estimate the mixer execution time. The mixer was never run.",13,10,0
 endif
 
 end
