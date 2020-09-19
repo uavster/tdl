@@ -1,5 +1,5 @@
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Sound Blaster DSP 1.xx routines for audio input/output
+; Sound Blaster DSP 2.00 routines for audio input/output
 ;       Ignacio Mellado Bataller ( B52 / the DarkRising )
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 .386p
@@ -7,8 +7,9 @@
 .code
         PLAY_ON                 EQU 1
         PLAY_OFF                EQU 0
-        DSP_8_BIT_PLAYBACK      EQU 14h	; Single-cycle transfer
-
+        DSP_8_BIT_PLAYBACK      EQU 1Ch	; Auto-initialize transfer
+		DSP_EXIT_AUTOINIT		EQU 0DAh
+		
 		MIN_PLAY_SAMPLE_RATE	EQU 4000
         MAX_PLAY_SAMPLE_RATE    EQU 23000
 		MIN_PLAY_NUM_CHANNELS	EQU 1
@@ -16,7 +17,7 @@
 		VALID_BITS_PER_SAMPLE	EQU 8	; Comma-separated list in descending order
 
         INCLUDE sounddev.inc
-        INCLUDE sb1xx.inc
+        INCLUDE sb200.inc
         INCLUDE utils.inc
         INCLUDE dma.inc
         INCLUDE stderror.inc
@@ -26,7 +27,7 @@
 		INCLUDE assert.inc
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Initializes SB 1.xx driver
+; Initializes SB 2.00 driver
 ;
 ; OUTPUT : CF = 0 if ok
 ;          CF = 1 if error
@@ -117,23 +118,6 @@ Terminate       proc
         ret
 Terminate       endp
 
-EnableDSP       MACRO	ret_label
-        ; Set playback type (8 bits mono)
-        mov     al,DSP_8_BIT_PLAYBACK
-        call    WriteDSP
-        ; Set transfer size
-		jc		ret_label
-        mov     eax,PlayBuff.NumBytes
-        dec     eax
-        push    eax
-        call    WriteDSP
-		jc		ret_label
-        pop     eax
-        mov     al,ah
-        call    WriteDSP
-		jc		ret_label
-ENDM
-
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Starts playing sound from the playback buffer
 ;
@@ -143,6 +127,17 @@ ENDM
 StartPlay       proc
         mov     PlayStatus,PLAY_ON
         mov     FirstPlayBuff,1
+        ; Turn DAC on
+        mov     al,DSP_DAC_ON
+        call    WriteDSP
+        jc      splay_error
+        ; Program DMA chip  
+		mov		al,DMA_AUTOINIT
+        mov     ah,SBdma
+        mov     ebx,PlayBuff.Pointer
+        mov     ecx,PlayBuff.NumBytes
+		shl		ecx,1	; DMA transfers the two buffers and restarts
+        call    DMAWriteToDevice
         ; Send time constant
         mov     al,DSP_WRITE_TIME_CT
         call    WriteDSP
@@ -153,17 +148,23 @@ StartPlay       proc
         call    SBGetTimeConstant
         call    WriteDSP
         jc      splay_error
-        ; Program DMA chip        
-		mov		al,DMA_SINGLECYCLE
-        mov     ah,SBdma
-        mov     ebx,PlayBuff.Pointer
-        mov     ecx,PlayBuff.NumBytes
-        call    DMAWriteToDevice
-        ; Turn DAC on
-        mov     al,DSP_DAC_ON
+		; Set DSP block transfer size
+		mov		al,DSP_BLOCK_TRANSFER_SIZE
+		call	WriteDSP
+		jc		splay_error
+		mov		eax,PlayBuff.NumBytes
+		dec		eax
+		push	eax
+		call	WriteDSP
+		pop		eax
+		jc		splay_error
+		mov		al,ah
+		call	WriteDSP
+		jc		splay_error
+        ; Set playback type (8 bits mono)
+        mov     al,DSP_8_BIT_PLAYBACK
         call    WriteDSP
-        jc      splay_error
-		EnableDSP splay_error
+		jc		splay_error
         clc
 		ret
         splay_error:
@@ -187,18 +188,6 @@ PlayIRQ         proc
         ; DSP Acknowledge
         mov     edx,DSPDataAvail
         in      al,dx
-		; Program DMA controller for the next buffer
-		mov		al,DMA_SINGLECYCLE
-        mov     ah,SBdma
-        mov     ebx,PlayBuff.Pointer
-        test    FirstPlayBuff,1
-        jz     	play_first_buffer
-                add     ebx,PlayBuff.NumBytes
-        play_first_buffer:
-        mov     ecx,PlayBuff.NumBytes
-        call    DMAWriteToDevice
-		; Program DSP for the next block
-        EnableDSP irq_error
         ; IRQ acknowledge
         mov     al,20h
         mov     edx,irq_ack_port
@@ -232,7 +221,8 @@ StopPlay        proc
         ; Maybe SB didn't get acknowledge
         mov     edx,DSPDataAvail
         in      al,dx
-        mov     al,DSP_DMA_STOP
+		; Exit DMA auto-initialize mode
+        mov     al,DSP_EXIT_AUTOINIT
         call    WriteDSP
         jc      stop_error
         mov     al,DSP_DAC_OFF
@@ -388,7 +378,7 @@ GetRec1xxCaps	proc
 GetRec1xxCaps	endp
 
 .data
-SB1xxDevice     SoundDevice <offset SBGetDevName, offset DetectBLASTER, offset SBDetectHard, offset Init, offset Terminate, offset SBReset, offset StartPlay, offset StopPlay, offset StartRec, offset StopRec, offset GetSndBuffers, offset GetPlayProps, offset SetPlayProps, offset GetRecProps, offset SetRecProps, offset GetPlay1xxCaps, offset GetRec1xxCaps>
+SB200Device     SoundDevice <offset SBGetDevName, offset DetectBLASTER, offset SBDetectHard, offset Init, offset Terminate, offset SBReset, offset StartPlay, offset StopPlay, offset StartRec, offset StopRec, offset GetSndBuffers, offset GetPlayProps, offset SetPlayProps, offset GetRecProps, offset SetRecProps, offset GetPlay1xxCaps, offset GetRec1xxCaps>
 
 PlayStatus      		db PLAY_OFF
 ValidPlaySampleBits		db VALID_BITS_PER_SAMPLE

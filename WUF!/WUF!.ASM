@@ -12,7 +12,7 @@
         INCLUDE utils.inc
         INCLUDE mixer.inc
 		INCLUDE snddev.def
-		
+		include assert.inc
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Initializes all the stuff needed by wuF!
 ;

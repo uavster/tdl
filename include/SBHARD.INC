@@ -17,6 +17,7 @@
         DSP_DMA_STOP            EQU 0D0h
         DSP_DMA_CONTINUE        EQU 0D4h
         DSP_WRITE_TIME_CT       EQU 40h
+		DSP_BLOCK_TRANSFER_SIZE	EQU 48h
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Reads a byte from the DSP
