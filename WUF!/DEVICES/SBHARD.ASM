@@ -92,6 +92,13 @@ WriteDSP        endp
 ;           CF = 1 if error
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 DetectBLASTER   proc
+		cmp		SBEnvResult,0
+		stc
+		jl		wrong_env_var	; DetectBLASTER failed previously
+		clc
+		jg		wrong_env_var	; DetectBLASTER succeeded previously
+		; DetectBLASTER not attempted yet
+		mov		SBEnvResult,-1
         GetEnvVar "BLASTER"
         jc      wrong_env_var
         ; Looking for A...
@@ -143,8 +150,9 @@ DetectBLASTER   proc
         mov   	SBdma,cl
         call    FixRegisters
 		call	GetDSPVersion
-		mov		DSPVersion,ax
+		mov		word ptr [DSPVersion],ax
         clc
+		mov		SBEnvResult,1
         wrong_env_var:
         ret
 DetectBLASTER   endp
@@ -263,10 +271,10 @@ SBGetTimeConstant	endp
 
 .data
 ; Device name
-DevNameFormat   db "[ SoundBlaster DSP v%bn"
-				dd offset DSPVersion
+DevNameFormat   db "[ Sound Blaster DSP v%bn"
+				dd offset DSPVersion.Major
 				db ".%b02n"
-				dd offset DSPVersion+1
+				dd offset DSPVersion.Minor
 				db " - A:%dhn"
 				dd offset SBbase
 				db "h I:%dn"
@@ -274,6 +282,8 @@ DevNameFormat   db "[ SoundBlaster DSP v%bn"
 				db " D:%bn"
 				dd offset SBdma
 				db " ]",0
+				
+SBEnvResult		db 0	; 0: Environment detection not attempted, 1: Environment detection succeeded, -1: Environment detection failed.
 
 ; SB registers
 SBRegs  LABEL
@@ -291,7 +301,7 @@ SBbase          dd ?
 SBirq           dd ?
 SBdma           db ?
 				db ?
-DSPVersion		dw ?
+DSPVersion		DSPVersionStruc <>
 IrqLength       dd ?
 
 irq_ack_port    dd ?

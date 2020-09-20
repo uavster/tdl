@@ -26,6 +26,30 @@
 		INCLUDE assert.inc
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Return driver name
+;
+; OUTPUT : EAX -> Driver name
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+GetSB1xxDriverName	proc
+		mov		eax,offset SB1xxDriverName
+		ret
+GetSB1xxDriverName	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Detect Sound Blaster DSP 1.xx with BLASTER environment variable
+;
+; OUTPUT : CF = 0 if ok
+;          CF = 1 if error
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+DetectSB1xx	proc
+		call	DetectBLASTER
+		jc		sb1xx_det_end
+				cmp		DSPVersion.Major,1	; >=1 -> CF = 0; <1 -> CF = 1
+		sb1xx_det_end:
+		ret
+DetectSB1xx	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Initializes SB 1.xx driver
 ;
 ; OUTPUT : CF = 0 if ok
@@ -388,7 +412,7 @@ GetRec1xxCaps	proc
 GetRec1xxCaps	endp
 
 .data
-SB1xxDevice     SoundDevice <offset SBGetDevName, offset DetectBLASTER, offset SBDetectHard, offset Init, offset Terminate, offset SBReset, offset StartPlay, offset StopPlay, offset StartRec, offset StopRec, offset GetSndBuffers, offset GetPlayProps, offset SetPlayProps, offset GetRecProps, offset SetRecProps, offset GetPlay1xxCaps, offset GetRec1xxCaps>
+SB1xxDevice     SoundDevice <offset GetSB1xxDriverName, offset SBGetDevName, offset DetectSB1xx, offset SBDetectHard, offset Init, offset Terminate, offset SBReset, offset StartPlay, offset StopPlay, offset StartRec, offset StopRec, offset GetSndBuffers, offset GetPlayProps, offset SetPlayProps, offset GetRecProps, offset SetRecProps, offset GetPlay1xxCaps, offset GetRec1xxCaps>
 
 PlayStatus      		db PLAY_OFF
 ValidPlaySampleBits		db VALID_BITS_PER_SAMPLE
@@ -399,6 +423,8 @@ PlayProps       SoundProperties <>
 
 ; Device capabilities for playback
 PlayCaps		SoundHardwareCapabilities <>
+
+SB1xxDriverName			db "SB1XX",0
 
 .data?
 

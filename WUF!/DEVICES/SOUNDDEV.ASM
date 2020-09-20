@@ -12,10 +12,10 @@
 		INCLUDE sb200.inc
         INCLUDE sounddev.inc
 
-SOUND_DEVICES   EQU 1
+SOUND_DEVICES   EQU 2
 
 ; Devices will be scanned in left-right order
-SoundDevices    dd offset SB200Device ; offset SB1xxDevice
+SoundDevices    dd offset SB200Device, offset SB1xxDevice
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Looks for an active Sound Device
@@ -94,6 +94,17 @@ GetSoundDeviceName      proc
         call	[esi.SDGetDeviceName]
         ret
 GetSoundDeviceName      endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Gets the name of the sound driver
+;
+; OUTPUT : EAX -> Sound driver name
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+GetSoundDriverName		proc
+		mov		esi,SDev
+		call	[esi.SDGetDriverName]
+		ret
+GetSoundDriverName		endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets the address and size of the play and record buffers

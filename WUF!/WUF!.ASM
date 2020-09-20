@@ -25,15 +25,20 @@ WUFInit         proc
         LPrintS "Starting wuF! - Wave Buffer v0.99:"
 
         ; Start sound device
-        LPrintS "  þ Autodetecting sound device..."
+        LPrintS "  þ Detecting audio device..."
         call    SearchSoundDevice
         ErrorCode NO_SOUND_DEVICE
-        PrintS  "    þ Found device name:  "
+        PrintS  "    þ Found device:  "
         call    GetSoundDeviceName
         mov     esi,eax
         call    Printf
         LPrintS ""
-        LPrintS "  þ Opening sound device driver..."
+		PrintS	"    þ Device driver:  "
+		call	GetSoundDriverName
+		mov		esi,eax
+		call	Printf
+		LPrintS ""
+        LPrintS "  þ Opening audio device driver..."
         call    OpenSoundDevice
         ErrorCode SDEV_OPEN_ERROR
         call    SDPlay
@@ -93,7 +98,7 @@ WUFClose        proc
         LPrintS "  þ Closing mixer..."
         call    CloseMixer
         ErrorCode eax
-        LPrintS "  þ Closing sound device driver..."
+        LPrintS "  þ Closing audio device driver..."
         call    CloseSoundDevice
         ErrorCode SDEV_CLOSE_ERROR
         ret

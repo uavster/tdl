@@ -81,9 +81,15 @@ global SBGetTimeConstant : NEAR
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Needed global data
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+DSPVersionStruc		STRUC
+		Major		db ?
+		Minor		db ?
+ENDS
+
 global  SBbase          : DWORD
 global  SBirq           : DWORD
 global  SBdma           : BYTE
+global  DSPVersion      : DSPVersionStruc
 global  IrqLength       : DWORD
 global  irq_ack_port    : DWORD
 
