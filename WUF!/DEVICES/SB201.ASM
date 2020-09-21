@@ -1,5 +1,5 @@
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Sound Blaster DSP 2.00 routines for audio input/output
+; Sound Blaster DSP 2.01+ routines for audio input/output
 ;       Ignacio Mellado Bataller ( B52 / the DarkRising )
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 .386p
@@ -8,16 +8,18 @@
         PLAY_ON                 EQU 1
         PLAY_OFF                EQU 0
         DSP_8_BIT_PLAYBACK      EQU 1Ch	; Auto-initialize transfer
+		DSP_8_BIT_PLAYBACK_HS	EQU 90h ; High-speed auto-initialize transfer
+		HIGH_SPEED_MIN_FREQ		EQU	23000	; Use high-speed mode above this sampling frequency
 		DSP_EXIT_AUTOINIT		EQU 0DAh
 		
 		MIN_PLAY_SAMPLE_RATE	EQU 4000
-        MAX_PLAY_SAMPLE_RATE    EQU 23000
+        MAX_PLAY_SAMPLE_RATE    EQU 44100
 		MIN_PLAY_NUM_CHANNELS	EQU 1
 		MAX_PLAY_NUM_CHANNELS	EQU 1
 		VALID_BITS_PER_SAMPLE	EQU 8	; Comma-separated list in descending order
 
         INCLUDE sounddev.inc
-        INCLUDE sb200.inc
+        INCLUDE sb201.inc
         INCLUDE utils.inc
         INCLUDE dma.inc
         INCLUDE stderror.inc
@@ -31,27 +33,29 @@
 ;
 ; OUTPUT : EAX -> Driver name
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-GetSB200DriverName	proc
-		mov		eax,offset SB200DriverName
+GetSB201DriverName	proc
+		mov		eax,offset SB201DriverName
 		ret
-GetSB200DriverName	endp
+GetSB201DriverName	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Detect Sound Blaster DSP 2.00 with BLASTER environment variable
+; Detect Sound Blaster DSP 2.01+ with BLASTER environment variable
 ;
 ; OUTPUT : CF = 0 if ok
 ;          CF = 1 if error
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-DetectSB200	proc
+DetectSB201	proc
 		call	DetectBLASTER
-		jc		sb200_det_end
-				cmp		DSPVersion.Major,2	; >=2 -> CF = 0; <2 -> CF = 1
-		sb200_det_end:	
+		jc		sb201_det_end
+				cmp		DSPVersion.Major,2	; >2 -> CF = 0; <2 -> CF = 1
+				jne		sb201_det_end
+				cmp		DSPVersion.Minor,1	; >=1 -> CF = 0; <2 -> CF = 1
+		sb201_det_end:	
 		ret
-DetectSB200	endp
+DetectSB201	endp
 		
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Initializes SB 2.00 driver
+; Initializes SB 2.01+ driver
 ;
 ; OUTPUT : CF = 0 if ok
 ;          CF = 1 if error
@@ -187,6 +191,11 @@ StartPlay       proc
 		jc		splay_error
         ; Set playback type (8 bits mono)
         mov     al,DSP_8_BIT_PLAYBACK
+		cmp		PlayProps.SamplingRate,HIGH_SPEED_MIN_FREQ
+		jbe		normal_mode
+				; High-speed mode
+				mov		al,DSP_8_BIT_PLAYBACK_HS
+		normal_mode:
         call    WriteDSP
 		jc		splay_error
         clc
@@ -246,9 +255,16 @@ StopPlay        proc
         mov     edx,DSPDataAvail
         in      al,dx
 		; Exit DMA auto-initialize mode
-        mov     al,DSP_EXIT_AUTOINIT
-        call    WriteDSP
-        jc      stop_error
+		cmp		PlayProps.SamplingRate,HIGH_SPEED_MIN_FREQ
+		ja		stop_high_speed_mode
+				mov     al,DSP_EXIT_AUTOINIT
+				call    WriteDSP
+				jc      stop_error
+				jmp		continue_stopping
+		stop_high_speed_mode:
+				call    SBReset
+				jc      init_error
+		continue_stopping:
         mov     al,DSP_DAC_OFF
         call    WriteDSP
         jc      stop_error
@@ -379,7 +395,7 @@ SetRecProps     endp
 ;
 ; OUTPUT : EAX -> Playback capabilities (SoundHardwareCapabilities structure)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-GetPlay200Caps	proc
+GetPlay201Caps	proc
 		mov		eax,offset PlayCaps
 		mov		[eax.MinSamplingRate],MIN_PLAY_SAMPLE_RATE
 		mov		[eax.MaxSamplingRate],MAX_PLAY_SAMPLE_RATE
@@ -388,21 +404,21 @@ GetPlay200Caps	proc
 		mov		[eax.MinNumChannels],MIN_PLAY_NUM_CHANNELS
 		mov		[eax.MaxNumChannels],MAX_PLAY_NUM_CHANNELS
         ret
-GetPlay200Caps  endp
+GetPlay201Caps  endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets sound device hardware recording capabilities
 ;
 ; OUTPUT : EAX -> Recording capabilities (SoundHardwareCapabilities structure)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-GetRec200Caps	proc
+GetRec201Caps	proc
 		; Not yet supported
 		xor		eax,eax
         ret
-GetRec200Caps	endp
+GetRec201Caps	endp
 
 .data
-SB200Device     SoundDevice <offset GetSB200DriverName, offset SBGetDevName, offset DetectSB200, offset SBDetectHard, offset Init, offset Terminate, offset SBReset, offset StartPlay, offset StopPlay, offset StartRec, offset StopRec, offset GetSndBuffers, offset GetPlayProps, offset SetPlayProps, offset GetRecProps, offset SetRecProps, offset GetPlay200Caps, offset GetRec200Caps>
+SB201Device     SoundDevice <offset GetSB201DriverName, offset SBGetDevName, offset DetectSB201, offset SBDetectHard, offset Init, offset Terminate, offset SBReset, offset StartPlay, offset StopPlay, offset StartRec, offset StopRec, offset GetSndBuffers, offset GetPlayProps, offset SetPlayProps, offset GetRecProps, offset SetRecProps, offset GetPlay201Caps, offset GetRec201Caps>
 
 PlayStatus      		db PLAY_OFF
 ValidPlaySampleBits		db VALID_BITS_PER_SAMPLE
@@ -414,7 +430,7 @@ PlayProps       SoundProperties <>
 ; Device capabilities for playback
 PlayCaps		SoundHardwareCapabilities <>
 
-SB200DriverName			db "SB200",0
+SB201DriverName			db "SB201",0
 
 .data?
 
