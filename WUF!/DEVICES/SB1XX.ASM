@@ -9,12 +9,6 @@
         PLAY_OFF                EQU 0
         DSP_8_BIT_PLAYBACK      EQU 14h	; Single-cycle transfer
 
-		MIN_PLAY_SAMPLE_RATE	EQU 4000
-        MAX_PLAY_SAMPLE_RATE    EQU 23000
-		MIN_PLAY_NUM_CHANNELS	EQU 1
-		MAX_PLAY_NUM_CHANNELS	EQU 1
-		VALID_BITS_PER_SAMPLE	EQU 8	; Comma-separated list in descending order
-
         INCLUDE sounddev.inc
         INCLUDE sb1xx.inc
         INCLUDE utils.inc
@@ -58,14 +52,20 @@ DetectSB1xx	endp
 Init    proc
 		AssertD	DMA_PLAY_BUFFER_LENGTH,_ltu,65536
 		AssertD	DMA_REC_BUFFER_LENGTH,_ltu,65536
-		; Set maximum play properties
+		; Set preferred play properties
+		call	GetPlay1xxCaps
+		mov		edx,eax
+		movzx	ebx,[edx.NumCapabilities]
+		AssertD	ebx,_gtu,0
+		mov		edx,[edx.Capabilities]	; The first capability is the preferred one
 		sub		esp,size SoundProperties
 		mov		eax,esp
-		mov		[SoundProperties ptr eax.SamplingRate],MAX_PLAY_SAMPLE_RATE
-		mov		bl,ValidPlaySampleBits	; First byte is the highest valid value
-		mov		[SoundProperties ptr eax.BitsPerSample],bl
-		mov		bl,MAX_PLAY_NUM_CHANNELS
-		mov		[SoundProperties ptr eax.NumChannels],bl
+		mov		ebx,[edx.SCMaxSamplingRate]
+		mov		[eax.SPSamplingRate],ebx
+		mov		bl,[edx.SCBitsPerSample]
+		mov		[eax.SPBitsPerSample],bl
+		mov		bl,[edx.SCNumChannels]
+		mov		[eax.SPNumChannels],bl
 		call	SetPlayProps
 		lea		esp,[esp+size SoundProperties]
 		jc		init_error
@@ -172,8 +172,8 @@ StartPlay       proc
         call    WriteDSP
         jc      splay_error
 		call	GetPlayProps
-		mov		bl,[eax.NumChannels]
-		mov		eax,[eax.SamplingRate]
+		mov		bl,[eax.SPNumChannels]
+		mov		eax,[eax.SPSamplingRate]
         call    SBGetTimeConstant
         call    WriteDSP
         jc      splay_error
@@ -307,39 +307,17 @@ GetPlayProps    endp
 ;          CF = 1 if hardware capabilities exceeded or device does not respond
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetPlayProps    proc
-		; If NULL, leave
-		or		eax,eax
-		jz		dnts
-		; Check that requested properties are within bounds
-		cmp		[eax.SamplingRate],MIN_PLAY_SAMPLE_RATE
-		jb		spp_error
-        cmp     [eax.SamplingRate],MAX_PLAY_SAMPLE_RATE
-        ja      spp_error
-		cmp		[eax.NumChannels],MIN_PLAY_NUM_CHANNELS
-		jb		spp_error
-		cmp		[eax.NumChannels],MAX_PLAY_NUM_CHANNELS
-		ja		spp_error
-		mov		bl,[eax.BitsPerSample]
-		mov		ecx,offset ValidPlaySampleBitsEnd - offset ValidPlaySampleBits
-		mov		edx,offset ValidPlaySampleBits
-		check_bits_per_sample:
-				cmp	bl,[edx]
-				je 	bits_per_sample_valid
-				inc	edx
-		loop	check_bits_per_sample
-		jmp		spp_error
-		bits_per_sample_valid:
 		; Copy properties
 		mov		ecx,size SoundProperties
 		mov		edi,offset PlayProps
 		mov		esi,eax
 		rep		movsb
 		; Get actual frequency due to time constant resolution
-		mov		bl,[eax.NumChannels]
-		mov		eax,[eax.SamplingRate]
+		mov		bl,[eax.SPNumChannels]
+		mov		eax,[eax.SPSamplingRate]
 		call	SBGetTimeConstant
 		mov		eax,offset PlayProps
-		mov		[eax.SamplingRate],ebx
+		mov		[eax.SPSamplingRate],ebx
         cmp     PlayStatus,PLAY_OFF
         jz      dnts
 				; Restart, if it is playing
@@ -376,9 +354,6 @@ GetRecProps     endp
 ;          CF = 1 if hardware capabilities exceeded or device does not respond
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetRecProps     proc
-		; If NULL, leave
-		or		eax,eax
-		jz		dnts
 		; Not yet supported
         stc
         ret
@@ -391,12 +366,7 @@ SetRecProps     endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 GetPlay1xxCaps	proc
 		mov		eax,offset PlayCaps
-		mov		[eax.MinSamplingRate],MIN_PLAY_SAMPLE_RATE
-		mov		[eax.MaxSamplingRate],MAX_PLAY_SAMPLE_RATE
-		mov		[eax.ValidBitsPerSampleArrayLen],offset ValidPlaySampleBitsEnd - offset ValidPlaySampleBits
-		mov		[eax.ValidBitsPerSampleArray],offset ValidPlaySampleBitsEnd
-		mov		[eax.MinNumChannels],MIN_PLAY_NUM_CHANNELS
-		mov		[eax.MaxNumChannels],MAX_PLAY_NUM_CHANNELS
+		clc
         ret
 GetPlay1xxCaps  endp
 
@@ -415,14 +385,13 @@ GetRec1xxCaps	endp
 SB1xxDevice     SoundDevice <offset GetSB1xxDriverName, offset SBGetDevName, offset DetectSB1xx, offset SBDetectHard, offset Init, offset Terminate, offset SBReset, offset StartPlay, offset StopPlay, offset StartRec, offset StopRec, offset GetSndBuffers, offset GetPlayProps, offset SetPlayProps, offset GetRecProps, offset SetRecProps, offset GetPlay1xxCaps, offset GetRec1xxCaps>
 
 PlayStatus      		db PLAY_OFF
-ValidPlaySampleBits		db VALID_BITS_PER_SAMPLE
-ValidPlaySampleBitsEnd 	db ?
 
 ; Device properties for playback
 PlayProps       SoundProperties <>
 
 ; Device capabilities for playback
-PlayCaps		SoundHardwareCapabilities <>
+PlayCaps			SoundHardwareCapabilities <1, offset PlayValidConfigs>
+PlayValidConfigs	SoundCapability <4000, 23000, 8, 1>
 
 SB1xxDriverName			db "SB1XX",0
 

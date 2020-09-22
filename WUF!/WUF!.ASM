@@ -50,8 +50,8 @@ WUFInit         proc
         call    SDGetPlayProperties
         ; Start mixer
 		mov		esi,eax
-		mov		bl,[esi.BitsPerSample]
-		mov		bh,[esi.NumChannels]
+		mov		bl,[esi.SPBitsPerSample]
+		mov		bh,[esi.SPNumChannels]
 		movzx	ecx,bl
 		shr		ecx,3	; bytes per sample
         movzx   edx,bh
@@ -60,7 +60,7 @@ WUFInit         proc
 		xor		edx,edx
 		div		ecx
 		mov		edx,eax
-		mov		eax,[esi.SamplingRate]
+		mov		eax,[esi.SPSamplingRate]
         mov     cl,MAX_CHANNELS
 		push	eax ebx
         call    OpenMixer

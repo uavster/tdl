@@ -151,7 +151,40 @@ SDGetPlayProperties     endp
 ;          CF = 1 if hardware capabilities exceeded or device does not respond
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 SDSetPlayProperties     proc
+		; If NULL, leave
+		or		eax,eax
+		jz		sd_set_props_error
+		; Check that the requested properties match a valid hardware configuration
+		push	eax
+		call	SDGetPlayHardCapabilities
+		pop		ebx
+		movzx	ecx,[eax.NumCapabilities]
+		mov		eax,[eax.Capabilities]
+		check_playback_capabilities:
+				mov		edx,[ebx.SPSamplingRate]
+				cmp		edx,[eax.SCMinSamplingRate]
+				jb		next_playback_capability
+				cmp		edx,[ebx.SCMaxSamplingRate]
+				ja		next_playback_capability
+				mov		dl,[ebx.SPBitsPerSample]
+				cmp		dl,[eax.SCBitsPerSample]
+				jne		next_playback_capability
+				mov		dl,[ebx.SPNumChannels]
+				cmp		dl,[eax.SCNumChannels]
+				jne		next_playback_capability
+				jmp		found_playback_capability_match
+				next_playback_capability:
+				add		eax,size SoundCapability
+		dec		ecx
+		jnz		check_playback_capabilities
+		sd_set_props_error:
+		stc
+		ret
+		
+		found_playback_capability_match:
+		; The hardware can provide the requested properties: set them in the driver
         mov     esi,SDev
+		mov		eax,ebx
         call    [esi.SDSetPlayProps]
         ret
 SDSetPlayProperties     endp

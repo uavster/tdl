@@ -11,18 +11,21 @@ SoundBuffer		STRUC
 ENDS
 
 SoundProperties STRUC
-        SamplingRate        dd ?
-		BitsPerSample		db ?
-		NumChannels			db ?
+        SPSamplingRate        		dd ?
+		SPBitsPerSample				db ?
+		SPNumChannels				db ?
+ENDS
+
+SoundCapability STRUC
+		SCMinSamplingRate			dd ?
+        SCMaxSamplingRate    		dd ?
+		SCBitsPerSample				db ?
+		SCNumChannels				db ?
 ENDS
 
 SoundHardwareCapabilities   STRUC
-		MinSamplingRate				dd ?
-        MaxSamplingRate    			dd ?
-		ValidBitsPerSampleArrayLen	db ?
-		ValidBitsPerSampleArray		dd ?	; Offset of array
-		MinNumChannels				db ?
-		MaxNumChannels				db ?
+		NumCapabilities				db ?
+		Capabilities				dd ?	; Offset of array of SoundCapability
 ENDS
 
 ; Wave structure
