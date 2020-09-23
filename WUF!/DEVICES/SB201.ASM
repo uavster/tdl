@@ -9,7 +9,6 @@
         PLAY_OFF                EQU 0
         DSP_8_BIT_PLAYBACK      EQU 1Ch	; Auto-initialize transfer
 		DSP_8_BIT_PLAYBACK_HS	EQU 90h ; High-speed auto-initialize transfer
-		HIGH_SPEED_MIN_FREQ		EQU	23000	; Use high-speed mode above this sampling frequency
 		DSP_EXIT_AUTOINIT		EQU 0DAh
 		
         INCLUDE sounddev.inc
@@ -62,6 +61,7 @@ Init    proc
 		mov		edx,eax
 		movzx	ebx,[edx.NumCapabilities]
 		AssertD	ebx,_gtu,0
+		mov		PlayCapabilityIndex,0
 		mov		edx,[edx.Capabilities]	; The first capability is the preferred one
 		sub		esp,size SoundProperties
 		mov		eax,esp
@@ -191,9 +191,9 @@ StartPlay       proc
 		jc		splay_error
         ; Set playback type (8 bits mono)
         mov     al,DSP_8_BIT_PLAYBACK
-		cmp		PlayProps.SPSamplingRate,HIGH_SPEED_MIN_FREQ
-		jbe		normal_mode
-				; High-speed mode
+		cmp		PlayCapabilityIndex,0
+		je		normal_mode
+				; High speed mode
 				mov		al,DSP_8_BIT_PLAYBACK_HS
 		normal_mode:
         call    WriteDSP
@@ -255,13 +255,15 @@ StopPlay        proc
         mov     edx,DSPDataAvail
         in      al,dx
 		; Exit DMA auto-initialize mode
-		cmp		PlayProps.SPSamplingRate,HIGH_SPEED_MIN_FREQ
-		ja		stop_high_speed_mode
+		cmp		PlayCapabilityIndex,1
+		je		stop_high_speed_mode
+				; Normal mode
 				mov     al,DSP_EXIT_AUTOINIT
 				call    WriteDSP
 				jc      stop_error
 				jmp		continue_stopping
 		stop_high_speed_mode:
+				; High speed mode
 				call    SBReset
 				jc      init_error
 		continue_stopping:
@@ -308,11 +310,13 @@ GetPlayProps    endp
 ; Sets playback properties
 ;
 ; INPUT  : EAX -> Playback properties (SoundProperties structure), or NULL
+;		   EBX = Playback capability index
 ;
 ; OUTPUT : CF = 0 if ok
 ;          CF = 1 if hardware capabilities exceeded or device does not respond
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 SetPlayProps    proc
+		mov		PlayCapabilityIndex,ebx
 		; Copy properties
 		mov		ecx,size SoundProperties
 		mov		edi,offset PlayProps
@@ -392,16 +396,18 @@ SB201Device     SoundDevice <offset GetSB201DriverName, offset SBGetDevName, off
 
 PlayStatus      		db PLAY_OFF
 
-; Device properties for playback
-PlayProps       SoundProperties <>
-
 ; Device capabilities for playback
 PlayCaps			SoundHardwareCapabilities <1, offset PlayValidConfigs>
-PlayValidConfigs	SoundCapability <4000, 44100, 8, 1>
+; The first capability in the list is the preferred one
+PlayValidConfigs	SoundCapability <23000, 44100, 8, 1>, <4000, 23000, 8, 1>
 
 SB201DriverName			db "SB201",0
 
 .data?
+
+; Device properties for playback
+PlayProps       	SoundProperties <>
+PlayCapabilityIndex	dd ?
 
 IRQVector       STRUC
         IRQOffset       dd ?

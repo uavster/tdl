@@ -158,8 +158,9 @@ SDSetPlayProperties     proc
 		push	eax
 		call	SDGetPlayHardCapabilities
 		pop		ebx
-		movzx	ecx,[eax.NumCapabilities]
-		mov		eax,[eax.Capabilities]
+		mov		esi,eax
+		movzx	ecx,[esi.NumCapabilities]
+		mov		eax,[esi.Capabilities]
 		check_playback_capabilities:
 				mov		edx,[ebx.SPSamplingRate]
 				cmp		edx,[eax.SCMinSamplingRate]
@@ -183,8 +184,12 @@ SDSetPlayProperties     proc
 		
 		found_playback_capability_match:
 		; The hardware can provide the requested properties: set them in the driver
+		movzx	edx,[esi.NumCapabilities]
+		sub		ecx,edx
+		neg		ecx		; capability_index = -(loop_counter - total_capabilities)
         mov     esi,SDev
 		mov		eax,ebx
+		mov		ebx,ecx
         call    [esi.SDSetPlayProps]
         ret
 SDSetPlayProperties     endp

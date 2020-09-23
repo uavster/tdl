@@ -293,6 +293,7 @@ GetPlayProps    endp
 ; Sets playback properties
 ;
 ; INPUT  : EAX -> Playback properties (SoundProperties structure), or NULL
+;		   EBX = Playback capability index
 ;
 ; OUTPUT : CF = 0 if ok
 ;          CF = 1 if hardware capabilities exceeded or device does not respond
@@ -382,6 +383,7 @@ PlayProps       SoundProperties <>
 
 ; Device capabilities for playback
 PlayCaps			SoundHardwareCapabilities <1, offset PlayValidConfigs>
+; The first capability in the list is the preferred one
 PlayValidConfigs	SoundCapability <4000, 23000, 8, 1>
 
 SB200DriverName			db "SB200",0
