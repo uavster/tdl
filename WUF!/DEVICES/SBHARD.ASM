@@ -269,6 +269,59 @@ SBGetTimeConstant	proc
         ret
 SBGetTimeConstant	endp
 
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Writes bits to a mixer register and returns the previous value
+;
+; First, the mask in AH is ANDed with the current value; then, the mask in AL
+; is ORed with the result. The resulting byte is sent to the mixer data port.
+;
+; INPUT  : AH = Bit mask to AND with the mixer register
+;		   AL = Bit mask to OR with the mixer register
+;		   BL = Mixer register
+; OUTPUT : AL = Previous register value
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SBMixerReadWriteBits	proc
+		mov		bh,al
+		mov		edx,MixerIndex
+		mov		al,bl
+		out		dx,al
+		mov		edx,MixerData
+		in		al,dx
+		mov		bl,al
+		and		al,ah
+		or		al,bh
+		out		dx,al
+		mov		al,bl
+		ret
+SBMixerReadWriteBits	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Enables bits in the mixer output configuration and returns the previous value
+;
+; INPUT  : AL = Bit mask to OR with the mixer configuration
+; OUTPUT : AL = Previous mixer configuration
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SBMixerOutputConfigEnableBits	proc
+		mov		bl,MIXER_OUTPUT_CONFIG
+		mov		ah,0FFh
+		call	SBMixerReadWriteBits
+		ret
+SBMixerOutputConfigEnableBits	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Disables bits in the mixer output configuration and returns the previous value
+;
+; INPUT  : AL = Bit mask to AND with the mixer configuration
+; OUTPUT : AL = Previous mixer configuration
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SBMixerOutputConfigDisableBits	proc
+		mov		bl,MIXER_OUTPUT_CONFIG
+		mov		ah,al
+		xor		al,al
+		call	SBMixerReadWriteBits
+		ret
+SBMixerOutputConfigDisableBits	endp
+
 .data
 ; Device name
 DevNameFormat   db "[ Sound Blaster DSP v%bn"
