@@ -11,12 +11,13 @@
         INCLUDE sb1xx.inc
 		INCLUDE sb200.inc
 		INCLUDE sb201.inc
+		INCLUDE sb3xx.inc
         INCLUDE sounddev.inc
 
-SOUND_DEVICES   EQU 3
+SOUND_DEVICES   EQU 4
 
 ; Devices will be scanned in left-right order
-SoundDevices    dd offset SB201Device, offset SB200Device, offset SB1xxDevice
+SoundDevices    dd offset SB3xxDevice, offset SB201Device, offset SB200Device, offset SB1xxDevice
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Looks for an active Sound Device
