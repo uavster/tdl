@@ -238,7 +238,7 @@ PlaySound       endp
 ; INPUT  : EBX -> Wave data
 ;		   EDX = Current sample index
 ;		   ESI -> ChanWave structure
-;		   EDI -> offset MixingBuffer + 4 * NumOutputChannels(1) * NumOutputSamples
+;		   EDI -> offset MixingBuffer + MixBytesPerSample(4) * NumOutputChannels(1) * NumOutputSamples
 ;		   EBP = -NumOutputSamples
 ; OUTPUT : CF = 0 if channel is still active
 ;		   CF = 1 if channel went inactive
@@ -335,12 +335,100 @@ MixChannelToMono	endp
 ; INPUT  : EBX -> Wave data
 ;		   EDX = Current sample index
 ;		   ESI -> ChanWave structure
-;		   EDI -> offset MixingBuffer + 4 * NumOutputChannels(1) * NumOutputSamples
+;		   EDI -> offset MixingBuffer + MixBytesPerSample(4) * NumOutputChannels(2) * NumOutputSamples
 ;		   EBP = -NumOutputSamples
 ; OUTPUT : CF = 0 if channel is still active
 ;		   CF = 1 if channel went inactive
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 MixChannelToStereo	proc
+		; Number of loops = min(NumOutputSamples, esi.WaveLen - esi.CurrentSample) 
+		test    [esi.WaveType],1
+		jz      its_8_bits_s
+				; 16-bit signed samples
+				test    [esi.WaveType],10b
+				jz      mono16_s
+				stereo16_s:
+						; Stereo, 16 bits
+						mov		ecx,edx
+						shr		ecx,8
+						mov     eax,[ebx+ecx*4]
+						movsx   ecx,ax	; ecx = left channel
+						shr		eax,16
+						movsx	eax,ax	; eax = right channel
+						add		ecx,32768
+						shl		ecx,EXPANSION_BITS
+						add		eax,32768
+						shl		eax,EXPANSION_BITS
+						add		[edi+ebp*8],ecx
+						add		[edi+ebp*8+4],eax
+						inc		ebp
+						jz		no_samp_end_s
+						add     edx,[esi.SampleIncrement]
+						mov		ecx,[esi.WaveLen]
+						shl		ecx,8
+						cmp     edx,ecx
+						jb		stereo16_s
+						jmp		wave_mixed
+				mono16_s:
+						; Mono, 16 bits												
+						mov		ecx,edx
+						shr		ecx,8
+						movsx   eax,word ptr [ebx+ecx*2]
+						add		eax,32768
+						shl		eax,EXPANSION_BITS
+						add		[edi+ebp*8],eax
+						add		[edi+ebp*8+4],eax
+						inc		ebp
+						jz		no_samp_end_s
+						add     edx,[esi.SampleIncrement]
+						mov		ecx,[esi.WaveLen]
+						shl		ecx,8
+						cmp     edx,ecx
+						jb		mono16_s
+						jmp     wave_mixed_s
+		its_8_bits_s:
+				; 8-bit unsigned samples
+				test	[esi.WaveType],10b
+				jz		mono8_s
+				stereo8_s:
+						; Stereo, 8 bits
+						mov		ecx,edx
+						shr		ecx,8
+						mov		ax,[ebx+ecx*2]
+						movzx	ecx,ah	; ecx = right channel
+						movzx	eax,al	; eax = left channel
+						shl		ecx,8+EXPANSION_BITS
+						shl		eax,8+EXPANSION_BITS
+						add		[edi+ebp*8],eax
+						add		[edi+ebp*8+4],ecx
+						inc		ebp
+						jz		no_samp_end_s
+						add     edx,[esi.SampleIncrement]
+						mov		ecx,[esi.WaveLen]
+						shl		ecx,8
+						cmp     edx,ecx
+						jb		stereo8_s
+						jmp		wave_mixed_s
+				mono8_s:
+						; Mono, 8 bits
+						mov		ecx,edx
+						shr		ecx,8
+						movzx   eax,byte ptr [ebx+ecx]
+						shl		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
+						add		[edi+ebp*8],eax
+						add		[edi+ebp*8+4],eax
+						inc		ebp
+						jz		no_samp_end_s
+						add     edx,[esi.SampleIncrement]
+						mov		ecx,[esi.WaveLen]
+						shl		ecx,8
+						cmp     edx,ecx
+						jb		mono8_s
+		wave_mixed_s:
+		stc
+		ret
+		no_samp_end_s:
+		clc
 		ret
 MixChannelToStereo	endp
 
