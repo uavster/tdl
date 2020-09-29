@@ -136,13 +136,13 @@ PrintMixerPerf	proc
 		fdivp
 		fst		AvgMixerExecTime
 		; Maximum mixer run time per DMA buffer to keep sampling rate
-		fild	NumOutputBytes
-		xor		eax,eax
-		mov		al,MixBitsPerSample
-		shr		al,3
-		mov		BytesPerSample,eax
-		fild	BytesPerSample
-		fdivp
+		fild	NumOutputSamples
+;		xor		eax,eax
+;		mov		al,MixBitsPerSample
+;		shr		al,3
+;		mov		BytesPerSample,eax
+;		fild	BytesPerSample
+;		fdivp
 		fild	MixFreq
 		fdivp
 		fdivp
@@ -368,7 +368,7 @@ MixChannelToStereo	proc
 						shl		ecx,8
 						cmp     edx,ecx
 						jb		stereo16_s
-						jmp		wave_mixed
+						jmp		wave_mixed_s
 				mono16_s:
 						; Mono, 16 bits												
 						mov		ecx,edx
@@ -452,7 +452,10 @@ endif
 		walk_channels:
 			mov		ebp,NumOutputSamples
 			mov		edi,ebp
-			shl		edi,2
+			shl		edi,2	; 4 bytes per mixer sample
+			mov		cl,NumOutputChannels
+			dec		cl
+			shl		edi,cl
 			add		edi,MixingBuffer
 			neg		ebp
 			mov		eax,ChannelPool
@@ -486,13 +489,29 @@ endif
 		mov		ecx,NumOutputSamples
 		mov		edi,OutputBuffer
 		xor		ebx,ebx
-		compress_output:
+		cmp		NumOutputChannels,2
+		jz		stereo8_compression
+		mono8_compression:
 				mov		eax,[esi+ebx*4]
 				lea		eax,[eax*4+eax]			; Compression factor *5
 				shr		eax,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
 				mov		[edi+ebx],al
 				inc		ebx
-				loop	compress_output
+				loop	mono8_compression
+				jmp		compression_done
+		stereo8_compression:
+				mov		eax,[esi+ebx*8]
+				lea		eax,[eax*4+eax]			; Compression factor *5
+				shr		eax,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				mov		[edi+ebx*2],al
+				mov		edx,[esi+ebx*8+4]
+				lea		edx,[edx*4+edx]			; Compression factor *5
+				shr		edx,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				mov		ah,dl
+				mov		[edi+ebx*2],ax
+				inc		ebx
+				loop	stereo8_compression
+		compression_done:
 
 ifdef DEBUG_MIXER_PERFORMANCE
 		mov		ebx,DebugPerfCounter
