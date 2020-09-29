@@ -52,13 +52,13 @@ WUFInit         proc
 		mov		esi,eax
 		mov		bl,[esi.SPBitsPerSample]
 		mov		bh,[esi.SPNumChannels]
-		movzx	ecx,bl
-		shr		ecx,3	; bytes per sample
-        movzx   edx,bh
-		imul	ecx,edx
+;		movzx	ecx,bl
+;		shr		ecx,3	; bytes per sample
+;        movzx   edx,bh
+;		imul	ecx,edx
 		mov		eax,DMA_PLAY_BUFFER_LENGTH
-		xor		edx,edx
-		div		ecx
+;		xor		edx,edx
+;		div		ecx
 		mov		edx,eax
 		mov		eax,[esi.SPSamplingRate]
         mov     cl,MAX_CHANNELS

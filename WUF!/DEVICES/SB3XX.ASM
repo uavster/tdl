@@ -365,8 +365,11 @@ GetPlayProps    endp
 AllocPlaybackDMABuffers	proc
 		call	FreePlaybackDMABuffers
 		jc		alloc_playback_end
-        mov     ecx,DMA_PLAY_BUFFER_LENGTH*2    ; double buffering
-		mov		eax,ecx
+        mov     eax,DMA_PLAY_BUFFER_LENGTH*2    ; double buffering
+		mov		cl,PlayProps.SPNumChannels
+		dec		cl
+		shl		eax,cl
+		mov		ecx,eax
 		shr 	eax,1
 		mov		PlayBuff.NumBytes,eax
         call    AllocDMABuffer
