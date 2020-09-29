@@ -54,12 +54,13 @@ DetectSB3xx	endp
 Init    proc
 		AssertD	DMA_PLAY_BUFFER_LENGTH,_ltu,65536
 		AssertD	DMA_REC_BUFFER_LENGTH,_ltu,65536
+		; Clear playback buffers
+		mov		PlayBuff.Pointer,0
 		; Set preferred play properties
 		call	GetPlay3xxCaps
 		mov		edx,eax
 		movzx	ebx,[edx.NumCapabilities]
 		AssertD	ebx,_gtu,0
-		mov		PlayCapabilityIndex,0
 		mov		edx,[edx.Capabilities]	; The first capability is the preferred one
 		sub		esp,size SoundProperties
 		mov		eax,esp
@@ -69,6 +70,7 @@ Init    proc
 		mov		[eax.SPBitsPerSample],bl
 		mov		bl,[edx.SCNumChannels]
 		mov		[eax.SPNumChannels],bl
+		xor		ebx,ebx
 		call	SetPlayProps
 		lea		esp,[esp+size SoundProperties]
 		jc		init_error
@@ -88,22 +90,12 @@ Init    proc
         mov     cx,cs
         mov     edx,offset PlayIRQ
         int     31h
-        ; Need memory for DMA buffers
-        mov     ecx,DMA_PLAY_BUFFER_LENGTH*2    ; double buffering
-        call    AllocDMABuffer
-        jc      init_error
-        mov     PlayBuff.Pointer,ebx
-		mov		PlayBuff.NumBytes,DMA_PLAY_BUFFER_LENGTH
+		; Allocate DMA recording buffer
         mov     ecx,DMA_REC_BUFFER_LENGTH
         call    AllocDMABuffer
         jc      init_error
         mov     RecBuff.Pointer,ebx
 		mov		RecBuff.NumBytes,DMA_REC_BUFFER_LENGTH
-        ; Clear play/rec buffers
-        mov     ecx,PlayBuff.NumBytes
-        xor     eax,eax
-        mov     edi,PlayBuff.Pointer
-        rep     stosw   ; double buffering
         mov     ecx,RecBuff.NumBytes
         mov     edi,RecBuff.Pointer
         rep     stosb
@@ -113,7 +105,7 @@ Init    proc
 Init    endp
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
-; Terminates SB 1.x driver
+; Terminates SB 3.xx driver
 ;
 ; OUTPUT : CF = 0 if ok
 ;          CF = 1 if error
@@ -133,9 +125,8 @@ Terminate       proc
         mov     cx,OldIRQ.IRQSegment
         int     31h
         ; Freeing buffers
-        mov     ebx,PlayBuff.Pointer
-        call    FreeDMABuffer
-        jc      terminate_error
+		call	FreePlaybackDMABuffers
+		jc		terminate_error
         mov     ebx,RecBuff.Pointer
         call    FreeDMABuffer
         jc      terminate_error
@@ -191,9 +182,12 @@ StartPlay       proc
         mov     al,DSP_DAC_ON
         call    WriteDSP
         jc      splay_error
-		; Set hardware to stereo mode
-		call	SetStereoOutput
-		jc		splay_error
+		cmp		PlayProps.SPNumChannels,1
+		je		skip_set_stereo_output
+				; Set hardware to stereo mode
+				call	SetStereoOutput
+				jc		splay_error
+		skip_set_stereo_output:
         ; Program DMA chip  
 		mov		al,DMA_AUTOINIT
         mov     ah,SBdma
@@ -211,10 +205,13 @@ StartPlay       proc
         call    SBGetTimeConstant
         call    WriteDSP
         jc      splay_error
-		; Save filter status and turn it off
-		mov		al,MIXER_CONFIG_FILTER_OFF
-		call	SBMixerOutputConfigEnableBits
-		mov		previous_filter_output_config,al
+		cmp		PlayProps.SPNumChannels,1
+		je		skip_turn_off_filter
+				; Save filter status and turn it off
+				mov		al,MIXER_CONFIG_FILTER_OFF
+				call	SBMixerOutputConfigEnableBits
+				mov		previous_filter_output_config,al
+		skip_turn_off_filter:
 		; Set DSP block transfer size
 		mov		al,DSP_BLOCK_TRANSFER_SIZE
 		call	WriteDSP
@@ -229,7 +226,13 @@ StartPlay       proc
 		call	WriteDSP
 		jc		splay_error
         ; Set playback type (8 bits mono)
-        mov     al,DSP_8_BIT_PLAYBACK_HS
+        mov     al,DSP_8_BIT_PLAYBACK
+		mov		ebx,PlayCapabilityIndex
+		cmp		byte ptr [ebx+offset IsHighSpeedMode],0
+		je		normal_mode
+				; High speed mode
+				mov		al,DSP_8_BIT_PLAYBACK_HS
+		normal_mode:
         call    WriteDSP
 		jc		splay_error
         clc
@@ -250,6 +253,15 @@ PlayIRQ         proc
         mov     ds,ax
         mov     es,ax
 
+        ; DSP Acknowledge
+        mov     edx,DSPDataAvail
+        in      al,dx
+        ; IRQ acknowledge
+        mov     al,20h
+        mov     edx,irq_ack_port
+        out     dx,al
+        sti
+		
         cmp     PlayStatus,PLAY_OFF
         jz      irq_error
 		
@@ -264,14 +276,6 @@ PlayIRQ         proc
 		
 		irq_error:
 		inc		irq_received
-        ; DSP Acknowledge
-        mov     edx,DSPDataAvail
-        in      al,dx
-        ; IRQ acknowledge
-        mov     al,20h
-        mov     edx,irq_ack_port
-        out     dx,al
-        sti
         pop     es ds
         popad
         iretd
@@ -287,26 +291,42 @@ StopPlay        proc
 		pushfd
 		cli
         cmp     PlayStatus,PLAY_OFF
-        jz      stop_error
+        jz      stopped
         ; Maybe SB didn't get acknowledge
         mov     edx,DSPDataAvail
         in      al,dx
 		; Exit DMA high-speed auto-initialize mode
-		call    SBReset
-		jc      init_error
-		; Restore filter status
-		mov		al,previous_filter_output_config
-		mov		ah,al
-		mov		bl,MIXER_OUTPUT_CONFIG
-		call 	SBMixerReadWriteBits
-		; Set hardware to mono mode
-		mov		al,NOT MIXER_CONFIG_STEREO
-		call	SBMixerOutputConfigDisableBits
+		mov		ebx,PlayCapabilityIndex
+		cmp		byte ptr [ebx+offset IsHighSpeedMode],0
+		jne		stop_high_speed_mode
+				; Normal mode
+				mov     al,DSP_EXIT_AUTOINIT
+				call    WriteDSP
+				jc      stop_error
+				jmp		continue_stopping
+		stop_high_speed_mode:
+				; High speed mode
+				call    SBReset
+				jc      init_error
+		continue_stopping:
+		cmp		PlayProps.SPNumChannels,1
+		je		skip_restore_filter_and_mono
+				; Restore filter status
+				mov		al,previous_filter_output_config
+				mov		ah,al
+				mov		bl,MIXER_OUTPUT_CONFIG
+				call 	SBMixerReadWriteBits
+				; Set hardware to mono mode
+				mov		al,NOT MIXER_CONFIG_STEREO
+				call	SBMixerOutputConfigDisableBits
+		skip_restore_filter_and_mono:
 		; Turn off DAC
         mov     al,DSP_DAC_OFF
         call    WriteDSP
         jc      stop_error
         mov     PlayStatus,PLAY_OFF
+		stopped:
+		clc
         stop_error:
 		popfd
         ret
@@ -342,6 +362,36 @@ GetPlayProps    proc
         ret
 GetPlayProps    endp
 
+AllocPlaybackDMABuffers	proc
+		call	FreePlaybackDMABuffers
+		jc		alloc_playback_end
+        mov     ecx,DMA_PLAY_BUFFER_LENGTH*2    ; double buffering
+		mov		eax,ecx
+		shr 	eax,1
+		mov		PlayBuff.NumBytes,eax
+        call    AllocDMABuffer
+        jc      alloc_playback_end
+        mov     PlayBuff.Pointer,ebx
+        ; Clear play/rec buffers
+        mov     ecx,PlayBuff.NumBytes
+        xor     eax,eax
+        mov     edi,PlayBuff.Pointer
+        rep     stosw   ; double buffering
+		alloc_playback_end:
+		ret
+AllocPlaybackDMABuffers	endp
+
+FreePlaybackDMABuffers	proc	
+        mov     ebx,PlayBuff.Pointer
+		or		ebx,ebx
+		jz		free_playback_end
+        call    FreeDMABuffer
+        jc      free_playback_end
+		mov		PlayBuff.Pointer,0
+		free_playback_end:
+		ret
+FreePlaybackDMABuffers	endp
+
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Sets playback properties
 ;
@@ -353,6 +403,14 @@ GetPlayProps    endp
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 SetPlayProps    proc
 		mov		PlayCapabilityIndex,ebx
+		; Stop, if it is playing
+        cmp     PlayStatus,PLAY_OFF
+        jz      not_playing
+				push	eax
+				call    StopPlay
+				pop		eax
+				jc      spp_error
+        not_playing:
 		; Copy properties
 		mov		ecx,size SoundProperties
 		mov		edi,offset PlayProps
@@ -364,14 +422,15 @@ SetPlayProps    proc
 		call	SBGetTimeConstant
 		mov		eax,offset PlayProps
 		mov		[eax.SPSamplingRate],ebx
+		; Allocate DMA buffers (frees any previous buffer)
+		call	AllocPlaybackDMABuffers
+		; Restart, if it was playing
         cmp     PlayStatus,PLAY_OFF
-        jz      dnts
+        jz      not_playing2
 				; Restart, if it is playing
-				call    StopPlay
-				jc      spp_error
 				call    StartPlay
 				jc      spp_error
-        dnts:
+        not_playing2:
         clc
         ret
 
@@ -436,6 +495,7 @@ PlayStatus      	db PLAY_OFF
 PlayCaps			SoundHardwareCapabilities <1, offset PlayValidConfigs>
 ; The first capability in the list is the preferred one
 PlayValidConfigs	SoundCapability <11025, 22050, 8, 2>, <23000, 44100, 8, 1>, <4000, 23000, 8, 1>
+IsHighSpeedMode		db 1, 1, 0
 
 SB3xxDriverName		db "SB3XX",0
 
