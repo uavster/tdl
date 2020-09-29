@@ -68,6 +68,7 @@ Init    proc
 		mov		[eax.SPBitsPerSample],bl
 		mov		bl,[edx.SCNumChannels]
 		mov		[eax.SPNumChannels],bl
+		xor		ebx,ebx
 		call	SetPlayProps
 		lea		esp,[esp+size SoundProperties]
 		jc		init_error
