@@ -137,12 +137,6 @@ PrintMixerPerf	proc
 		fst		AvgMixerExecTime
 		; Maximum mixer run time per DMA buffer to keep sampling rate
 		fild	NumOutputSamples
-;		xor		eax,eax
-;		mov		al,MixBitsPerSample
-;		shr		al,3
-;		mov		BytesPerSample,eax
-;		fild	BytesPerSample
-;		fdivp
 		fild	MixFreq
 		fdivp
 		fdivp
@@ -155,7 +149,6 @@ PrintMixerPerf	proc
 		popfd
 		ret
 		endp
-BytesPerSample	dd ?
 endif
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
