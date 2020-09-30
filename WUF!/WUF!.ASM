@@ -52,13 +52,16 @@ WUFInit         proc
 		mov		esi,eax
 		mov		bl,[esi.SPBitsPerSample]
 		mov		bh,[esi.SPNumChannels]
-;		movzx	ecx,bl
-;		shr		ecx,3	; bytes per sample
-;        movzx   edx,bh
-;		imul	ecx,edx
-		mov		eax,DMA_PLAY_BUFFER_LENGTH
-;		xor		edx,edx
-;		div		ecx
+		movzx	ecx,bl
+		shr		ecx,3	; bytes per sample
+        movzx   edx,bh
+		imul	ecx,edx
+		push	esi ebx ecx
+		call	GetSDBuffers
+		mov		eax,[SoundBuffer ptr eax.NumBytes]
+		pop		ecx ebx esi
+		xor		edx,edx
+		div		ecx
 		mov		edx,eax
 		mov		eax,[esi.SPSamplingRate]
         mov     cl,MAX_CHANNELS
