@@ -11,7 +11,7 @@
 
         INCLUDE utils.inc
         INCLUDE sbhard.inc
-
+include assert.inc
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Fixes SB registers
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
@@ -101,59 +101,81 @@ DetectBLASTER   proc
 		mov		SBEnvResult,-1
         GetEnvVar "BLASTER"
         jc      wrong_env_var
-        ; Looking for A...
-        mov     esi,eax         ; pointer to environment variable
-        mov     edi,offset TempBuffer
-        call    GetCommandParam
-        cmp     ecx,4
-        jnz     wrong_env_var
-        cmp     byte ptr [edi],'A'
-        jnz     wrong_env_var
-        ; Looking for I...
-        add     edi,4
-        call    GetCommandParam
-        cmp     ecx,3           ; irq 10 string is 3 bytes long
-        ja      wrong_env_var
-        cmp     ecx,2           ; otherwise, 2 bytes long
-        jnz     wrong_env_var
-        cmp     byte ptr [edi],'I'
-        jnz     wrong_env_var
-        dec     ecx
-        mov     IrqLength,ecx
-        ; Looking for D...
-        add     edi,3
-        call    GetCommandParam
-        cmp     ecx,2
-        jnz     wrong_env_var
-        cmp     byte ptr [edi],'D'
-        jnz     wrong_env_var
-
-        ; Parameter conversion
-        ; Port
+		
+		push	eax
+		mov		ebp,esp
+		loop_params:
+		mov		esi,[ebp]
+		mov		edi,offset TempBuffer
+		call	GetCommandParam
+		mov		[ebp],esi
+		mov		al,[edi]
+		or		al,al
+		jz		got_all_params
+		cmp		al,'A'
+		je		found_port
+		cmp		al,'I'
+		je		found_irq
+		cmp		al,'D'
+		je		found_dma
+		cmp		al,'H'
+		je		found_hdma
+		jmp		got_all_params
+		found_port:
+		cmp		SBbase,-1
+		jne		wrong_env_var
         mov     esi,offset TempBuffer+1
-        mov     byte ptr [esi+3],0
         call    GetHexInteger
         jc      wrong_env_var
         mov     SBbase,eax
-        ; irq
-        mov     esi,offset TempBuffer+5
-        mov     ecx,IrqLength
-        mov     byte ptr [esi+ecx],0
+		jmp		loop_params
+		found_irq:
+		cmp		SBirq,-1
+		jne		wrong_env_var
+        mov     esi,offset TempBuffer+1
         call    GetInteger
         jc      wrong_env_var
         mov     SBirq,ecx
-        ; dma
-        mov     esi,offset TempBuffer+8
-        mov     byte ptr [esi+1],0
+		jmp		loop_params
+		found_dma:
+		cmp		SBdma,-1
+		jne		wrong_env_var
+        mov     esi,offset TempBuffer+1
         call    GetInteger
         jc      wrong_env_var
         mov   	SBdma,cl
+		jmp		loop_params
+		found_hdma:
+		cmp		SBhdma,-1
+		jne		wrong_env_var
+        mov     esi,offset TempBuffer+1
+        call    GetInteger
+        jc      wrong_env_var
+        mov   	SBhdma,cl
+		jmp		loop_params
+		
+		got_all_params:
+		pop		eax
+		; Minimum configuration: port, irq and dma
+		cmp		SBbase,-1
+		je		wrong_env_var
+		cmp		SBirq,-1
+		je		wrong_env_var
+		cmp		SBdma,-1
+		je		wrong_env_var
+		
+		; Fix Sound Blaster registers addresses with base port
         call    FixRegisters
+		
+		; Get DSP version
 		call	GetDSPVersion
 		mov		word ptr [DSPVersion],ax
-        clc
 		mov		SBEnvResult,1
+        clc
+		ret
+		
         wrong_env_var:
+		stc
         ret
 DetectBLASTER   endp
 
@@ -348,12 +370,13 @@ SBRegs  LABEL
         DSPWriteStatus  dd 0Ch
         DSPDataAvail    dd 0Eh
 
+SBbase          dd -1
+SBirq           dd -1
+SBdma           db -1
+SBhdma			db -1
+
 .data?
 
-SBbase          dd ?
-SBirq           dd ?
-SBdma           db ?
-				db ?
 DSPVersion		DSPVersionStruc <>
 IrqLength       dd ?
 
