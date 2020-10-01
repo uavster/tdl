@@ -309,6 +309,8 @@ GetCommandParam proc
         xor     ecx,ecx
 GCPlab3:
         lodsb
+		or		al,al
+		je		GCPlab2
         cmp     al,20h
         je      GCPlab3
         cmp     al,','
@@ -321,8 +323,8 @@ GCPlab1:
         lodsb
         cmp     al,13
         je      GCPlab2
-        or      al,al           ; B52
-        je      GCPlab2         ; B52
+        or      al,al
+        je      GCPlab2
         cmp     al,20h
         je      GCPlab2
         cmp     al,','
