@@ -126,6 +126,7 @@ ENDS
 global  SBbase          : DWORD
 global  SBirq           : DWORD
 global  SBdma           : BYTE
+global  SBhdma          : BYTE
 global  DSPVersion      : DSPVersionStruc
 global  IrqLength       : DWORD
 global  irq_ack_port    : DWORD

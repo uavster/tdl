@@ -483,7 +483,10 @@ endif
 		mov		edi,OutputBuffer
 		xor		ebx,ebx
 		cmp		NumOutputChannels,2
-		jz		stereo8_compression
+		jz		stereo_compression
+		mono_compression:
+		cmp		MixBitsPerSample,16
+		je		mono16_compression
 		mono8_compression:
 				mov		eax,[esi+ebx*4]
 				lea		eax,[eax*4+eax]			; Compression factor *5
@@ -492,11 +495,22 @@ endif
 				inc		ebx
 				loop	mono8_compression
 				jmp		compression_done
+		mono16_compression:
+				mov		eax,[esi+ebx*4]
+				lea		eax,[eax*4+eax]			; Compression factor *5
+				shr		eax,4+EXPANSION_BITS	; Compression factor /16, EXPANSION_BITS
+				sub		eax,32768
+				mov		[edi+ebx*2],ax
+				inc		ebx
+				loop	mono8_compression
+				jmp		compression_done
+		stereo_compression:
+		cmp		MixBitsPerSample,16
+		je		stereo16_compression
 		stereo8_compression:
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]			; Compression factor *5
 				shr		eax,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
-				mov		[edi+ebx*2],al
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]			; Compression factor *5
 				shr		edx,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
@@ -504,6 +518,20 @@ endif
 				mov		[edi+ebx*2],ax
 				inc		ebx
 				loop	stereo8_compression
+				jmp		compression_done
+		stereo16_compression:
+				mov		eax,[esi+ebx*8]
+				lea		eax,[eax*4+eax]			; Compression factor *5
+				shr		eax,4+EXPANSION_BITS	; Compression factor /16, EXPANSION_BITS
+				sub		eax,32768
+				mov		[edi+ebx*4],ax
+				mov		edx,[esi+ebx*8+4]
+				lea		edx,[edx*4+edx]			; Compression factor *5
+				shr		edx,4+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				sub		eax,32768
+				mov		[edi+ebx*4+2],ax
+				inc		ebx
+				loop	stereo8_compression				
 		compression_done:
 
 ifdef DEBUG_MIXER_PERFORMANCE

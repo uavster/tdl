@@ -145,6 +145,22 @@ Terminate       proc
         ret
 Terminate       endp
 
+GetIOCommandAndTransferMode	proc
+		mov		al,PlayProps.SPNumChannels
+		dec		al
+		shl		al,1
+		mov		ah,PlayProps.SPBitsPerSample
+		shr		ah,3
+		dec		ah
+		or		al,ah
+		movzx	ebx,al
+		mov		al,[IOCommands+ebx]
+		mov		ah,[TransferModes+ebx]
+		ret
+IOCommands		db DSP_COMMAND_OUTPUT_8BIT, DSP_COMMAND_OUTPUT_16BIT, DSP_COMMAND_OUTPUT_8BIT, DSP_COMMAND_OUTPUT_16BIT
+TransferModes	db DSP_MODE_MONO_8BIT, DSP_MODE_MONO_16BIT, DSP_MODE_STEREO_8BIT, DSP_MODE_STEREO_16BIT
+GetIOCommandAndTransferMode	endp
+
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Starts playing sound from the playback buffer
 ;
@@ -157,25 +173,45 @@ StartPlay       proc
         ; Program DMA chip  
 		mov		al,DMA_AUTOINIT
         mov     ah,SBdma
+		cmp		PlayProps.SPBitsPerSample,8
+		je		normal_dma_channel
+				mov		ah,SBhdma
+		normal_dma_channel:
         mov     ebx,PlayBuff.Pointer
         mov     ecx,PlayBuff.NumBytes
 		shl		ecx,1	; DMA transfers the two buffers and restarts
         call    DMAWriteToDevice
-        ; Send time constant
-        mov     al,DSP_WRITE_TIME_CT
+        ; Send the transfer sampling rate
+        mov     al,DSP_SET_SAMPLING_RATE
         call    WriteDSP
         jc      splay_error
 		call	GetPlayProps
-		mov		bl,[eax.SPNumChannels]
 		mov		eax,[eax.SPSamplingRate]
-        call    SBGetTimeConstant
+		push	eax
+		mov		al,ah		; high byte first
         call    WriteDSP
+		pop		eax
         jc      splay_error
-		; Set DSP block transfer size
-		mov		al,DSP_BLOCK_TRANSFER_SIZE
+        call    WriteDSP	; then, low byte
+        jc      splay_error
+        ; Send I/O command
+		call	GetIOCommandAndTransferMode
+		push	eax
+        call    WriteDSP
+		pop		eax
+		jc		splay_error
+		; Send transfer mode
+		mov		al,ah
 		call	WriteDSP
 		jc		splay_error
+		; Set DSP block transfer size (num_samples - 1)
 		mov		eax,PlayBuff.NumBytes
+		movzx	ebx,PlayProps.SPBitsPerSample
+		shr		ebx,3
+		xor		edx,edx
+		div		ebx
+;		movzx	ebx,PlayProps.SPNumChannels
+;		div		ebx
 		dec		eax
 		push	eax
 		call	WriteDSP
@@ -183,17 +219,7 @@ StartPlay       proc
 		jc		splay_error
 		mov		al,ah
 		call	WriteDSP
-		jc		splay_error
-        ; Set playback type (8 bits mono)
-        mov     al,DSP_8_BIT_PLAYBACK
-		mov		ebx,PlayCapabilityIndex
-		cmp		byte ptr [ebx+offset IsHighSpeedMode],0
-		je		normal_mode
-				; High speed mode
-				mov		al,DSP_8_BIT_PLAYBACK_HS
-		normal_mode:
-        call    WriteDSP
-		jc		splay_error
+		jc		splay_error		
         clc
 		ret
         splay_error:
@@ -234,6 +260,7 @@ PlayIRQ         proc
         call    MixChannels
 		
 		irq_error:
+		inc		irq_count
         pop     es ds
         popad
         iretd
@@ -254,15 +281,24 @@ StopPlay        proc
         mov     edx,DSPDataAvail
         in      al,dx
 		; Exit DMA high-speed auto-initialize mode
-		; Turn off DAC
-        mov     al,DSP_DAC_OFF
+        mov     al,DSP_EXIT_AUTOINIT_8BIT
+		cmp		PlayProps.SPBitsPerSample,8
+		je		exit_dma_8bits
+		cmp		PlayProps.SPBitsPerSample,16
+		jne		stop_error
+		mov		al,DSP_EXIT_AUTOINIT_16BIT
+		exit_dma_8bits:
         call    WriteDSP
         jc      stop_error
         mov     PlayStatus,PLAY_OFF
 		stopped:
+		popfd
 		clc
+		ret
+		
         stop_error:
 		popfd
+		stc
         ret
 StopPlay        endp
 
@@ -351,11 +387,11 @@ SetPlayProps    proc
 		mov		esi,eax
 		rep		movsb
 		; Get actual frequency due to time constant resolution
-		mov		bl,[eax.SPNumChannels]
-		mov		eax,[eax.SPSamplingRate]
-		call	SBGetTimeConstant
-		mov		eax,offset PlayProps
-		mov		[eax.SPSamplingRate],ebx
+;		mov		bl,[eax.SPNumChannels]
+;		mov		eax,[eax.SPSamplingRate]
+;		call	SBGetTimeConstant
+;		mov		eax,offset PlayProps
+;		mov		[eax.SPSamplingRate],ebx
 		; Allocate DMA buffers (frees any previous buffer)
 		call	AllocPlaybackDMABuffers
 		; Restart, if it was playing
@@ -429,9 +465,9 @@ PlayStatus      	db PLAY_OFF
 PlayCaps			SoundHardwareCapabilities <1, offset PlayValidConfigs>
 ; The first capability in the list is the preferred one
 PlayValidConfigs	SoundCapability <5000, 44100, 16, 2>, <5000, 44100, 8, 2>, <5000, 44100, 16, 1>, <5000, 44100, 8, 1>
-IsHighSpeedMode		db 0, 0, 0, 0
 
 SB4xxDriverName		db "SB4XX",0
+irq_count dd 0
 
 .data?
 
