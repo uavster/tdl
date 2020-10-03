@@ -175,6 +175,8 @@ StartPlay       proc
         mov     ah,SBdma
 		cmp		PlayProps.SPBitsPerSample,8
 		je		normal_dma_channel
+		cmp		PlayProps.SPBitsPerSample,16
+		jne		splay_error
 				mov		ah,SBhdma
 		normal_dma_channel:
         mov     ebx,PlayBuff.Pointer
@@ -232,6 +234,7 @@ StartPlay       endp
 ; IRQ handler to refresh DMA transfer
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 PlayIRQ         proc
+; TODO: The Interrupt Status register, addressed as register 82h on the Mixer register map,is used by the ISR to determine whether the interrupt is meant for it or for some otherISR, in which case it should chain to the previous routine.
         pushad
         push    ds es
         mov     ax,DataSelector
@@ -239,12 +242,13 @@ PlayIRQ         proc
         mov     es,ax
 
         ; DSP Acknowledge
-        mov     edx,DSPDataAvail
+        mov     edx,PlayDSPAckPort
         in      al,dx
         ; IRQ acknowledge
         mov     al,20h
         mov     edx,irq_ack_port
         out     dx,al
+; TODO: If the sound card is on IRQ8-15, you must also write 20h to A0h. 
         sti
 		
         cmp     PlayStatus,PLAY_OFF
@@ -260,7 +264,6 @@ PlayIRQ         proc
         call    MixChannels
 		
 		irq_error:
-		inc		irq_count
         pop     es ds
         popad
         iretd
@@ -278,7 +281,7 @@ StopPlay        proc
         cmp     PlayStatus,PLAY_OFF
         jz      stopped
         ; Maybe SB didn't get acknowledge
-        mov     edx,DSPDataAvail
+        mov     edx,PlayDSPAckPort
         in      al,dx
 		; Exit DMA high-speed auto-initialize mode
         mov     al,DSP_EXIT_AUTOINIT_8BIT
@@ -386,6 +389,15 @@ SetPlayProps    proc
 		mov		edi,offset PlayProps
 		mov		esi,eax
 		rep		movsb
+		; Select IRQ acknowledgement port
+		mov		eax,DSPDataAvail
+		cmp		PlayProps.SPBitsPerSample,8
+		je		ack_8bits
+		cmp		PlayProps.SPBitsPerSample,16
+		jne		spp_error
+				mov		eax,DSPDataAvail16
+		ack_8bits:
+		mov		PlayDSPAckPort,eax
 		; Get actual frequency due to time constant resolution
 ;		mov		bl,[eax.SPNumChannels]
 ;		mov		eax,[eax.SPSamplingRate]
@@ -467,7 +479,6 @@ PlayCaps			SoundHardwareCapabilities <1, offset PlayValidConfigs>
 PlayValidConfigs	SoundCapability <5000, 44100, 16, 2>, <5000, 44100, 8, 2>, <5000, 44100, 16, 1>, <5000, 44100, 8, 1>
 
 SB4xxDriverName		db "SB4XX",0
-irq_count dd 0
 
 .data?
 
@@ -485,6 +496,7 @@ OldIRQ          IRQVector <>
 PlayBuff        SoundBuffer <>
 RecBuff         SoundBuffer <>
 
+PlayDSPAckPort	dd ?
 FirstPlayBuff   dd ?
 
 end

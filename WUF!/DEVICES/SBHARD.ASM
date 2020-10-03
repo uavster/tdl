@@ -369,6 +369,7 @@ SBRegs  LABEL
         DSPWriteData    dd 0Ch
         DSPWriteStatus  dd 0Ch
         DSPDataAvail    dd 0Eh
+		DSPDataAvail16	dd 0Fh
 
 SBbase          dd -1
 SBirq           dd -1

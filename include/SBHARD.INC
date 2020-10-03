@@ -8,7 +8,7 @@
 ; SB hardware constants
 
         SB_TIMEOUT              EQU 65536
-        SB_REGISTERS            EQU 7
+        SB_REGISTERS            EQU 8
 
         ; DSP commands
 		DSP_GET_VERSION			EQU 0E1h
@@ -139,4 +139,5 @@ global  DSPReadData     : DWORD
 global  DSPWriteData    : DWORD
 global  DSPWriteStatus  : DWORD
 global  DSPDataAvail    : DWORD
+global  DSPDataAvail16  : DWORD
 
