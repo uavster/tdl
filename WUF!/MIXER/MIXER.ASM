@@ -502,7 +502,7 @@ endif
 				sub		eax,32768
 				mov		[edi+ebx*2],ax
 				inc		ebx
-				loop	mono8_compression
+				loop	mono16_compression
 				jmp		compression_done
 		stereo_compression:
 		cmp		MixBitsPerSample,16
@@ -524,14 +524,17 @@ endif
 				lea		eax,[eax*4+eax]			; Compression factor *5
 				shr		eax,4+EXPANSION_BITS	; Compression factor /16, EXPANSION_BITS
 				sub		eax,32768
-				mov		[edi+ebx*4],ax
+				and		eax,0ffffh
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]			; Compression factor *5
 				shr		edx,4+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
-				sub		eax,32768
-				mov		[edi+ebx*4+2],ax
+				sub		edx,32768
+				and		edx,0ffffh
+				shl		edx,16
+				or		eax,edx
+				mov		[edi+ebx*4],eax
 				inc		ebx
-				loop	stereo8_compression				
+				loop	stereo16_compression
 		compression_done:
 
 ifdef DEBUG_MIXER_PERFORMANCE
