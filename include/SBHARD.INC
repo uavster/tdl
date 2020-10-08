@@ -22,6 +22,7 @@
 		
 		; Mixer registers
 		MIXER_OUTPUT_CONFIG		EQU 0Eh
+		MIXER_INTERRUPT_STATUS	EQU 82h
 		
 		; Mixer configuration register bits
 		MIXER_CONFIG_STEREO		EQU 2

@@ -234,22 +234,23 @@ StartPlay       endp
 ; IRQ handler to refresh DMA transfer
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 PlayIRQ         proc
-; TODO: The Interrupt Status register, addressed as register 82h on the Mixer register map,is used by the ISR to determine whether the interrupt is meant for it or for some otherISR, in which case it should chain to the previous routine.
         pushad
         push    ds es
         mov     ax,DataSelector
         mov     ds,ax
         mov     es,ax
 
-        ; DSP Acknowledge
-        mov     edx,PlayDSPAckPort
-        in      al,dx
-        ; IRQ acknowledge
-        mov     al,20h
-        mov     edx,irq_ack_port
-        out     dx,al
-; TODO: If the sound card is on IRQ8-15, you must also write 20h to A0h. 
-        sti
+		; Check the source that triggered the IRQ
+		mov		edx,MixerIndex
+		mov		al,MIXER_INTERRUPT_STATUS
+		out		dx,al
+		mov		edx,MixerData
+		in		al,dx
+		mov		bl,PlayProps.SPBitsPerSample
+		shr		bl,3
+		; Chain with the old ISR if the IRQ was not triggered by our DMA transfer
+		test	al,bl		
+		jz		chain_prev_irq
 		
         cmp     PlayStatus,PLAY_OFF
         jz      irq_error
@@ -264,9 +265,22 @@ PlayIRQ         proc
         call    MixChannels
 		
 		irq_error:
+        ; DSP Acknowledge
+        mov     edx,PlayDSPAckPort
+        in      al,dx
+        ; IRQ acknowledge
+        mov     al,20h
+        mov     edx,irq_ack_port
+        out     dx,al
+; TODO: If the sound card is on IRQ8-15, you must also write 20h to A0h. 
+        sti
+		
         pop     es ds
         popad
         iretd
+		
+		chain_prev_irq:
+		jmp fword ptr OldIRQ
 PlayIRQ         endp
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
@@ -398,12 +412,6 @@ SetPlayProps    proc
 				mov		eax,DSPDataAvail16
 		ack_8bits:
 		mov		PlayDSPAckPort,eax
-		; Get actual frequency due to time constant resolution
-;		mov		bl,[eax.SPNumChannels]
-;		mov		eax,[eax.SPSamplingRate]
-;		call	SBGetTimeConstant
-;		mov		eax,offset PlayProps
-;		mov		[eax.SPSamplingRate],ebx
 		; Allocate DMA buffers (frees any previous buffer)
 		call	AllocPlaybackDMABuffers
 		; Restart, if it was playing
