@@ -686,7 +686,7 @@ PRFlab521:
 		c3_is_1:
 				jc		is_empty
 				jpe		is_denormal
-				jmp		print_type_name
+				jmp		finite_number	; 0 value
 		is_empty:
 				mov		esi,offset msg_empty
 				jmp		print_type_name
