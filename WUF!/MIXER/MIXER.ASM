@@ -116,12 +116,7 @@ MixerDebugPerf	proc
 PrintMixerPerf	proc
 		pushfd
 		cli
-		fild	NumMixerRuns
-		fldz
-		fcompp
-		fstsw	ax
-		fwait
-		sahf
+		cmp		NumMixerRuns,0
 		jnz		mixer_did_run
 				; The mixer was never run
 				mov 	esi,offset NoPerfDataMsg
