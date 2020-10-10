@@ -142,7 +142,7 @@ PrintMixerPerf	proc
 		fdivp
 		fldf	100.0
 		fmulp
-		fstp	AvgMixexPercentCPU
+		fstp	AvgMixerPercentCPU
 		mov		esi,offset PerfDataMsg
 		call	printf
 		leave_print_mixer_perf:
@@ -564,7 +564,7 @@ DebugPerfCounter	dd ?
 MixerRunTicks		dd ?
 NumMixerRuns		dd ?
 AvgMixerExecTime	dq ?
-AvgMixexPercentCPU	dq ?
+AvgMixerPercentCPU	dq ?
 endif
 
 .data
@@ -572,7 +572,7 @@ ifdef DEBUG_MIXER_PERFORMANCE
 PerfDataMsg		db "Average mixer execution time: %dfn"
 				dd offset AvgMixerExecTime
 				db "s ; %dfn"
-				dd offset AvgMixexPercentCPU
+				dd offset AvgMixerPercentCPU
 				db "%% of CPU", 13, 10, 0
 NoPerfDataMsg	db "Unable to estimate the mixer execution time. The mixer was never run.",13,10,0
 endif
