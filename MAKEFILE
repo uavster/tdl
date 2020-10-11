@@ -154,7 +154,7 @@ sb1xx.obj:      sb1xx.inc      	sb1xx.asm       dma.inc         dma.asm         
 sb200.obj:      sb200.inc      	sb200.asm       dma.inc         dma.asm         sounddev.asm    sounddev.inc    stderror.inc    snddev.def      utils.asm       utils.inc
 sb201.obj:      sb201.inc      	sb201.asm       dma.inc         dma.asm         sounddev.asm    sounddev.inc    stderror.inc    snddev.def      utils.asm       utils.inc
 sb3xx.obj:      sb3xx.inc      	sb3xx.asm       dma.inc         dma.asm         sounddev.asm    sounddev.inc    stderror.inc    snddev.def      utils.asm       utils.inc
-sb4xx.obj:      sb4xx.inc      	sb4xx.asm       dma.inc         dma.asm         sounddev.asm    sounddev.inc    stderror.inc    snddev.def      utils.asm       utils.inc
+sb4xx.obj:      sb4xx.inc      	sb4xx.asm       dma.inc         dma.asm         sounddev.asm    sounddev.inc    stderror.inc    snddev.def      utils.asm       utils.inc	irq.inc
 mixer.obj:      mixer.asm       mixer.inc       wuf!.inc
 waveload.obj:   waveload.asm    waveload.inc    wav.asm         wav.inc
 wav.obj:        wav.asm         wav.inc         memmgr.asm      alloc.inc       filesys.asm     filesys.inc     waveload.asm     waveload.inc

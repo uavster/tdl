@@ -30,6 +30,7 @@
         INCLUDE sbhard.inc
         INCLUDE mixer.inc
 		INCLUDE assert.inc
+		INCLUDE	irq.inc
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Return driver name
@@ -234,12 +235,8 @@ StartPlay       endp
 ; IRQ handler to refresh DMA transfer
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 PlayIRQ         proc
-        pushad
-        push    ds es
-        mov     ax,DataSelector
-        mov     ds,ax
-        mov     es,ax
-
+		IRQEnter
+		
 		; Check the source that triggered the IRQ
 		mov		edx,MixerIndex
 		mov		al,MIXER_INTERRUPT_STATUS
@@ -251,6 +248,9 @@ PlayIRQ         proc
 		; Chain with the old ISR if the IRQ was not triggered by our DMA transfer
 		test	al,bl		
 		jz		chain_prev_irq
+
+		; Only higher priority interrupts will nest, like timer or keyboard.
+        sti
 		
         cmp     PlayStatus,PLAY_OFF
         jz      irq_error
@@ -265,19 +265,12 @@ PlayIRQ         proc
         call    MixChannels
 		
 		irq_error:
-        ; DSP Acknowledge
+        ; Acknowledge DSP before PIC so it does not re-trigger
         mov     edx,PlayDSPAckPort
         in      al,dx
-        ; IRQ acknowledge
-        mov     al,20h
-        mov     edx,irq_ack_port
-        out     dx,al
-; TODO: If the sound card is on IRQ8-15, you must also write 20h to A0h. 
-        sti
-		
-        pop     es ds
-        popad
-        iretd
+		; Acknowledge PIC/s and return
+		IRQAck	SBirq
+		IRQLeave
 		
 		chain_prev_irq:
 		jmp fword ptr OldIRQ
