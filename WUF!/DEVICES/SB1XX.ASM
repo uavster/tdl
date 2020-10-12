@@ -18,6 +18,7 @@
         INCLUDE sbhard.inc
         INCLUDE mixer.inc
 		INCLUDE assert.inc
+		INCLUDE irq.inc
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Return driver name
@@ -201,17 +202,14 @@ StartPlay       endp
 ; IRQ handler to refresh DMA transfer
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 PlayIRQ         proc
-        pushad
-        push    ds es
-        mov     ax,DataSelector
-        mov     ds,ax
-        mov     es,ax
+		IRQEnter
 
+		; Only higher priority interrupts will nest, like timer or keyboard.
+        sti
+		
         cmp     PlayStatus,PLAY_OFF
         jz      irq_error
-        ; DSP Acknowledge
-        mov     edx,DSPDataAvail
-        in      al,dx
+
 		; Program DMA controller for the next buffer
 		mov		al,DMA_SINGLECYCLE
         mov     ah,SBdma
@@ -224,11 +222,7 @@ PlayIRQ         proc
         call    DMAWriteToDevice
 		; Program DSP for the next block
         EnableDSP irq_error
-        ; IRQ acknowledge
-        mov     al,20h
-        mov     edx,irq_ack_port
-        out     dx,al
-        sti
+
         ; Mix all channels
         mov     eax,PlayBuff.Pointer
         test    FirstPlayBuff,1
@@ -237,10 +231,14 @@ PlayIRQ         proc
         its_first_half:
         xor     FirstPlayBuff,1
         call    MixChannels
+		
 		irq_error:
-        pop     es ds
-        popad
-        iretd
+        ; Acknowledge DSP before PIC so it does not re-trigger
+        mov     edx,DSPDataAvail
+        in      al,dx
+		; Acknowledge PIC/s and return
+		IRQAck	SBirq
+		IRQLeave
 PlayIRQ         endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -254,9 +252,6 @@ StopPlay        proc
 		cli
         cmp     PlayStatus,PLAY_OFF
         jz      stop_error
-        ; Maybe SB didn't get acknowledge
-        mov     edx,DSPDataAvail
-        in      al,dx
         mov     al,DSP_DMA_STOP
         call    WriteDSP
         jc      stop_error

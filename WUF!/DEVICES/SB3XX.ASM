@@ -20,6 +20,7 @@
         INCLUDE sbhard.inc
         INCLUDE mixer.inc
 		INCLUDE assert.inc
+		INCLUDE irq.inc
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Return driver name
@@ -247,19 +248,9 @@ StartPlay       endp
 ; IRQ handler to refresh DMA transfer
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 PlayIRQ         proc
-        pushad
-        push    ds es
-        mov     ax,DataSelector
-        mov     ds,ax
-        mov     es,ax
+		IRQEnter
 
-        ; DSP Acknowledge
-        mov     edx,DSPDataAvail
-        in      al,dx
-        ; IRQ acknowledge
-        mov     al,20h
-        mov     edx,irq_ack_port
-        out     dx,al
+		; Only higher priority interrupts will nest, like timer or keyboard.
         sti
 		
         cmp     PlayStatus,PLAY_OFF
@@ -276,9 +267,12 @@ PlayIRQ         proc
 		
 		irq_error:
 		inc		irq_received
-        pop     es ds
-        popad
-        iretd
+        ; Acknowledge DSP before PIC so it does not re-trigger
+        mov     edx,DSPDataAvail
+        in      al,dx
+		; Acknowledge PIC/s and return
+		IRQAck	SBirq
+		IRQLeave
 PlayIRQ         endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -292,9 +286,6 @@ StopPlay        proc
 		cli
         cmp     PlayStatus,PLAY_OFF
         jz      stopped
-        ; Maybe SB didn't get acknowledge
-        mov     edx,DSPDataAvail
-        in      al,dx
 		; Exit DMA high-speed auto-initialize mode
 		mov		ebx,PlayCapabilityIndex
 		cmp		byte ptr [ebx+offset IsHighSpeedMode],0

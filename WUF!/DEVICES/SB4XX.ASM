@@ -51,7 +51,7 @@ GetSB4xxDriverName	endp
 DetectSB4xx	proc
 		call	DetectBLASTER
 		jc		sb4xx_det_end
-				cmp		DSPVersion.Major,3	; >=3 -> CF = 0; <3 -> CF = 1
+				cmp		DSPVersion.Major,4	; >=4 -> CF = 0; <4 -> CF = 1
 		sb4xx_det_end:	
 		ret
 DetectSB4xx	endp
@@ -213,8 +213,6 @@ StartPlay       proc
 		shr		ebx,3
 		xor		edx,edx
 		div		ebx
-;		movzx	ebx,PlayProps.SPNumChannels
-;		div		ebx
 		dec		eax
 		push	eax
 		call	WriteDSP
@@ -287,9 +285,6 @@ StopPlay        proc
 		cli
         cmp     PlayStatus,PLAY_OFF
         jz      stopped
-        ; Maybe SB didn't get acknowledge
-        mov     edx,PlayDSPAckPort
-        in      al,dx
 		; Exit DMA high-speed auto-initialize mode
         mov     al,DSP_EXIT_AUTOINIT_8BIT
 		cmp		PlayProps.SPBitsPerSample,8
