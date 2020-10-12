@@ -11,7 +11,7 @@
 
         INCLUDE utils.inc
         INCLUDE sbhard.inc
-include assert.inc
+
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Fixes SB registers
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -93,10 +93,8 @@ WriteDSP        endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 DetectBLASTER   proc
 		cmp		SBEnvResult,0
-		stc
 		jl		wrong_env_var	; DetectBLASTER failed previously
-		clc
-		jg		wrong_env_var	; DetectBLASTER succeeded previously
+		jg		env_var_parsed	; DetectBLASTER succeeded previously
 		; DetectBLASTER not attempted yet
 		mov		SBEnvResult,-1
         GetEnvVar "BLASTER"
@@ -120,7 +118,7 @@ DetectBLASTER   proc
 		je		found_dma
 		cmp		al,'H'
 		je		found_hdma
-		jmp		got_all_params
+		jmp		loop_params
 		found_port:
 		cmp		SBbase,-1
 		jne		wrong_env_var
@@ -171,6 +169,8 @@ DetectBLASTER   proc
 		call	GetDSPVersion
 		mov		word ptr [DSPVersion],ax
 		mov		SBEnvResult,1
+		
+		env_var_parsed:
         clc
 		ret
 		
