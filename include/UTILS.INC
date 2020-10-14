@@ -87,6 +87,16 @@ var_entorno     db env_var,0
 skip_getenvvar:
 ENDM
 
+GetCommandLineLength	MACRO
+		mov		eax,ProgramPSP
+		movzx	eax,byte ptr [eax+80h]
+ENDM
+
+GetCommandLineOffset	MACRO
+		mov		eax,ProgramPSP
+		lea		eax,[eax+81h]
+ENDM
+
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Skips a string of the given character
 ;
