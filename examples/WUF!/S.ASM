@@ -9,9 +9,38 @@
         INCLUDE sounddev.inc
         INCLUDE mixer.inc
         INCLUDE waveload.inc
+		include assert.inc
+
+KeyHandler	proc
+		sub		eax,2
+        mov     eax,[wav_ptr+eax*4]
+        call    PlaySound
+		ret
+		endp
+		
+EscHandler	proc
+		mov		exit_loop,1
+		ret
+		endp
 
 start:
         InitDPMI
+		
+		mov		al,1
+		mov		ebx,offset EscHandler
+		call	add_key
+		mov		al,2
+		mov		ebx,offset KeyHandler
+		call	add_key
+		mov		al,3
+		mov		ebx,offset KeyHandler
+		call	add_key
+		mov		al,4
+		mov		ebx,offset KeyHandler
+		call	add_key
+		mov		al,5
+		mov		ebx,offset KeyHandler
+		call	add_key
 
         call    WUFInit
         ErrorExit "Error initializing wuF!"
@@ -25,27 +54,48 @@ start:
 ;        call    SetWUFProperties
 ;        ErrorExit "Error setting sound properties"
 
-        mov     eax,offset fname8mono
-        call    LoadWAVE
-        ErrorExit "Error: Can't load WAVE file"
-        mov     wave8m_ptr,eax
+		xor		esi,esi
+		load_files:		
+				mov     eax,[esi*4+wav_files]
+				test	eax,eax
+				jz		wait_loop
+				push	esi
+				call    LoadWAVE
+				pop		esi
+				ErrorExit "Error: Can't load WAVE file"				
+				mov     [wav_ptr+esi*4],eax
+				lea     ebx,[eax.WaveType]
+				mov     wtype,ebx
+				lea     ebx,[eax.BaseRate]
+				mov     wrate,ebx
+				lea     ebx,[eax.WavePtr]
+				mov     wptr,ebx
+				lea     ebx,[eax.WaveLen]
+				mov     wlen,ebx
+				push	esi
+				mov     esi,offset info_msg
+				call    Printf
+				pop		esi		
+				inc		esi
+		jmp		load_files
 
-        mov     eax,offset fname16stereo
-        call    LoadWAVE
-        ErrorExit "Error: Can't load WAVE file"
-        mov     wave16s_ptr,eax
+        wait_loop:
+		cmp		exit_loop,0
+        jz	    wait_loop
 		
-        lea     ebx,[eax.WaveType]
-        mov     wtype,ebx
-        lea     ebx,[eax.BaseRate]
-        mov     wrate,ebx
-        lea     ebx,[eax.WavePtr]
-        mov     wptr,ebx
-        lea     ebx,[eax.WaveLen]
-        mov     wlen,ebx
-        mov     esi,offset info_msg
-        call    Printf
-        jmp     skip_msg
+        call    WUFClose
+        ErrorExit "Error closing wuF!"
+
+        Exit
+
+.data
+
+wav_files		dd offset fname8mono, offset fname8stereo, offset fname16mono, offset fname16stereo,0
+
+fname8mono   	db "W8M22K.WAV",0
+fname8stereo   	db "W8S8K.WAV",0
+fname16mono		db "W16M8K.WAV",0
+fname16stereo	db "W16S44K.WAV",0
 
 info_msg        db 13,10,"Wave type: %dn"
 wtype           dd ?
@@ -56,40 +106,8 @@ wlen            dd ?
                 db 13,10,"Wave sample rate: %dn"
 wrate           dd ?
                 db 13,10,0                        
-
-        skip_msg:
-
-;        mov     eax,offset sound_struc
-;        call    PlaySound
-
-;        mov     eax,offset sound_struc1
-;        call    PlaySound
-
-        mov     eax,wave16s_ptr
-        call    PlaySound
 				
-        wait_bucle:		
-        in      al,60h                
-        dec     al
-        jnz     wait_bucle
-
-		mov		eax,wave8m_ptr
-        call    PlaySound
-
-        wait_bucle2:		
-        in      al,60h
-        cmp		al,2
-        jnz     wait_bucle2
-		
-        call    WUFClose
-        ErrorExit "Error closing wuF!"
-
-        Exit
-
-.data
-
-fname8mono   	db "demo8.wav",0
-fname16stereo	db "demo16.wav",0
+exit_loop		db 0
 
 comment #
 sound_struc     TWave <0,offset my_sound,50000,44000,?>
@@ -110,7 +128,6 @@ I=I XOR -1
 ENDM
 #
 .data?
-wave8m_ptr	dd ?
-wave16s_ptr	dd ?
+wav_ptr			dd ?,?,?,?
 
 end start
