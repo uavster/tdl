@@ -199,6 +199,10 @@ SearchFreeChannel       endp
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Fills a channel with the given wave
 ;
+; This function may be called from an IRQ, but it is not reentrant.
+; TODO: make it reentrant with atomic allocation of channels, so that a module
+; can be played, while triggering sounds with the keyboard, for instance.
+;
 ; INPUT  : EAX -> TWave structure
 ;
 ; OUTPUT : CF = 0 if channel found
@@ -207,16 +211,19 @@ SearchFreeChannel       endp
 ;               EAX = NO_FREE_CHANNELS
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 PlaySound       proc
-        mov     ebx,eax
+        mov		ebx,eax
         call    SearchFreeChannel
         ErrorCode eax
-        mov     [eax.ChanWave],ebx
+		push	eax
 		xor		edx,edx
 		mov		eax,[ebx.BaseRate]
 		shl		eax,8
 		div		MixFreq
 		mov		[ebx.SampleIncrement],eax
         mov     [ebx.CurrentSample],0
+		pop		eax
+		; Atomic allocation of the channel
+        mov     [eax.ChanWave],ebx
         ret
 PlaySound       endp
 
@@ -464,7 +471,10 @@ endif
 				channel_mixed:
 				mov		eax,ChannelPool
 				add		eax,CurrentChannelOffset
+				; Atomic freeing of the channel
 				mov     [eax.ChanWave],0
+				; The channel may have been allocated by a higher priority IRQ at this point: don't touch it.
+				jmp		no_wave_in_channel
 				channel_continues:
 				mov		[esi.CurrentSample],edx
 			no_wave_in_channel:
