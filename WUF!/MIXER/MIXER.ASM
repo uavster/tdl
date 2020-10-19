@@ -216,30 +216,37 @@ PlaySound       proc
         ErrorCode eax
 		push	eax
 		xor		edx,edx
-		mov		eax,[ebx.BaseRate]
+		mov		eax,[TWave ptr ebx.BaseRate]
 		shl		eax,8
 		div		MixFreq
-		mov		[ebx.SampleIncrement],eax
-        mov     [ebx.CurrentSample],0
+		mov		edx,eax
 		pop		eax
+		mov		[TChannel ptr eax.SampleIncrement],edx
+        mov     [TChannel ptr eax.CurrentSample],0
 		; Atomic allocation of the channel
-        mov     [eax.ChanWave],ebx
+        mov     [TChannel ptr eax.ChanWave],ebx
+		xor		eax,eax
+		clc		
         ret
 PlaySound       endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Mixes an active channel on a mono output buffer
 ;
-; INPUT  : EBX -> Wave data
-;		   EDX = Current sample index
+; INPUT  : EAX -> TChannel structure
+;		   EBX -> Wave data
+;		   EDX = Current sample index (fixed point 24.8)
 ;		   ESI -> ChanWave structure
 ;		   EDI -> offset MixingBuffer + MixBytesPerSample(4) * NumOutputChannels(1) * NumOutputSamples
 ;		   EBP = -NumOutputSamples
-; OUTPUT : CF = 0 if channel is still active
+; OUTPUT : EDX = Current sample index (fixed point 24.8)
+;		   CF = 0 if channel is still active
 ;		   CF = 1 if channel went inactive
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 MixChannelToMono	proc
-		; Number of loops = min(NumOutputSamples, esi.WaveLen - esi.CurrentSample) 
+		; Number of loops = min(NumOutputSamples, esi.WaveLen - eax.CurrentSample)
+		mov		eax,[TChannel ptr eax.SampleIncrement]
+		mov		sample_increment,eax
 		test    [esi.WaveType],1
 		jz      its_8_bits
 				; 16-bit signed samples
@@ -258,7 +265,7 @@ MixChannelToMono	proc
 						add		[edi+ebp*4],eax
 						inc		ebp
 						jz		no_samp_end
-						add     edx,[esi.SampleIncrement]
+						add     edx,sample_increment
 						mov		ecx,[esi.WaveLen]
 						shl		ecx,8
 						cmp     edx,ecx
@@ -274,7 +281,7 @@ MixChannelToMono	proc
 						add		[edi+ebp*4],eax
 						inc		ebp
 						jz		no_samp_end
-						add     edx,[esi.SampleIncrement]
+						add     edx,sample_increment
 						mov		ecx,[esi.WaveLen]
 						shl		ecx,8
 						cmp     edx,ecx
@@ -296,7 +303,7 @@ MixChannelToMono	proc
 						add		[edi+ebp*4],eax
 						inc		ebp
 						jz		no_samp_end
-						add     edx,[esi.SampleIncrement]
+						add     edx,sample_increment
 						mov		ecx,[esi.WaveLen]
 						shl		ecx,8
 						cmp     edx,ecx
@@ -311,7 +318,7 @@ MixChannelToMono	proc
 						add		[edi+ebp*4],eax
 						inc		ebp
 						jz		no_samp_end
-						add     edx,[esi.SampleIncrement]
+						add     edx,sample_increment
 						mov		ecx,[esi.WaveLen]
 						shl		ecx,8
 						cmp     edx,ecx
@@ -327,16 +334,20 @@ MixChannelToMono	endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Mixes an active channel on a stereo output buffer
 ;
-; INPUT  : EBX -> Wave data
-;		   EDX = Current sample index
+; INPUT  : EAX -> TChannel structure
+;		   EBX -> Wave data
+;		   EDX = Current sample index (fixed point 24.8)
 ;		   ESI -> ChanWave structure
 ;		   EDI -> offset MixingBuffer + MixBytesPerSample(4) * NumOutputChannels(2) * NumOutputSamples
 ;		   EBP = -NumOutputSamples
-; OUTPUT : CF = 0 if channel is still active
+; OUTPUT : EDX = Current sample index (fixed point 24.8)
+;		   CF = 0 if channel is still active
 ;		   CF = 1 if channel went inactive
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 MixChannelToStereo	proc
-		; Number of loops = min(NumOutputSamples, esi.WaveLen - esi.CurrentSample) 
+		; Number of loops = min(NumOutputSamples, esi.WaveLen - eax.CurrentSample) 
+		mov		eax,[TChannel ptr eax.SampleIncrement]
+		mov		sample_increment,eax
 		test    [esi.WaveType],1
 		jz      its_8_bits_s
 				; 16-bit signed samples
@@ -358,7 +369,7 @@ MixChannelToStereo	proc
 						add		[edi+ebp*8+4],eax
 						inc		ebp
 						jz		no_samp_end_s
-						add     edx,[esi.SampleIncrement]
+						add     edx,sample_increment
 						mov		ecx,[esi.WaveLen]
 						shl		ecx,8
 						cmp     edx,ecx
@@ -375,7 +386,7 @@ MixChannelToStereo	proc
 						add		[edi+ebp*8+4],eax
 						inc		ebp
 						jz		no_samp_end_s
-						add     edx,[esi.SampleIncrement]
+						add     edx,sample_increment
 						mov		ecx,[esi.WaveLen]
 						shl		ecx,8
 						cmp     edx,ecx
@@ -398,7 +409,7 @@ MixChannelToStereo	proc
 						add		[edi+ebp*8+4],ecx
 						inc		ebp
 						jz		no_samp_end_s
-						add     edx,[esi.SampleIncrement]
+						add     edx,sample_increment
 						mov		ecx,[esi.WaveLen]
 						shl		ecx,8
 						cmp     edx,ecx
@@ -414,7 +425,7 @@ MixChannelToStereo	proc
 						add		[edi+ebp*8+4],eax
 						inc		ebp
 						jz		no_samp_end_s
-						add     edx,[esi.SampleIncrement]
+						add     edx,sample_increment
 						mov		ecx,[esi.WaveLen]
 						shl		ecx,8
 						cmp     edx,ecx
@@ -459,7 +470,7 @@ endif
 			test    esi,esi
 			jz      no_wave_in_channel
 				mov     ebx,[esi.WavePtr]
-				mov     edx,[esi.CurrentSample]
+				mov     edx,[eax.CurrentSample]
 				cmp		NumOutputChannels,2
 				jz		stereo_output
 						call	MixChannelToMono
@@ -476,7 +487,9 @@ endif
 				; The channel may have been allocated by a higher priority IRQ at this point: don't touch it.
 				jmp		no_wave_in_channel
 				channel_continues:
-				mov		[esi.CurrentSample],edx
+				mov		eax,ChannelPool
+				add		eax,CurrentChannelOffset
+				mov		[eax.CurrentSample],edx
 			no_wave_in_channel:
 			add	CurrentChannelOffset,size TChannel
 		dec     nchannels
@@ -563,6 +576,7 @@ NumOutputSamples		dd ?
 NumOutputBytes			dd ?
 MixingBuffer			dd ?
 CurrentChannelOffset    dd ?
+sample_increment		dd ?
 
 ifdef DEBUG_MIXER_PERFORMANCE
 DebugPerfCounter	dd ?

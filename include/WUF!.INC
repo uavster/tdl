@@ -34,9 +34,6 @@ TWave           STRUC
         WavePtr         dd ?    ; -> Sound data
         WaveLen         dd ?    ; Sound length in samples
         BaseRate        dd ?    ; Base sample rate
-        ; Internal data
-		SampleIncrement	dd ?	; Fixed point 24.8
-        CurrentSample   dd ?	; Fixed point 24.8
 ENDS
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�

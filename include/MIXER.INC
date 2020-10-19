@@ -7,6 +7,8 @@
 ; Sound digital channel structure
 TChannel        STRUC
         ChanWave        dd ?    ; Pointer to TWave structure or NULL if not active
+		SampleIncrement	dd ?	; Fixed point 24.8
+        CurrentSample   dd ?	; Fixed point 24.8
 ENDS
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
