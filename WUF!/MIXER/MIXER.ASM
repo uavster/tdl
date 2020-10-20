@@ -261,7 +261,6 @@ MixChannelToMono	proc
 						shr		eax,16
 						movsx	eax,ax
 						add     eax,ecx
-						add		eax,65536
 						add		[edi+ebp*4],eax
 						inc		ebp
 						jz		no_samp_end
@@ -276,8 +275,7 @@ MixChannelToMono	proc
 						mov		ecx,edx
 						shr		ecx,8
 						movsx   eax,word ptr [ebx+ecx*2]
-						add		eax,32768
-						shl		eax,EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
+						rol		eax,EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
 						add		[edi+ebp*4],eax
 						inc		ebp
 						jz		no_samp_end
@@ -296,10 +294,12 @@ MixChannelToMono	proc
 						mov		ecx,edx
 						shr		ecx,8
 						mov		ax,[ebx+ecx*2]
-						movzx	ecx,ah
-						movzx	eax,al
+						sub		al,128
+						sub		ah,128
+						movsx	ecx,ah
+						movsx	eax,al
 						add		eax,ecx
-						shl		eax,8	; Expand to match 16+1 bits in stereo16
+						rol		eax,8	; Expand to match 16+1 bits in stereo16
 						add		[edi+ebp*4],eax
 						inc		ebp
 						jz		no_samp_end
@@ -313,8 +313,10 @@ MixChannelToMono	proc
 						; Mono, 8 bits
 						mov		ecx,edx
 						shr		ecx,8
-						movzx   eax,byte ptr [ebx+ecx]
-						shl		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
+						mov   	al,byte ptr [ebx+ecx]
+						sub		al,128
+						movsx	eax,al
+						rol		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
 						add		[edi+ebp*4],eax
 						inc		ebp
 						jz		no_samp_end
@@ -361,10 +363,8 @@ MixChannelToStereo	proc
 						movsx   ecx,ax	; ecx = left channel
 						shr		eax,16
 						movsx	eax,ax	; eax = right channel
-						add		ecx,32768
-						shl		ecx,EXPANSION_BITS
-						add		eax,32768
-						shl		eax,EXPANSION_BITS
+						rol		ecx,EXPANSION_BITS
+						rol		eax,EXPANSION_BITS
 						add		[edi+ebp*8],ecx
 						add		[edi+ebp*8+4],eax
 						inc		ebp
@@ -380,8 +380,7 @@ MixChannelToStereo	proc
 						mov		ecx,edx
 						shr		ecx,8
 						movsx   eax,word ptr [ebx+ecx*2]
-						add		eax,32768
-						shl		eax,EXPANSION_BITS
+						rol		eax,EXPANSION_BITS
 						add		[edi+ebp*8],eax
 						add		[edi+ebp*8+4],eax
 						inc		ebp
@@ -401,10 +400,12 @@ MixChannelToStereo	proc
 						mov		ecx,edx
 						shr		ecx,8
 						mov		ax,[ebx+ecx*2]
-						movzx	ecx,ah	; ecx = right channel
-						movzx	eax,al	; eax = left channel
-						shl		ecx,8+EXPANSION_BITS
-						shl		eax,8+EXPANSION_BITS
+						sub		ah,128
+						sub		al,128
+						movsx	ecx,ah	; ecx = right channel
+						movsx	eax,al	; eax = left channel
+						rol		ecx,8+EXPANSION_BITS
+						rol		eax,8+EXPANSION_BITS
 						add		[edi+ebp*8],eax
 						add		[edi+ebp*8+4],ecx
 						inc		ebp
@@ -418,9 +419,11 @@ MixChannelToStereo	proc
 				mono8_s:
 						; Mono, 8 bits
 						mov		ecx,edx
-						shr		ecx,8
-						movzx   eax,byte ptr [ebx+ecx]
-						shl		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
+						shr		ecx,8						
+						mov   	al,byte ptr [ebx+ecx]
+						sub		al,128
+						movsx	eax,al
+						rol		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
 						add		[edi+ebp*8],eax
 						add		[edi+ebp*8+4],eax
 						inc		ebp
@@ -508,7 +511,8 @@ endif
 		mono8_compression:
 				mov		eax,[esi+ebx*4]
 				lea		eax,[eax*4+eax]			; Compression factor *5
-				shr		eax,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				ror		eax,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				add		al,128
 				mov		[edi+ebx],al
 				inc		ebx
 				loop	mono8_compression
@@ -516,8 +520,7 @@ endif
 		mono16_compression:
 				mov		eax,[esi+ebx*4]
 				lea		eax,[eax*4+eax]			; Compression factor *5
-				shr		eax,4+EXPANSION_BITS	; Compression factor /16, EXPANSION_BITS
-				sub		eax,32768
+				ror		eax,4+EXPANSION_BITS	; Compression factor /16, EXPANSION_BITS
 				mov		[edi+ebx*2],ax
 				inc		ebx
 				loop	mono16_compression
@@ -528,11 +531,13 @@ endif
 		stereo8_compression:
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]			; Compression factor *5
-				shr		eax,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				ror		eax,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]			; Compression factor *5
-				shr		edx,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				ror		edx,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
 				mov		ah,dl
+				add		ah,128
+				add		al,128
 				mov		[edi+ebx*2],ax
 				inc		ebx
 				loop	stereo8_compression
@@ -540,23 +545,11 @@ endif
 		stereo16_compression:
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]			; Compression factor *5
-				shr		eax,4+EXPANSION_BITS	; Compression factor /16, EXPANSION_BITS
-				xor		ebp,ebp
-				cmp		eax,65536
-				sbb		ebp,ebp
-				not		ebp
-				or		eax,ebp
-				sub		ax,32768
+				ror		eax,4+EXPANSION_BITS	; Compression factor /16, EXPANSION_BITS
 				and		eax,0ffffh
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]			; Compression factor *5
-				shr		edx,4+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
-				xor		ebp,ebp
-				cmp		edx,65536
-				sbb		ebp,ebp
-				not		ebp
-				or		edx,ebp
-				sub		dx,32768
+				ror		edx,4+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
 				shl		edx,16
 				or		eax,edx
 				mov		[edi+ebx*4],eax
