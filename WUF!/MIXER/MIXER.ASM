@@ -541,13 +541,22 @@ endif
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]			; Compression factor *5
 				shr		eax,4+EXPANSION_BITS	; Compression factor /16, EXPANSION_BITS
-				sub		eax,32768
+				xor		ebp,ebp
+				cmp		eax,65536
+				sbb		ebp,ebp
+				not		ebp
+				or		eax,ebp
+				sub		ax,32768
 				and		eax,0ffffh
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]			; Compression factor *5
 				shr		edx,4+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
-				sub		edx,32768
-				and		edx,0ffffh
+				xor		ebp,ebp
+				cmp		edx,65536
+				sbb		ebp,ebp
+				not		ebp
+				or		edx,ebp
+				sub		dx,32768
 				shl		edx,16
 				or		eax,edx
 				mov		[edi+ebx*4],eax
