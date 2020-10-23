@@ -498,6 +498,7 @@ endif
 		dec     nchannels
 		jnz     walk_channels
 		dont_mix_anything:
+
 		; Compress mixing buffer into output buffer
 		mov		esi,MixingBuffer
 		mov		ecx,NumOutputSamples
@@ -508,53 +509,147 @@ endif
 		mono_compression:
 		cmp		MixBitsPerSample,16
 		je		mono16_compression
+
 		mono8_compression:
+				; Compress
 				mov		eax,[esi+ebx*4]
 				lea		eax,[eax*4+eax]			; Compression factor *5
-				ror		eax,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				sar		eax,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				; Saturate
+				cmp		eax,127
+				jg		sat_m8_pos
+				cmp		eax,-128
+				jl		sat_m8_neg
+				sat_m8_done:
+				; Signed -> unsigned
 				add		al,128
+				; Write output
 				mov		[edi+ebx],al
 				inc		ebx
-				loop	mono8_compression
+				dec		ecx
+				jnz		mono8_compression
 				jmp		compression_done
+				
+				sat_m8_pos:
+						mov	eax,127
+						jmp	sat_m8_done
+				sat_m8_neg:
+						mov	eax,-128
+						jmp	sat_m8_done
+
 		mono16_compression:
+				; Compress
 				mov		eax,[esi+ebx*4]
 				lea		eax,[eax*4+eax]			; Compression factor *5
-				ror		eax,4+EXPANSION_BITS	; Compression factor /16, EXPANSION_BITS
+				sar		eax,4+EXPANSION_BITS	; Compression factor /16, EXPANSION_BITS
+				; Saturate
+				cmp		eax,32767
+				jg		sat_m16_pos
+				cmp		eax,-32768
+				jl		sat_m16_neg
+				sat_m16_done:
+				; Write output
 				mov		[edi+ebx*2],ax
 				inc		ebx
-				loop	mono16_compression
+				dec		ecx
+				jnz		mono16_compression
 				jmp		compression_done
+				
+				sat_m16_pos:
+						mov	eax,32767
+						jmp	sat_m16_done
+				sat_m16_neg:
+						mov	eax,-32768
+						jmp	sat_m16_done
+
 		stereo_compression:
 		cmp		MixBitsPerSample,16
 		je		stereo16_compression
 		stereo8_compression:
+				; Compress left channel
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]			; Compression factor *5
-				ror		eax,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				sar		eax,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				
+				; Saturate left channel
+				cmp		eax,127
+				jg		sat_l8_pos
+				cmp		eax,-128
+				jl		sat_l8_neg
+				sat_l8_done:
+
+				; Compress right channel
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]			; Compression factor *5
-				ror		edx,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				sar		edx,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				
+				; Saturate right channel
+				cmp		edx,127
+				jg		sat_r8_pos
+				cmp		edx,-128
+				jl		sat_r8_neg
+				sat_r8_done:
+				
+				; Signed -> unsigned
 				mov		ah,dl
 				add		ah,128
 				add		al,128
 				mov		[edi+ebx*2],ax
 				inc		ebx
-				loop	stereo8_compression
+				dec		ecx
+				jnz		stereo8_compression
 				jmp		compression_done
+
+				sat_l8_pos:
+						mov	eax,127
+						jmp	sat_l8_done
+				sat_l8_neg:
+						mov	eax,-128
+						jmp	sat_l8_done
+				sat_r8_pos:
+						mov	edx,127
+						jmp	sat_r8_done
+				sat_r8_neg:
+						mov	edx,-128
+						jmp	sat_r8_done
+
 		stereo16_compression:
+				; Compress left channel
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]			; Compression factor *5
-				ror		eax,4+EXPANSION_BITS	; Compression factor /16, EXPANSION_BITS
-				and		eax,0ffffh
+				sar		eax,4+EXPANSION_BITS	; Compression factor /16, EXPANSION_BITS
+
+				; Saturate left channel (cycles 386,486)
+				cmp		eax,32767		; 2, 1
+				jg		sat_l16_pos		; 3/7+m2, 1/3
+				cmp		eax,-32768		; 2, 1
+				jl		sat_l16_neg		; 3/7+m2, 1/3
+										; TOTAL:
+										; No saturation: 10, 4 (most likely case)
+										; Saturation positive: 18+m4=23, 8
+										; Saturation negative: 23+m4=18, 11
+				sat_l16_done:
+
+				; Compress right channel
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]			; Compression factor *5
-				ror		edx,4+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
-				shl		edx,16
+				sar		edx,4+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+
+				; Saturate right channel (same timing as left channel saturation)
+				cmp		edx,32767
+				jg		sat_r16_pos
+				cmp		edx,-32768
+				jl		sat_r16_neg
+				sat_r16_done:
+
+				; Write output
+				and		eax,0ffffh
+				shl		edx,16				
 				or		eax,edx
 				mov		[edi+ebx*4],eax
 				inc		ebx
-				loop	stereo16_compression
+				dec		ecx
+				jnz		short stereo16_compression
 		compression_done:
 
 ifdef DEBUG_MIXER_PERFORMANCE
@@ -563,6 +658,19 @@ ifdef DEBUG_MIXER_PERFORMANCE
 		inc		NumMixerRuns
 endif
 		ret
+
+				sat_l16_pos:
+						mov	eax,32767				; 2, 1
+						jmp	sat_l16_done			; 7+m2, 3
+				sat_l16_neg:
+						mov	eax,-32768				; 2, 1
+						jmp	sat_l16_done			; 7+m2, 3
+				sat_r16_pos:
+						mov	edx,32767
+						jmp	sat_r16_done
+				sat_r16_neg:
+						mov	edx,-32768
+						jmp	sat_r16_done
 
 MixChannels     endp
 
