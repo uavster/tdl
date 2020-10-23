@@ -45,31 +45,28 @@ start:
         call    WUFInit
         ErrorExit "Error initializing wuF!"
 
-;        mov     ecx,50000000
-;        otro_bucle:
-;        loop    otro_bucle
-;
-;        call    GetWUFProperties
-;        shr     [eax.PlayRate],1
-;        call    SetWUFProperties
-;        ErrorExit "Error setting sound properties"
-
 		xor		esi,esi
 		load_files:		
 				mov     eax,[esi*4+wav_files]
 				test	eax,eax
-				jz		wait_loop
+				jz		loading_done
 				push	esi
 				call    LoadWAVE
 				pop		esi
 				ErrorExit "Error: Can't load WAVE file"				
 				mov     [wav_ptr+esi*4],eax
-				lea     ebx,[eax.WaveType]
-				mov     wtype,ebx
+				mov	    ebx,[eax.WaveType]
+				mov		ecx,ebx
+				and		ecx,1
+				inc		ecx
+				shl		ecx,3
+				mov		wbps,ecx
+				shr		ebx,1
+				and		ebx,1
+				inc		ebx
+				mov		wcps,ebx
 				lea     ebx,[eax.BaseRate]
 				mov     wrate,ebx
-				lea     ebx,[eax.WavePtr]
-				mov     wptr,ebx
 				lea     ebx,[eax.WaveLen]
 				mov     wlen,ebx
 				push	esi
@@ -79,10 +76,14 @@ start:
 				inc		esi
 		jmp		load_files
 
+		loading_done:
+		LPrintS ""
+		LPrintS "Press keys 1-4 to mix the four different samples above. ESC to quit."
+		
         wait_loop:
 		cmp		exit_loop,0
         jz	    wait_loop
-		
+
         call    WUFClose
         ErrorExit "Error closing wuF!"
 
@@ -97,16 +98,20 @@ fname8stereo   	db "W8S8K.WAV",0
 fname16mono		db "W16M8K.WAV",0
 fname16stereo	db "W16S44K.WAV",0
 
-info_msg        db 13,10,"Wave type: %dn"
-wtype           dd ?
-                db 13,10,"Wave pointer: %dhn"
-wptr            dd ?
-                db "h",13,10,"Wave length: %dn"
+info_msg        db 13,10,"WAV type: %dn"
+				dd offset wbps
+				db " bits, %dn"
+				dd offset wcps
+				db " channel(s)"
+                db 13,10,"Length: %dn"
 wlen            dd ?
-                db 13,10,"Wave sample rate: %dn"
+				db " samples"
+                db 13,10,"Sampling rate: %dn"
 wrate           dd ?
+				db " Hz"
                 db 13,10,0                        
-				
+wbps			dd ?
+wcps			dd ?
 exit_loop		db 0
 
 comment #
