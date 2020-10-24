@@ -15,32 +15,41 @@ KeyHandler	proc
 		sub		eax,2
         mov     eax,[wav_ptr+eax*4]
         call    PlaySound
+		xor		eax,eax		; Do not chain with old ISR
+		ret
+		endp
+
+DefaultKeyHandler	proc
+		xor		eax,eax		; Do not chain with old ISR
 		ret
 		endp
 		
 EscHandler	proc
 		mov		exit_loop,1
+		xor		eax,eax		; Do not chain with old ISR
 		ret
 		endp
 
 start:
         InitDPMI
 		
-		mov		al,1
+		mov		al,Key_ESC
 		mov		ebx,offset EscHandler
 		call	add_key
-		mov		al,2
+		mov		al,Key_1
 		mov		ebx,offset KeyHandler
 		call	add_key
-		mov		al,3
+		mov		al,Key_2
 		mov		ebx,offset KeyHandler
 		call	add_key
-		mov		al,4
+		mov		al,Key_3
 		mov		ebx,offset KeyHandler
 		call	add_key
-		mov		al,5
+		mov		al,Key_4
 		mov		ebx,offset KeyHandler
 		call	add_key
+		mov		ebx,offset DefaultKeyHandler
+		call	add_default_key
 
         call    WUFInit
         ErrorExit "Error initializing wuF!"
