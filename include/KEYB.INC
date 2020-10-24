@@ -29,6 +29,22 @@ extrn   add_key: NEAR
 extrn   remove_key: NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Sets the routine to be called by any keyboard event that has no specific handler
+; associated to it
+;
+; INPUT -> DS:EBX -> routine to be called when any scancode is received or NULL if none
+; 		   The routine is called with AL = scancode
+;		   The routine returns != 0, if the IRQ must chain with the old ISR,
+;		   or 0, otherwise.
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+extrn add_default_key: NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Removes the routine to be called by any keyboard event
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+extrn remove_default_key: NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Keyboard Table
 ;
 ;       NOTE: For each key in the map: 1 if pressed , 0 if not pressed
@@ -58,3 +74,12 @@ Key_f10         equ     44h
 Key_f11         equ     85h
 Key_f12         equ     86h
 Key_SPACE       equ     39h
+Key_1			equ		2
+Key_2			equ		3
+Key_3			equ		4
+Key_4			equ		5
+Key_5			equ		6
+Key_6			equ		7
+Key_7			equ		8
+Key_8			equ		9
+Key_9			equ		10

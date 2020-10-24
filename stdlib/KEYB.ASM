@@ -16,6 +16,8 @@ public  disable_keyb
 public  add_key
 public  remove_key
 public  keyb_map
+public 	add_default_key
+public	remove_default_key
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Common irq1 handler
@@ -51,8 +53,26 @@ common_key_handler      proc far
         cmp     ebx,-1
         jz      no_reaction
                 call    ebx
+				jmp		no_default_handler
         no_reaction:
-
+		; If no special handler for the key, call default handler
+		mov		ebx,default_key_handler
+		or		ebx,ebx
+		jz		chain_old_isr
+				call	ebx
+		no_default_handler:
+		or		eax,eax
+		jnz		chain_old_isr
+		
+		; Ack interrupt controller
+		mov		al,20h
+		mov		dx,20h
+		out		dx,al
+		popad
+		pop		gs fs es ds
+		iretd
+		
+		chain_old_isr:
 		popad
 		pop		gs fs es ds
 		; Chain with previous keyboard irq handler.
@@ -132,6 +152,8 @@ disable_keyb    endp
 ;
 ; INPUT -> AL = keyboard scancode
 ;          DS:EBX -> routine to be called when the scancode is received
+;		   The routine returns != 0, if the IRQ must chain with the old ISR,
+;		   or 0, otherwise.
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 add_key proc
         ; need to lock the routine memory field
@@ -146,7 +168,21 @@ add_key proc
 add_key endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Removes the routine called by a keyboard event
+; Sets the routine to be called by any keyboard event that has no specific handler
+; associated to it
+;
+; INPUT -> DS:EBX -> routine to be called when any scancode is received or NULL if none
+; 		   The routine is called with EAX = scancode
+;		   The routine returns != 0, if the IRQ must chain with the old ISR,
+;		   or 0, otherwise.
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+add_default_key proc
+		mov		default_key_handler,ebx
+		ret
+add_default_key	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Removes the routine called by any keyboard event
 ;
 ; INPUT -> AL = keyboard scancode
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -159,7 +195,18 @@ remove_key      proc
         ret
 remove_key      endp
 
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Removes the routine to be called by any keyboard event
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+remove_default_key 	proc
+		mov		default_key_handler,0
+		ret
+remove_default_key	endp
+
+.data
+default_key_handler	dd 0
+
 .data?
-keyb_map        db 128 dup (?)
+keyb_map        	db 128 dup (?)
 end
 
