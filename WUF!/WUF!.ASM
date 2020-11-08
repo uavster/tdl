@@ -64,7 +64,7 @@ WUFInit         proc
 		div		ecx
 		mov		edx,eax
 		mov		eax,[esi.SPSamplingRate]
-        mov     cl,MAX_CHANNELS
+        mov     cl,MAX_MIXER_CHANNELS
 		push	eax ebx
         call    OpenMixer
         ErrorCode eax, ebx ecx
@@ -173,7 +173,7 @@ WUFSetProperties        proc
 WUFSetProperties        endp
 
 .data
-mix_input_channels	dd MAX_CHANNELS
+mix_input_channels	dd MAX_MIXER_CHANNELS
 mix_msg         db "  þ Opening mixer with %dn"
                 dd offset mix_input_channels
                 db " virtual channels...",13,10,0

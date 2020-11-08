@@ -3,7 +3,7 @@
 ;       Ignacio Mellado Bataller ( B52 / the DarkRising )
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
-MAX_CHANNELS    EQU 64
+MAX_MIXER_CHANNELS		EQU 64
 
 SoundBuffer		STRUC
         Pointer			dd ?

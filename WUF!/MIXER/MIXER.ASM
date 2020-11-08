@@ -72,6 +72,11 @@ OpenMixer       proc
 		mov		NumOutputChannels,bh
         mov     MaxInputChannels,cl
 		mov		NumOutputSamples,edx
+		; Initialize variables
+		xor		eax,eax
+		dec		eax
+		mov		SamplesPerTick,eax
+		mov		MissingTickSamples,eax
 		; Allocate array of input channel descriptors
 		movzx	ecx,cl
         imul    ecx,size TChannel
@@ -170,6 +175,28 @@ endif
         clc
         ret
 CloseMixer      endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Sets a callback that will be called periodically from the playback IRQ
+;
+; INPUT  : EAX = Callback period in seconds (float)
+; 		   EBX -> Callback function, or NULL to disable
+;				  Callback input is EAX -> Channel pool (TChannel elements),
+;				  and ECX = Num. channels
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetMixerCallback	proc
+		mov		smc_tmp,eax
+		fld		smc_tmp
+		fild	MixFreq
+		fmulp
+		mov		smc_tmp,256
+		fild	smc_tmp
+		fmulp
+		fst		SamplesPerTick
+		fstp	MissingTickSamples
+		ret
+smc_tmp	dd ?
+SetMixerCallback	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Looks for a free channel
@@ -457,9 +484,18 @@ endif
         jz      dont_mix_anything
 		mov		nchannels,bl
 		call	ClearMixingBuffer
-		mov		CurrentChannelOffset,0
-		walk_channels:
-			mov		ebp,NumOutputSamples
+		mov		eax,NumOutputSamples
+		mov		MissingMixerBufferSamples,eax
+		tick_loop:
+			mov		CurrentChannelOffset,0
+			; Samples to process = min(missing tick samples, missing mixer buffer samples)
+			mov		ebp,MissingTickSamples
+			shr		ebp,8
+			mov		eax,MissingMixerBufferSamples
+			cmp		ebp,eax
+			jbe		not_over_buffer_end
+					mov		ebp,eax
+			not_over_buffer_end:
 			mov		edi,ebp
 			shl		edi,2	; 4 bytes per mixer sample
 			mov		cl,NumOutputChannels
@@ -467,36 +503,56 @@ endif
 			shl		edi,cl
 			add		edi,MixingBuffer
 			neg		ebp
-			mov		eax,ChannelPool
-			add		eax,CurrentChannelOffset
-			mov     esi,[eax.ChanWave]
-			test    esi,esi
-			jz      no_wave_in_channel
-				mov     ebx,[esi.WavePtr]
-				mov     edx,[eax.CurrentSample]
-				cmp		NumOutputChannels,2
-				jz		stereo_output
-						call	MixChannelToMono
-						jc		channel_mixed
-						jmp		channel_continues
-				stereo_output:
-						call	MixChannelToStereo
-						jnc		channel_continues
-				channel_mixed:
+			walk_channels:
+				push	ebp
 				mov		eax,ChannelPool
 				add		eax,CurrentChannelOffset
-				; Atomic freeing of the channel
-				mov     [eax.ChanWave],0
-				; The channel may have been allocated by a higher priority IRQ at this point: don't touch it.
-				jmp		no_wave_in_channel
-				channel_continues:
-				mov		eax,ChannelPool
-				add		eax,CurrentChannelOffset
-				mov		[eax.CurrentSample],edx
-			no_wave_in_channel:
-			add	CurrentChannelOffset,size TChannel
-		dec     nchannels
-		jnz     walk_channels
+				mov     esi,[eax.ChanWave]
+				test    esi,esi
+				jz      no_wave_in_channel
+					mov     ebx,[esi.WavePtr]
+					mov     edx,[eax.CurrentSample]
+					cmp		NumOutputChannels,2
+					jz		stereo_output
+							call	MixChannelToMono
+							jc		channel_mixed
+							jmp		channel_continues
+					stereo_output:
+							call	MixChannelToStereo
+							jnc		channel_continues
+					channel_mixed:
+					mov		eax,ChannelPool
+					add		eax,CurrentChannelOffset
+					; Atomic freeing of the channel
+					mov     [eax.ChanWave],0
+					; The channel may have been allocated by a higher priority IRQ at this point: don't touch it.
+					jmp		no_wave_in_channel
+					channel_continues:
+					mov		eax,ChannelPool
+					add		eax,CurrentChannelOffset
+					mov		[eax.CurrentSample],edx
+				no_wave_in_channel:
+				add	CurrentChannelOffset,size TChannel
+				pop	ebp
+			dec     nchannels
+			jnz     walk_channels
+		sal ebp,8
+		add MissingTickSamples,ebp
+		jg	tick_samples_not_expired
+			; End of tick
+			mov		eax,SamplesPerTick
+			add		MissingTickSamples,eax
+			; Call mixer callback, if set
+			mov		eax,MixerCallback
+			or		eax,eax
+			jz		tick_samples_not_expired
+			call	eax
+		tick_samples_not_expired:
+		sar	ebp,8
+		add	MissingMixerBufferSamples,ebp
+		jnz	tick_loop
+		; Mixer buffer processed
+		
 		dont_mix_anything:
 
 		; Compress mixing buffer into output buffer
@@ -688,6 +744,10 @@ MixingBuffer			dd ?
 CurrentChannelOffset    dd ?
 sample_increment		dd ?
 
+MissingMixerBufferSamples	dd ?
+SamplesPerTick				dd ?	; fixed point 24.8, unsigned
+MissingTickSamples			dd ?	; fixed point 24.8, unsigned
+
 ifdef DEBUG_MIXER_PERFORMANCE
 DebugPerfCounter	dd ?
 MixerRunTicks		dd ?
@@ -697,6 +757,7 @@ AvgMixerPercentCPU	dq ?
 endif
 
 .data
+MixerCallback	dd 0
 ifdef DEBUG_MIXER_PERFORMANCE
 PerfDataMsg		db "Average mixer execution time: %dfn"
 				dd offset AvgMixerExecTime

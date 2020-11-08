@@ -14,7 +14,11 @@ ENDS
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Initializes mixer with a given channel number
 ;
-; INPUT  : EAX = Number of channels
+; INPUT  : EAX = Mixing frequency
+;		   BL = Bits per sample
+;		   BH = Number of output channels
+;		   CL = Maximum number of input channels
+;		   EDX = Output buffer size (samples)
 ;
 ; OUTPUT : CF = 0 if ok
 ;               EAX = 0
@@ -26,8 +30,6 @@ global  OpenMixer : NEAR
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Frees memory used by the mixer
 ;
-; INPUT  : EAX = Number of channels
-;
 ; OUTPUT : CF = 0 if ok
 ;               EAX = NO_ERROR
 ;          CF = 1 if error
@@ -37,6 +39,10 @@ global  CloseMixer : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Fills a channel with the given wave
+;
+; This function may be called from an IRQ, but it is not reentrant.
+; TODO: make it reentrant with atomic allocation of channels, so that a module
+; can be played, while triggering sounds with the keyboard, for instance.
 ;
 ; INPUT  : EAX -> TWave structure
 ;
@@ -48,25 +54,18 @@ global  CloseMixer : NEAR
 global  PlaySound : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Sets the number of active channels
+; Mixes all active channels
 ;
-; INPUT : EAX = Number of active channels
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-global  SetActiveChannels : NEAR
-
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Sets the mixing properties
-;
-; INPUT : EAX = Mixing frequency
-;         EBX = Flags (bit 0 : 8/16 bits , bit 1 : Mono/Stereo)
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-global  SetMixingProperties : NEAR
-
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Mixes all data in channels
-;
-; INPUT  : EAX -> Destination buffer
-;          ECX = Destination buffer size in bytes
+; INPUT  : EAX -> Output buffer
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global  MixChannels : NEAR
 
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Sets a callback that will be called periodically from the playback IRQ
+;
+; INPUT  : EAX = Callback frequency in Hz (float)
+; 		   EBX -> Callback function, or NULL to disable
+;				  Callback input is EAX -> Channel pool (TChannel elements),
+;				  and ECX = Num. channels
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global  SetMixerCallback : NEAR
