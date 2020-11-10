@@ -30,6 +30,20 @@ EscHandler	proc
 		ret
 		endp
 
+MixerCallback	proc
+		movzx	eax,tick_index
+		mov		al,[eax+offset tick_sequence]
+		mov		tick_message,al
+		mov		esi,offset tick_message
+		call	printf
+		inc		tick_index
+		and		tick_index,3
+		ret
+tick_message	db ?,13,0
+tick_index		db 0
+tick_sequence	db "|/-\"
+		endp
+		
 start:
         InitDPMI
 		
@@ -50,9 +64,13 @@ start:
 		call	add_key
 		mov		ebx,offset DefaultKeyHandler
 		call	add_default_key
-
+		
         call    WUFInit
         ErrorExit "Error initializing wuF!"
+		
+		movf	eax,0.25
+		mov		ebx,offset MixerCallback
+		call	WUFSetMixerCallback
 
 		xor		esi,esi
 		load_files:		

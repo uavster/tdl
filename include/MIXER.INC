@@ -63,9 +63,9 @@ global  MixChannels : NEAR
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Sets a callback that will be called periodically from the playback IRQ
 ;
-; INPUT  : EAX = Callback frequency in Hz (float)
+; INPUT  : EAX = Callback period in seconds (float)
 ; 		   EBX -> Callback function, or NULL to disable
-;				  Callback input is EAX -> Channel pool (TChannel elements),
+;				  Callback input is EBX -> Channel pool (TChannel elements),
 ;				  and ECX = Num. channels
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 global  SetMixerCallback : NEAR
