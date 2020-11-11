@@ -13,7 +13,7 @@ main() {
 		
         add_key(&KH,Key_ESC);
 
-        increment=1.0/60.0;
+        increment=1.0/30.0;
 		myfloat=0.0f;
         while(Salir==0) {
                 IncFloat(&myfloat,&increment);

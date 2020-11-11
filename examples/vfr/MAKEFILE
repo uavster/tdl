@@ -15,7 +15,7 @@ LIBDIR = $(TDLPATH)\lib
 CFLAGS = -4r -hw -db -d2 -fpi87 -fp3 -i$(INCDIR) -mf -w5 -ze -zp=4 -zdp
 #AFLAGS = /mx /m2 /q /zi
 AFLAGS = -f obj
-LFLAGS = system pmodew
+LFLAGS = system DarkX
 #debug all
 
 !else
@@ -23,7 +23,7 @@ LFLAGS = system pmodew
 CFLAGS = -4r -fpi87 -fp3 -i$(INCDIR) -mf -otexan -w5 -ze -zdp
 #AFLAGS = /mx /m2 /q
 AFLAGS = -f obj
-LFLAGS = system pmodew
+LFLAGS = system DarkX
 
 !endif
 
