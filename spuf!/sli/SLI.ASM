@@ -177,8 +177,7 @@ SetFramePointers        endp
 ;³                      ECX : ColorBits
 ;³                      EDX : Number of frames
 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-;³      Salida:         EBX = puntero al SLI
-;³                      EAX = NULL
+;³      Salida:         EBX = puntero al SLI or NULL
 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 CreateSLI       proc
 ;mov cbits,ecx
@@ -231,7 +230,6 @@ CreateSLI       proc
                 no_stosb:
 
                 pop     ebx
-                xor     eax,eax
                 pop     ebp
                 clc
                 ret
@@ -488,7 +486,7 @@ SetFrameRate    proc
         endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Sets the frame rate of a multiframe SLI.
+; Updates a SLI animation with the current synchronization timer ticks.
 ;
 ; INPUT  : ESI -> SLI
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -500,7 +498,7 @@ AnimateSLI	proc
 		endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Sets the frame rate of a multiframe SLI.
+; Updates a SLI animation with the passed timer ticks.
 ;
 ; INPUT  : ESI -> SLI
 ;		   EAX = Timer ticks
