@@ -51,6 +51,4 @@ void main(void)
     Blit(GetVideoSLI(), buffer);
     ShowPage();
   }
-  DestroyVideoSLI(3);
-//  UnInitSGL();
 }
