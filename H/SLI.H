@@ -13,11 +13,16 @@
 #endif
 
 //    Blitting basic methodes
-#define SLIBlitCopy       0
+#define SLIBlitCopy       0		// Default
 #define SLIBlitAlpha      1
 #define SLIBlitAlphaMap   2
 
 #define SLIMaskedColor    4
+
+// Animation modes
+#define SLIAnimNormal		0	// Default
+#define SLIAnimForwardLoop	1
+#define SLIAnimPingPongLoop	2
 
 //   Estructura de punto
 typedef struct
@@ -63,15 +68,25 @@ typedef struct
     DWORD SLIFrame          ; //Frame actual de la animacion 16.16
     DWORD SLITotalFrames    ; //Numero de frames de la animacion 16.16
     DWORD SLIFrameRate      ; //Incremento de frames en 16.16
-    BYTE  *SLIFramePtr       ; //Puntero al frame actual
+    DWORD SLIStartTicks		; //Valor del timer la ъltima vez que se cambiу el frame actual manualmente o la velocidad de reproducciуn
+    DWORD SLIStartFrame		; //Frame de inicio de animaciуn en 16.16
+    DWORD SLILoopStart		; //Frame de inicio del loop de animaciуn
+    DWORD SLILoopEnd		; //Frame final del loop de animaciуn
+    BYTE  *SLIFramePtr      ; //Puntero al frame actual
 
     DWORD SLIPImages        ; //puntero a la lista de punteros de frames
 
     DWORD SLITemp[SLI_TEMP_VARS];// Espacio para variables temporales
 
-    DWORD SLIPalette[256]; // paleta asociada si no la tiene = NULL
-    BYTE  *SLILitTable    ; // puntero a una tabla de conversion si no la tiene = NULL
-    DWORD SLISBufferNfo  ; // Datos para los sbufferSLI's
+    DWORD SLIPalette[256]	; // paleta asociada si no la tiene = NULL
+    BYTE  *SLILitTable    	; // puntero a una tabla de conversion si no la tiene = NULL
+    DWORD SLISBufferNfo  	; // Datos para los sbufferSLI's
+	// Loops will not work well when the end of the loop in fixed point 16.16
+	// is above the range of a signed dword (2^31-1). That's 32,768 frames.
+	BYTE SLIAnimMode		; //0 - Normal
+							  //1 - Forward loop
+							  //2 - Ping pong loop							
+	BYTE SLIPlayingBackwards;
 } SLI;
 
 
@@ -84,7 +99,7 @@ typedef struct
 ;і                      ECX : ColorBits
 ;і                      EDX : Number of frames
 ;ГДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
-;і      Salida:         EBX : puntero al SLI
+;і      Salida:         EBX : puntero al SLI o NULL
 ;АДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
 */
 SLI *CreateSLI(int X, int Y, int colorbits, int nframes);
@@ -289,6 +304,48 @@ int GetFrame(SLI *slip);
 
 /*
 ;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+; Updates a SLI animation with the current synchronization timer ticks.
+;
+; INPUT  : ESI -> SLI
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+*/
+void AnimateSLI(SLI *slip);
+#pragma aux AnimateSLI "*" parm [esi]\
+                     modify [eax ebx ecx edx esi edi ebp];
+
+/*
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+; Updates a SLI animation with the passed timer ticks.
+;
+; INPUT  : ESI -> SLI
+;		   EAX = Timer ticks
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+*/
+void AnimateSLIWithTicks(SLI *slip, DWORD timer_ticks);
+#pragma aux AnimateSLIWithTicks "*" parm [esi] [eax]\
+                     modify [eax ebx ecx edx esi edi ebp]\
+					 value [eax];
+
+/*
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+; Sets the frame rate of a multiframe SLI.
+;
+; INPUT  : EAX -> SLI
+;          EBX = Fixed point (16.16) frame rate in frames per second
+;
+; OUTPUT : CF = 0 if ok
+;				EAX = NULL
+;		   CF = 1 if error
+;				EAX = Error code				
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+*/
+int SetFrameRate(SLI *slip, DWORD frame_rate_fp);
+#pragma aux SetFrameRate "*" parm [eax] [ebx]\
+                     modify [eax ebx ecx edx esi edi ebp]\
+					 value [eax];
+
+/*
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
 ; Pone el rect ngulo de clipping
 ;
 ; INTPUT : EAX = x1
@@ -315,6 +372,110 @@ global  SetPos : NEAR
 */
 void SetPos(SLI *slip, int x1, int y1);
 #pragma aux SetPos "*" parm [edi] [eax] [ebx]\
+                       modify [eax ebx ecx edx esi edi ebp];
+
+/*
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+; Devuelve el puntero a un frame determinado
+;
+; INPUT  : EAX -> SLI
+;          EBX = Frame
+;
+; OUTPUT : CF = 0 si ok
+;               EAX = NULL
+;               EBX -> Frame
+;          CF = 1 si el frame no existe
+;               EAX = Error code
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+global  GetFramePtr : NEAR
+
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+; Pone el puntero a un frame determinado
+;
+; INPUT  : EAX -> SLI
+;          EBX = NЈmero de frame
+;          ECX -> Frame
+;
+; OUTPUT : CF = 0 si ok
+;               EAX = NULL
+;          CF = 1 si el frame no existe
+;               EAX = Error code
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+global  SetFramePtr : NEAR
+*/
+
+/*
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+; Devuelve el puntero al frame actual
+;
+; INPUT  : EAX -> SLI
+;
+; OUTPUT : EAX -> Frame actual
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+*/
+void *GetCurrentFramePtr(SLI *slip);
+#pragma aux GetCurrentFramePtr "*" parm [eax]\
+                       modify [eax ebx ecx edx esi edi ebp]\
+					   value [eax];
+
+/*
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+; Devuelve las dimensiones (con escalado) del SLI
+;
+; INPUT  : EAX -> SLI
+;
+; OUTPUT : EAX = X size
+;          EBX = Y size
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+global  GetDimensions : NEAR
+*/
+
+/*
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+; Pone el campo de alpha
+;
+; INPUT : EAX -> SLI
+;         EBX = Alpha constante o puntero al mapa de alphas
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+*/
+void SetAlpha(SLI *slip, void *alpha_value_or_map_ptr);
+#pragma aux SetAlpha "*" parm [eax] [ebx]\
+                       modify [eax ebx ecx edx esi edi ebp];
+
+/*
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+; Pone el modo de animaciуn
+;
+; INPUT : EAX -> SLI
+;         BL = Modo de animaciуn
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+*/
+void SetAnimMode(SLI *slip, BYTE anim_mode);
+#pragma aux SetAlpha "*" parm [eax] [bl]\
+                       modify [eax ebx ecx edx esi edi ebp];
+
+/*
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+; Pone el inicio del loop de animaciуn
+;
+; INPUT : EAX -> SLI
+;         EBX = Frame inicial del loop
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+*/
+void SetAnimLoopStartFrame(SLI *slip, DWORD start_frame);
+#pragma aux SetAnimLoopStartFrame "*" parm [eax] [ebx]\
+                       modify [eax ebx ecx edx esi edi ebp];
+
+/*
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+; Pone el final del loop de animaciуn
+;
+; INPUT : EAX -> SLI
+;         EBX = Frame final del loop
+;ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
+*/
+void SetAnimLoopEndFrame(SLI *slip, DWORD end_frame);
+#pragma aux SetAnimLoopEndFrame "*" parm [eax] [ebx]\
                        modify [eax ebx ecx edx esi edi ebp];
 
 //ДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДДД
