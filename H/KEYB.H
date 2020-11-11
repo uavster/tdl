@@ -15,9 +15,10 @@
 
  INPUT : sc  - keyboard scancode
          pFn - routine to be called when the scancode is received
+		 If the routine returns !=0, the default keyboard ISR is chained.
 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 */
-void add_key(void (*pFn)(),char sc);
+void add_key(int (*pFn)(),char sc);
 #pragma aux add_key "*" parm [ebx] [eax]\
                         modify [eax ebx ecx edx ebp esi edi];
 
