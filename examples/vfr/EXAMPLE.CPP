@@ -1,28 +1,27 @@
 #include <tdl.h>
 
-int Salir=0;
+volatile int Salir=0;
 
-void KH() {
+int KH() {
         Salir=1;
+		return 0;	// Do not chain with default ISR.
 }
 
 main() {
-        float   myfloat,increment;
-        char    c[5];
-        
-        c[0]='t';
-        c[0]='i';
-        c[0]='c';
-        c[0]='k';
-        c[0]='s';
-        c[0]='\0';
-
+        float myfloat,increment;
+		double increment_double,mydouble;
+		
         add_key(&KH,Key_ESC);
 
-        increment=0.1;
+        increment=1.0/60.0;
+		myfloat=0.0f;
         while(Salir==0) {
-                GetElapsedTime();
                 IncFloat(&myfloat,&increment);
-                printf("Value %s incremented %dfn times every tick: %dfn\r",&c,increment,myfloat);
+				mydouble=myfloat;
+				increment_double=increment;
+                printf("Incrementing %dfn", increment_double);
+				printf(" times every tick: %dfn", mydouble);
+				printf("\r");
+                GetElapsedTime();
         }
 }
