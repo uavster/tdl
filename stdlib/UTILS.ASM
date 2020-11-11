@@ -667,6 +667,7 @@ PRFlab521:
         push    eax ebx ecx edx esi
 		fld		qword ptr [ebx]
 		fxam
+		fstp	st(0)
 		fstsw	ax
 		fwait
 		sahf
