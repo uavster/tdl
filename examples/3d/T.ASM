@@ -373,6 +373,9 @@ start:
         dec     ah
         jnz     main
         
+		mov		eax,our_sli
+		call	DestroySLI
+		
         mov     eax,3
         call    DestroyVideoSLI
 
