@@ -129,6 +129,7 @@ SetDefProperties        proc
         mov		[SLI ptr edi.SLIAnimMode], 0
         mov		[SLI ptr edi.SLILoopStart], 0
         mov		[SLI ptr edi.SLIPlayingBackwards],0
+		mov		[SLI ptr edi.SLISBufferNfo],0
         ret
 SetDefProperties        endp
 
@@ -276,7 +277,16 @@ CreateVoidSLI   proc
 ;�                              EAX = Error Code
 ;읕컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 DestroySLI      proc
-                mov     ebx, eax
+				; Free the SBuffer structure if allocated
+				mov		ebx,[SLI ptr eax.SLISBufferNfo]
+				or		ebx,ebx
+				jz		no_sbuffer
+						push	eax
+						call	free
+						pop		eax
+						ErrorCode FREE_ERROR
+				no_sbuffer:
+                mov     ebx,eax
                 call    free
                 ErrorCode FREE_ERROR
                 xor     eax,eax
