@@ -994,12 +994,17 @@ RenderUniverse  proc
 
         cmp     RenderMethode,RENDER_SOLID
         jnz     dont_init_sb
-                push    eax
-                mov     eax,ebx
+				; Prepare SLI for sbuffer, if not done so already
+				cmp		[SLI ptr ebx.SLISBufferNfo],0
+				jnz		sbuffer_created
+						mov		eax,ebx
+						call	SLI2SBuffer						
+				sbuffer_created:
+                mov     eax,our_sli
                 call    InitSBufferSLI
-                pop     eax
 
-        dont_init_sb:
+		dont_init_sb:
+		mov		eax,our_world
         mov     ebx,our_sli
         mov     ecx,[eax.NumMeshes]
         mov     eax,[eax.MeshArray]
