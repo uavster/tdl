@@ -110,39 +110,49 @@ WUFClose        endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets the underlying hardware capabilities
 ;
-; OUTPUT : EAX -> Playback capabilities (SoundHardwareCapabilities structure)
-;		   EBX -> Recording capabilities (SoundHardwareCapabilities structure)
+; INPUT : EAX -> Pointer to SoundHardwareCapabilities structure to be overwritten with internal pointer
+;		  EBX -> Pointer to SoundHardwareCapabilities structure to be overwritten with internal pointer
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 WUFGetHardwareCapabilities	proc
-		call	SDGetPlayHardCapabilities
+		push	ebx
 		push	eax
+		call	SDGetPlayHardCapabilities
+		pop		edi
+		mov		[edi],eax
 		call	SDGetRecHardCapabilities
+		pop		edi
+		mov		[edi],eax
 		pop		ebx
 		ret
 WUFGetHardwareCapabilities	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Gets buffers used by wuF!
-;
-; OUTPUT : EAX -> Playback buffer (SoundBuffer structure)
-;          EBX -> Record buffer (SoundBuffer structure)
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-WUFGetBuffers   proc
-        call    GetSDBuffers
-        ret
-WUFGetBuffers   endp
-
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets playback and recording properties
 ;
-; OUTPUT : EAX -> Playback properties (SoundProperties structure)
-;		   EBX -> Recording properties (SoundProperties structure)
+; INPUT : EAX -> SoundProperties structure to fill with playback properties, or NULL
+;		  EBX -> SoundProperties structure to fill with recording properties, or NULL
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 WUFGetProperties        proc
-        call    SDGetPlayProperties
-		push	eax
-        call    SDGetRecProperties
+		push	ebx
+		or		eax,eax
+		jz		playback_struct_off
+				push	eax
+				call    SDGetPlayProperties
+				pop		edi
+				mov		esi,eax
+				mov		ecx,size SoundProperties
+				rep		movsb
+		playback_struct_off:
 		pop		ebx
+		or		ebx,ebx
+		jz		recording_struct_off
+				push	ebx
+				call    SDGetRecProperties
+				pop		edi
+				mov		esi,eax
+				mov		ecx,size SoundProperties
+				rep		movsb
+		recording_struct_off:
         ret
 WUFGetProperties        endp
 

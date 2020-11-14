@@ -59,24 +59,16 @@ global  WUFClose : NEAR
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets the underlying hardware capabilities
 ;
-; OUTPUT : EAX -> Playback capabilities (SoundHardwareCapabilities structure)
-;		   EBX -> Recording capabilities (SoundHardwareCapabilities structure)
+; INPUT : EAX -> SoundHardwareCapabilities structure to fill with playback capabilities, or NULL
+;		  EBX -> SoundHardwareCapabilities structure to fill with recording capabilities, or NULL
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global WUFGetHardwareCapabilities : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Gets buffers used by wuF!
-;
-; OUTPUT : EAX -> Playback buffer (SoundBuffer structure)
-;          EBX -> Record buffer (SoundBuffer structure)
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-global  WUFGetBuffers : NEAR
-
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Gets playback and recording properties
 ;
-; OUTPUT : EAX -> Playback properties (SoundProperties structure)
-;		   EBX -> Recording properties (SoundProperties structure)
+; INPUT : EAX -> SoundProperties structure to fill with playback properties, or NULL
+;		  EBX -> SoundProperties structure to fill with recording properties, or NULL
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global  WUFGetProperties : NEAR
 
