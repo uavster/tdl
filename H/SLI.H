@@ -439,8 +439,8 @@ global  GetDimensions : NEAR
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 */
 void SetAlpha(SLI *slip, void *alpha_value_or_map_ptr);
-#pragma aux SetAlpha "*" parm [eax] [ebx]\
-                       modify [eax ebx ecx edx esi edi ebp];
+#pragma aux SetAlpha "*" 	parm [eax] [ebx]\
+							modify [eax ebx ecx edx esi edi ebp];
 
 /*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -451,8 +451,8 @@ void SetAlpha(SLI *slip, void *alpha_value_or_map_ptr);
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 */
 void SetAnimMode(SLI *slip, BYTE anim_mode);
-#pragma aux SetAlpha "*" parm [eax] [bl]\
-                       modify [eax ebx ecx edx esi edi ebp];
+#pragma aux SetAnimMode "*" parm [eax] [bl]\
+							modify [eax ebx ecx edx esi edi ebp];
 
 /*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ

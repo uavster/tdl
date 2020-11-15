@@ -15,15 +15,21 @@
 
 typedef struct
 {
-        float   x,y,z;
+        float   x;
+		float	y;
+		float	z;
 } POINT3D;
 
 typedef struct
 {
-  float X, Y, k[SPAN_MAX_INTERPOLATE_VARS+1];
+  float X;
+  float Y;
+  float k[SPAN_MAX_INTERPOLATE_VARS+1];
   POINT3D       PointPos;
   int           PointFlags;
-  POINT3D       OrigPointPos,OrigNormal,Normal;
+  POINT3D       OrigPointPos;
+  POINT3D		OrigNormal;
+  POINT3D		Normal;
 } RENDERPOINT;
 
 typedef struct
@@ -51,10 +57,16 @@ typedef struct
 
 typedef struct
 {
-        POINT3D         CamPos,CamOrientation;
+        POINT3D         CamPos;
+		POINT3D			CamOrientation;
         int             CamFocus;
         // Useful precalculated values
-        int             sin_alpha,cos_alpha,sin_beta,cos_beta,sin_gamma,cos_gamma;
+        int             sin_alpha;
+		int				cos_alpha;
+		int				sin_beta;
+		int				cos_beta;
+		int				sin_gamma;
+		int				cos_gamma;
         // The useful name
         char            CamName[128];
 } RENDERCAMERA;
@@ -67,7 +79,8 @@ typedef struct
 
 typedef struct
 {
-        POINT3D         LightPos,LightVector;
+        POINT3D         LightPos;
+		POINT3D			LightVector;
         int             LightIntensity;
         char            LightName[128];
 } RENDERLIGHT;

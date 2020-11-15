@@ -60,14 +60,21 @@ LNKOPT = system tx32 op q
 
 # 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
 
-all:            tdl.lib         $(TDLPATH)\lib\c0tt.obj         c0tt.obj
+all:            tdl.lib         $(TDLPATH)\lib\c0tt.obj	$(TDLPATH)\lib\wpp.obj         c0tt.obj	wpp.obj
 
 # 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
 $(TDLPATH)\lib\c0tt.obj:        c0tt.obj
         @echo Copying ... [$?]
         @copy $(TDLPATH)\objs\c0tt.obj $(TDLPATH)\lib\c0tt.obj >nul
 
+
+$(TDLPATH)\lib\wpp.obj:			wpp.obj
+        @echo Copying ... [$?]
+        @copy $(TDLPATH)\objs\wpp.obj $(TDLPATH)\lib\wpp.obj >nul
+
+
 c0tt.obj:       c0tt.asm        utils.inc       dpmi.asm        alloc.inc       dma.inc         dma.asm memmgr.asm
+wpp.obj:		wpp.asm
 stdc.obj:       stdc.asm
 stdio.obj:      stdio.c         stdio.h         string.h
 

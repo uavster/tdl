@@ -13,7 +13,9 @@ typedef unsigned char   BYTE;
 typedef unsigned short  WORD;
 typedef unsigned long   DWORD;
 typedef double          QWORD;
+#ifndef __cplusplus
 typedef int             bool;
+#endif
 
 #define NULL        0
 
