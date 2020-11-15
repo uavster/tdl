@@ -70,6 +70,8 @@
 // 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
 #include <sync.h>
 
+#include <wuf!.h>
+
 #include <video.h>
 
 #ifdef __cplusplus
