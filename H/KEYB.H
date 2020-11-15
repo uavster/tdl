@@ -5,6 +5,8 @@
 #ifndef _KEYB_INCLUDED_
 #define _KEYB_INCLUDED_
 
+#include "stddef.h"
+
 #ifdef __cplusplus
   extern "C" {
 #endif
@@ -35,12 +37,16 @@ void remove_key(char sc);
 
 /*
 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
- Keyboard Table
+ Tells if the passed key is pressed.
 
-       NOTE: For each key in the map: 1 if pressed , 0 if not pressed
+ INPUT : sc - keyboard scancode
+ OUTPUT : !=0 if pressed; ==0, otherwise.
 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 */
-extern BYTE   keyb_map[128];
+int is_key_pressed(int sc);
+#pragma aux is_key_pressed "*"  parm [eax]\
+                                modify [eax]\
+								value [eax];
 
 #define Key_Home        0x47
 #define Key_Up          0x48

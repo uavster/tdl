@@ -18,6 +18,7 @@ public  remove_key
 public  keyb_map
 public 	add_default_key
 public	remove_default_key
+public 	is_key_pressed
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Common irq1 handler
@@ -202,6 +203,26 @@ remove_default_key 	proc
 		mov		default_key_handler,0
 		ret
 remove_default_key	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Removes the routine called by any keyboard event
+;
+; INPUT -> AL = keyboard scancode
+; OUTPUT : If key pressed,
+;				CF = 1 and EAX != 0
+;		   If key not pressed,
+;				CF = 0 and EAX == 0
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+is_key_pressed	proc
+		and		al,127
+		movzx	eax,al
+		movzx	eax,keyb_map[eax]
+		or		eax,eax
+		jz		key_not_pressed
+				stc
+		key_not_pressed:
+		ret
+is_key_pressed	endp
 
 .data
 default_key_handler	dd 0
