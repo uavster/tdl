@@ -4,6 +4,7 @@
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 NUM_HANDLES     equ 20  ; handle capacity
+USER_TIMER_ROUTINE_LOCK_SIZE		equ 4*4096
 
 JUMPS
 
@@ -11,8 +12,64 @@ JUMPS
 .model flat
 .code
 
+Trm_reg         STRUC
+        rm_edi          dd ?
+        rm_esi          dd ?
+        rm_ebp          dd ?
+                        dd ?
+        rm_ebx          dd ?
+        rm_edx          dd ?
+        rm_ecx          dd ?
+        rm_eax          dd ?
+        rm_flags        dw ?
+        rm_es           dw ?
+        rm_ds           dw ?
+        rm_fs           dw ?
+        rm_gs           dw ?
+        rm_ip           dw ?
+        rm_cs           dw ?
+        rm_sp           dw ?
+        rm_ss           dw ?
+ENDS
+
+
         INCLUDE timer.inc
         INCLUDE dpmi.inc
+
+rm_common_handler	proc
+		push	ds es fs gs
+		pushad
+		pushfd
+		call	fword ptr cs:common_handler_address
+		popad
+		pop		gs fs es ds
+
+;        mov     ds,cs:DataSelector
+;        mov     al,hihi
+;        mov     ah,1eh
+;        mov     ds:[0b8000h+4*160],ax
+;        inc     al
+;        cmp     al,3Ah
+;        jnz     nada
+;                mov     al,30h
+;        nada:
+;        mov     hihi,al
+;		mov     al,20h
+;        out     20h,al
+
+        cld
+        lodsw
+        mov     es:[edi.rm_ip],ax
+        lodsw
+        mov     es:[edi.rm_cs],ax
+        lodsw
+;or ax,200h
+        mov     es:[edi.rm_flags],ax
+        add     es:[edi.rm_sp],2*3
+        iretd
+common_handler_address		dd offset common_handler
+common_handler_address_seg	dw ?
+rm_common_handler	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Common irq0 handler that calls all near routines in allocated slots
@@ -22,11 +79,16 @@ JUMPS
 common_handler  proc far
         push    ds es fs gs
         pushad
+push ds
+		mov		old_irq_called,0
         mov     ax,cs:DataSelector
         mov     ds,ax
         mov     es,ax
         mov     fs,ax
         mov     gs,ax
+pop ds:input_ds
+mov ds:input_esi,esi
+
         mov     ecx,NUM_HANDLES
         mov     esi,offset handler_chain
         walk_handlers:
@@ -40,30 +102,78 @@ common_handler  proc far
                         time_for_handler:
                         or      [esi.status],0  ; is timer off?
                         jz      no_time_for_handler
-                        push    esi ecx
+                        push    ds es fs gs esi ecx
                         call    [esi.pointer]
-                        pop     ecx esi
+                        pop     ecx esi gs fs es ds
                 no_time_for_handler:
                 add     esi,size Ttimer
         loop    walk_handlers
         all_handlers_done:
         ; master irq controller aknowledgement
+		cmp		old_irq_called,0
+		jnz		ack_done
         mov     al,20h
         out     20h,al
+jmp leave_ack
+		ack_done:
+mov     byte ptr ds:[0b8000h+4*160+1],1eh
+inc     byte ptr ds:[0b8000h+4*160]
+leave_ack:
         popad
         pop     gs fs es ds
         iretd
+old_irq_called	db ?
+
+input_ds dd 0
+input_esi dd 0
+
+common_handler_end:
 common_handler  endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Routine to call old irq0 handler
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 call_old_handler        proc
-        pushfd
-        call    fword ptr old_handler
+;        pushfd
+;        call    fword ptr old_handler
+		; Call real mode proc with iret frame
+		mov		ax,302h
+		xor		bh,bh
+		xor		ecx,ecx
+		push	ds
+		pop		es
+		mov		edi,offset rm_call_regs_old_irq
+		mov		dx,word ptr old_rm_handler
+		mov		[edi.rm_ip],dx
+		mov		dx,word ptr old_rm_handler+2
+		mov		[edi.rm_cs],dx
+		mov		[edi.rm_ss],0
+		mov		[edi.rm_sp],0
+		mov		[edi.rm_flags],0		
+;		pushfd
+;		pop		dword ptr [edi.rm_flags]
+mov fs,cs:input_ds
+mov esi,cs:input_esi
+		int		31h	; TODO: Something inside smashes rm_call_struct.rm_flags
+;push ds esi
+;mov ds,cs:input_ds
+;mov esi,cs:input_esi
+;movzx eax,word ptr ds:[esi+2*2]
+;int 3
+;pop esi ds
+		mov		old_irq_called,1
+mov     byte ptr ds:[0b8000h+4*160+1],1eh
+inc     byte ptr ds:[0b8000h+4*160]
+mov     byte ptr ds:[0b8000h+9*160+1],1eh
+mov     byte ptr ds:[0b8000h+9*160],'D'
         ret
 call_old_handler        endp
 
+empty_irq:
+	mov	al,20h
+	out	20h,al
+	iretd
+	
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Enables timer extensions (sets irq0 handler)
 ;
@@ -77,18 +187,52 @@ enable_timer    proc
         cli
         test    enabled,1
         jnz     timer_already_enabled
-        mov     ebx,offset call_old_handler
-        call    add_timer
+		mov		old_handler_freq,eax
+		mov		cs:common_handler_address_seg,cs
+mov byte ptr ds:[0b8000h+4*160],'0'
+		; Lock handler memory
+		mov		ebx,offset common_handler
+		mov		ecx,offset common_handler_end-offset common_handler
+		call	LockMem
+		mov		ebx,offset handler_chain
+		mov		ecx,size handler_chain
+		call	LockMem
+		; Save old IRQ handler
+        mov     ax,200h
+        mov     bl,8
+        int     31h
+        mov     old_rm_handler,dx
+		mov		old_rm_handler+2,cx
+		; Save previous protected mode interrupt handler
         mov     ax,204h
         mov     bl,8
         int     31h
         mov     old_handler,edx
         mov     word ptr old_handler+4,cx
+		; Set new protected mode interrupt handler
         mov     ax,205h
         mov     bl,8
         mov     cx,cs
-        mov     edx,offset common_handler
+        mov     edx,offset empty_irq ; common_handler
         int     31h
+		; Get a real mode callback to our protected mode routine
+		push	ds es
+		push	ds
+		pop		es
+        mov     edi,offset rm_call_struct
+        push    cs
+        pop     ds
+        mov     esi,offset rm_common_handler
+        mov     ax,303h
+        int     31h
+		pop		es ds
+		mov		rm_callback_seg,cx
+		mov		rm_callback_off,dx
+		; Point timer IRQ0 to the real mode callback
+        mov     ax,201h
+        mov     bl,8
+        int     31h
+		
         ; first time execution of all timers allocated
         mov     ecx,NUM_HANDLES
         mov     esi,offset handler_chain
@@ -104,11 +248,16 @@ enable_timer    proc
                 add     esi,size Ttimer
         loop    exec_handlers
         all_handlers_executed:
+		; Call the original timer ISR
+		mov		eax,old_handler_freq
+        mov     ebx,offset call_old_handler
+        call    add_timer
         ; we set the enable flag
         mov     enabled,1
         timer_already_enabled:
         sti
         ret
+old_handler_freq	dd ?
 enable_timer    endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -118,13 +267,33 @@ disable_timer   proc
         test    enabled,1
         jz      timer_still_not_enabled
         mov     enabled,0                       ; timer is off
+		; Restore normal timer frequency
+        mov     eax,18
+        call    set_timer_freq
+		; Restore real mode interrupt handler
+        mov     ax,201h
+		mov		cx,old_rm_handler+2
+		mov		dx,old_rm_handler
+        mov     bl,8
+        int     31h
+		; Free real mode callback
+		mov		ax,304h
+		mov		cx,rm_callback_seg
+		mov		dx,rm_callback_off
+		int		31h
+		; Restore protected mode interrupt handler
         mov     edx,old_handler
         mov     ecx,dword ptr old_handler+4     ; smaller op.code with dword 
         mov     bl,8
         mov     ax,205h
         int     31h
-        mov     eax,18
-        call    set_timer_freq
+		; Unlock handler memory
+		mov		ebx,offset handler_chain
+		mov		ecx,size handler_chain
+		call	UnlockMem
+		mov		ebx,offset common_handler
+		mov		ecx,offset common_handler_end-offset common_handler
+		call	UnlockMem
         timer_still_not_enabled:
         ret
 disable_timer   endp
@@ -165,6 +334,10 @@ add_timer       proc
         ret
 
         found_free_slot:
+		push	eax ebx esi
+		mov		ecx,USER_TIMER_ROUTINE_LOCK_SIZE
+		call	LockMem
+		pop		esi ebx eax
         ; we disconnect the timer
         mov     [esi.status],0
         ; slot is filled with data
@@ -250,6 +423,12 @@ remove_timer    proc
         no_more_bytes:
         sti
         pop     esi
+
+		push	esi
+		mov		ebx,esi
+		mov		ecx,USER_TIMER_ROUTINE_LOCK_SIZE
+		call	UnlockMem
+		pop		esi
 
         ; if the current frequency corresponds to the removed one, we search
         ; the highest again and recalculate the periods
@@ -412,11 +591,18 @@ enabled         db 0
 
 handler_chain   Ttimer NUM_HANDLES+1 dup(<>)
                 ; last handle is end of data (for moving back the chain)
+hihi            db 30h
 
 .data?
 trash           dd ?
 old_handler     dd ?    ; old irq0 handler routine
                 dw ?
+old_rm_handler	dw ?
+				dw ?
+rm_callback_off dw ?
+rm_callback_seg	dw ?
 fpu_status      dw ?
+rm_call_struct	Trm_reg<?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?>
+rm_call_regs_old_irq Trm_reg<?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?>
 
 end 
