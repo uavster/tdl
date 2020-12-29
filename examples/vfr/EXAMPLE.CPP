@@ -21,7 +21,7 @@ main() {
 				increment_double=increment;
                 printf("Incrementing %dfn", increment_double);
 				printf(" times every tick: %dfn", mydouble);
-				printf("\r");
+				printf("       \r");
                 GetElapsedTime();
         }
 }
