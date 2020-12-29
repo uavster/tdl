@@ -35,6 +35,7 @@ ENDS
 
         INCLUDE timer.inc
         INCLUDE dpmi.inc
+		INCLUDE stderror.inc
 
 rm_common_handler	proc
 		push	ds es fs gs
@@ -112,13 +113,9 @@ mov ds:input_esi,esi
         ; master irq controller aknowledgement
 		cmp		old_irq_called,0
 		jnz		ack_done
-        mov     al,20h
-        out     20h,al
-jmp leave_ack
+				mov     al,20h
+				out     20h,al
 		ack_done:
-mov     byte ptr ds:[0b8000h+4*160+1],1eh
-inc     byte ptr ds:[0b8000h+4*160]
-leave_ack:
         popad
         pop     gs fs es ds
         iretd
@@ -164,15 +161,13 @@ mov esi,cs:input_esi
 		mov		old_irq_called,1
 mov     byte ptr ds:[0b8000h+4*160+1],1eh
 inc     byte ptr ds:[0b8000h+4*160]
-mov     byte ptr ds:[0b8000h+9*160+1],1eh
-mov     byte ptr ds:[0b8000h+9*160],'D'
         ret
 call_old_handler        endp
 
-empty_irq:
-	mov	al,20h
-	out	20h,al
-	iretd
+;empty_irq:
+;	mov	al,20h
+;	out	20h,al
+;	iretd
 	
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Enables timer extensions (sets irq0 handler)
@@ -213,7 +208,7 @@ mov byte ptr ds:[0b8000h+4*160],'0'
         mov     ax,205h
         mov     bl,8
         mov     cx,cs
-        mov     edx,offset empty_irq ; common_handler
+        mov     edx,offset common_handler
         int     31h
 		; Get a real mode callback to our protected mode routine
 		push	ds es
@@ -276,26 +271,39 @@ disable_timer   proc
 		mov		dx,old_rm_handler
         mov     bl,8
         int     31h
+		jc		disable_timer_error		
 		; Free real mode callback
 		mov		ax,304h
 		mov		cx,rm_callback_seg
 		mov		dx,rm_callback_off
 		int		31h
+		jc		disable_timer_error
 		; Restore protected mode interrupt handler
         mov     edx,old_handler
         mov     ecx,dword ptr old_handler+4     ; smaller op.code with dword 
         mov     bl,8
         mov     ax,205h
         int     31h
+		jc		disable_timer_error
 		; Unlock handler memory
 		mov		ebx,offset handler_chain
 		mov		ecx,size handler_chain
 		call	UnlockMem
+		jc		disable_timer_leave
 		mov		ebx,offset common_handler
 		mov		ecx,offset common_handler_end-offset common_handler
 		call	UnlockMem
+		jc		disable_timer_leave
         timer_still_not_enabled:
-        ret
+		clc
+		disable_timer_leave:
+		ret
+		
+		disable_timer_error:
+		and		eax,0ffffh
+		or		eax,DPMI_ERROR
+		stc
+		ret
 disable_timer   endp
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
