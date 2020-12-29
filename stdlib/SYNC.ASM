@@ -133,6 +133,9 @@ ForceVirtualFrameRate   endp
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Finaliza el controlador de virtual frame rate
+; OUTPUT -> CF = 0, if success
+; 			CF = 1, if error
+; 				EAX = Error code
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 EndVirtualFrameRate     proc
         call    disable_timer

@@ -61,9 +61,11 @@ LIST_ERROR          EQU 10 SHL 16
 
 HARDWARE_ERROR      EQU 11 SHL 16
 
-MIXER_ERROR         EQU 11 SHL 16
+MIXER_ERROR         EQU 12 SHL 16
 
    NO_FREE_CHANNELS     EQU MIXER_ERROR OR 1
+   
+DPMI_ERROR			EQU 13 SHL 16	; Low word is DPMI error code
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Macro de salida de error codes

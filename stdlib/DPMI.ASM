@@ -17,12 +17,16 @@
 
         include alloc.inc
         include dpmi.inc
-        
+		include stderror.inc
+		
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
 ; Locks a memory region
 ;
 ; INPUT -> DS:EBX -> memory region to lock
 ;          ECX = size of region to lock
+; OUTPUT -> CF = 0, if success
+;			CF = 1, if error
+;				EAX = Error code
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
 LockMem proc
         push    ecx
@@ -33,6 +37,13 @@ LockMem proc
         shr     esi,16
         mov     ax,600h
         int     31h
+		jc		lock_mem_error
+		ret
+		
+		lock_mem_error:
+		and		eax,0ffffh
+		or		eax,DPMI_ERROR
+		stc
         ret
 LockMem endp
 
@@ -41,6 +52,9 @@ LockMem endp
 ;
 ; INPUT -> DS:EBX -> memory region to unlock
 ;          ECX = size of region to unlock
+; OUTPUT -> CF = 0, if success
+;			CF = 1, if error
+;				EAX = Error code
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
 UnlockMem       proc
         push    ecx
@@ -51,6 +65,14 @@ UnlockMem       proc
         shr     esi,16
         mov     ax,601h
         int     31h
+		and		eax,0ffffh
+		jc		unlock_mem_error
+		ret
+		
+		unlock_mem_error:
+		and		eax,0ffffh
+		or		eax,DPMI_ERROR
+		stc
         ret
 UnlockMem       endp
 
