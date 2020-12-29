@@ -755,7 +755,7 @@ PRFlab521:
         call    StringLength
         mov     esi,offset PRFbuff
 		cmp		ecx,6
-		jz		print_mantisa
+		jae		print_mantisa
 		push	ecx
 		sub		ecx,6
 		neg		ecx
