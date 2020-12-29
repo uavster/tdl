@@ -4,7 +4,7 @@
 
 # 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
 
-DEBUG = 1
+#DEBUG = 1 
 INCDIR = $(TDLPATH)\h
 LIBDIR = $(TDLPATH)\lib
 
