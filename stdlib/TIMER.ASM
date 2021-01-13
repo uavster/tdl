@@ -80,15 +80,12 @@ rm_common_handler	endp
 common_handler  proc far
         push    ds es fs gs
         pushad
-push ds
-		mov		old_irq_called,0
+		mov		cs:old_irq_called,0
         mov     ax,cs:DataSelector
         mov     ds,ax
         mov     es,ax
         mov     fs,ax
         mov     gs,ax
-pop ds:input_ds
-mov ds:input_esi,esi
 
         mov     ecx,NUM_HANDLES
         mov     esi,offset handler_chain
@@ -111,7 +108,7 @@ mov ds:input_esi,esi
         loop    walk_handlers
         all_handlers_done:
         ; master irq controller aknowledgement
-		cmp		old_irq_called,0
+		cmp		cs:old_irq_called,0
 		jnz		ack_done
 				mov     al,20h
 				out     20h,al
@@ -149,8 +146,6 @@ call_old_handler        proc
 		mov		[edi.rm_flags],0		
 ;		pushfd
 ;		pop		dword ptr [edi.rm_flags]
-mov fs,cs:input_ds
-mov esi,cs:input_esi
 		int		31h	; TODO: Something inside smashes rm_call_struct.rm_flags
 ;push ds esi
 ;mov ds,cs:input_ds
@@ -158,17 +153,12 @@ mov esi,cs:input_esi
 ;movzx eax,word ptr ds:[esi+2*2]
 ;int 3
 ;pop esi ds
-		mov		old_irq_called,1
-mov     byte ptr ds:[0b8000h+4*160+1],1eh
-inc     byte ptr ds:[0b8000h+4*160]
+		mov		cs:old_irq_called,1
+;mov     byte ptr ds:[0b8000h+4*160+1],1eh
+;inc     byte ptr ds:[0b8000h+4*160]
         ret
 call_old_handler        endp
 
-;empty_irq:
-;	mov	al,20h
-;	out	20h,al
-;	iretd
-	
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Enables timer extensions (sets irq0 handler)
 ;
@@ -184,7 +174,7 @@ enable_timer    proc
         jnz     timer_already_enabled
 		mov		old_handler_freq,eax
 		mov		cs:common_handler_address_seg,cs
-mov byte ptr ds:[0b8000h+4*160],'0'
+;mov byte ptr ds:[0b8000h+4*160],'0'
 		; Lock handler memory
 		mov		ebx,offset common_handler
 		mov		ecx,offset common_handler_end-offset common_handler
