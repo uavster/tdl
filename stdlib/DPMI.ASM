@@ -218,11 +218,13 @@ RealInterrupt   proc
         push    word ptr RealESSegment
         push    word ptr 0
         pushad
+		push	ss
+		pop		es
         mov     edi,esp
         mov     ax,0300h
         mov     ecx,[RealStackCopy]
         xor     ebx,ebx
-        mov     bl,[esp +36h]
+        mov     bl,ss:[esp +36h]
         int     31h
         popad
         lea     esp,[esp+2]
