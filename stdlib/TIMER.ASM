@@ -45,26 +45,12 @@ rm_common_handler	proc
 		popad
 		pop		gs fs es ds
 
-;        mov     ds,cs:DataSelector
-;        mov     al,hihi
-;        mov     ah,1eh
-;        mov     ds:[0b8000h+4*160],ax
-;        inc     al
-;        cmp     al,3Ah
-;        jnz     nada
-;                mov     al,30h
-;        nada:
-;        mov     hihi,al
-;		mov     al,20h
-;        out     20h,al
-
         cld
         lodsw
         mov     es:[edi.rm_ip],ax
         lodsw
         mov     es:[edi.rm_cs],ax
         lodsw
-;or ax,200h
         mov     es:[edi.rm_flags],ax
         add     es:[edi.rm_sp],2*3
         iretd
@@ -117,10 +103,6 @@ common_handler  proc far
         pop     gs fs es ds
         iretd
 old_irq_called	db ?
-
-input_ds dd 0
-input_esi dd 0
-
 common_handler_end:
 common_handler  endp
 
@@ -128,8 +110,6 @@ common_handler  endp
 ; Routine to call old irq0 handler
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 call_old_handler        proc
-;        pushfd
-;        call    fword ptr old_handler
 		; Call real mode proc with iret frame
 		mov		ax,302h
 		xor		bh,bh
@@ -143,19 +123,9 @@ call_old_handler        proc
 		mov		[edi.rm_cs],dx
 		mov		[edi.rm_ss],0
 		mov		[edi.rm_sp],0
-		mov		[edi.rm_flags],0		
-;		pushfd
-;		pop		dword ptr [edi.rm_flags]
-		int		31h	; TODO: Something inside smashes rm_call_struct.rm_flags
-;push ds esi
-;mov ds,cs:input_ds
-;mov esi,cs:input_esi
-;movzx eax,word ptr ds:[esi+2*2]
-;int 3
-;pop esi ds
+		mov		[edi.rm_flags],0	; IRQ code will expect IF to be off.
+		int		31h
 		mov		cs:old_irq_called,1
-;mov     byte ptr ds:[0b8000h+4*160+1],1eh
-;inc     byte ptr ds:[0b8000h+4*160]
         ret
 call_old_handler        endp
 
@@ -174,7 +144,6 @@ enable_timer    proc
         jnz     timer_already_enabled
 		mov		old_handler_freq,eax
 		mov		cs:common_handler_address_seg,cs
-;mov byte ptr ds:[0b8000h+4*160],'0'
 		; Lock handler memory
 		mov		ebx,offset common_handler
 		mov		ecx,offset common_handler_end-offset common_handler
