@@ -12,6 +12,8 @@ JUMPS
 .model flat
 .code
 
+INCLUDE		irq.inc
+
 Trm_reg         STRUC
         rm_edi          dd ?
         rm_esi          dd ?
@@ -64,15 +66,9 @@ rm_common_handler	endp
 ;       and all segment registers are set to a 32bit 4Gb data selector
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 common_handler  proc far
-        push    ds es fs gs
-        pushad
+		IRQEnter
+		
 		mov		cs:old_irq_called,0
-        mov     ax,cs:DataSelector
-        mov     ds,ax
-        mov     es,ax
-        mov     fs,ax
-        mov     gs,ax
-
         mov     ecx,NUM_HANDLES
         mov     esi,offset handler_chain
         walk_handlers:
@@ -93,15 +89,13 @@ common_handler  proc far
                 add     esi,size Ttimer
         loop    walk_handlers
         all_handlers_done:
-        ; master irq controller aknowledgement
+		
 		cmp		cs:old_irq_called,0
 		jnz		ack_done
-				mov     al,20h
-				out     20h,al
-		ack_done:
-        popad
-        pop     gs fs es ds
-        iretd
+		IRQMasterAck
+		ack_done:		
+		IRQLeave
+
 old_irq_called	db ?
 common_handler_end:
 common_handler  endp

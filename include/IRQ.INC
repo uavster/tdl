@@ -5,16 +5,28 @@
 
 IRQEnter	MACRO
         pushad
-        push    ds es
-        mov     ax,DataSelector
+        push    ds es fs gs
+        mov     ax,cs:DataSelector
         mov     ds,ax
-        mov     es,ax		
+        mov     es,ax
+		mov		fs,ax
+		mov		gs,ax
 ENDM
 
 IRQLeave	MACRO
-        pop     es ds
+        pop     gs fs es ds
         popad
         iretd
+ENDM
+
+IRQMasterAck	MACRO
+		mov		al,20h
+		out		20h,al
+ENDM
+
+IRQSlaveAck		MACRO
+		mov		al,20h
+		out		0a0h,al
 ENDM
 
 IRQAck	MACRO irq_number
@@ -23,10 +35,9 @@ IRQAck	MACRO irq_number
 		cmp		irq_number,8
 		jb		ack_master_pic
 		; Acknowledge slave PIC first
-		mov		dx,0a0h
-		out		dx,al
+		out		0a0h,al
 		ack_master_pic:
 		; Acknowledge master PIC
-        mov     dx,20h
-        out     dx,al	
+        out     20h,al	
 ENDM
+
