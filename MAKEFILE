@@ -80,8 +80,9 @@ stdio.obj:      stdio.c         stdio.h         string.h
 
 count.obj:      count.asm
 dpmi.obj:       dpmi.asm        dpmi.inc
-litt32.obj:      litt32.asm    littable.inc
-litt16.obj:      litt16.asm    littable.inc
+irq.obj:		irq.asm			irq.inc			alloc.inc		memmgr.asm
+litt32.obj:		litt32.asm    	littable.inc
+litt16.obj:		litt16.asm    	littable.inc
 utils.obj:      utils.asm       utils.inc
 assert.obj:		assert.asm		assert.inc		utils.obj		utils.inc
 vga.obj:        vga.asm         vga.inc
@@ -174,7 +175,7 @@ wav.obj:        wav.asm         wav.inc         memmgr.asm      alloc.inc       
 #load_xm.obj:    load_xm.asm
 #sb.obj:         sb.asm          sb.inc
 
-tdl.lib:        stdc.obj        stdio.obj       count.obj       dpmi.obj\
+tdl.lib:        stdc.obj        stdio.obj       count.obj       dpmi.obj	irq.obj\
                 litt16.obj      framerat.obj    sglmain.obj\
                 utils.obj       assert.obj		vga.obj         draw8x8g.obj\
                 draw4x4g.obj    grid.obj\

@@ -14,6 +14,7 @@ extrn HESMLAB001: near
 extrn EndOfProgram: near
 
 if STANDARD_INIT
+		INCLUDE irq.inc
         INCLUDE newsgl.inc
         INCLUDE alpha.inc
         INCLUDE player.inc
@@ -327,6 +328,8 @@ InitDPMI        macro
         call    InitDPMIVariables
         call    init_c_heap
 if STANDARD_INIT
+		call	IRQInit
+		ErrorExit "Error: Unable to initialize IRQ library"
         call    InitSGL
         ErrorExit "Error: Unable to initialize graphic system"
         call    InitAlphaFX
@@ -367,6 +370,8 @@ ExitAfterCall    MACRO FinalCall
         ErrorExit "Error: Unable to uninitialize DMA extensions"
         call    UnInitSGL
         ErrorExit "Error: Unable to uninitialize graphic system"
+		call	IRQUninit
+		ErrorExit "Error: Unable to uninitialize IRQ library"
         call	FinalCall
         jmp     EndOfProgram
 ENDM

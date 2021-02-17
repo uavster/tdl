@@ -3,6 +3,26 @@
 ;       Coded by Ignacio Mellado Bataller a.k.a. B52 / the D@rkRising
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
+Trm_reg         STRUC
+        rm_edi          dd ?
+        rm_esi          dd ?
+        rm_ebp          dd ?
+                        dd ?
+        rm_ebx          dd ?
+        rm_edx          dd ?
+        rm_ecx          dd ?
+        rm_eax          dd ?
+        rm_flags        dw ?
+        rm_es           dw ?
+        rm_ds           dw ?
+        rm_fs           dw ?
+        rm_gs           dw ?
+        rm_ip           dw ?
+        rm_cs           dw ?
+        rm_sp           dw ?
+        rm_ss           dw ?
+ENDS
+
 IRQEnter	MACRO
         pushad
         push    ds es fs gs
@@ -41,3 +61,60 @@ IRQAck	MACRO irq_number
         out     20h,al	
 ENDM
 
+IRQHookData		STRUC
+		irq_number		db ?
+		int_number		db ?
+		pm_handler		dd ?
+						dw ?
+		lock_bytes		dd ?
+		old_pm_handler	dd ?
+						dw ?
+		rm_handler		dw ?
+						dw ?
+		rm_callback		dw ?
+						dw ?
+		rm_registers	Trm_reg<>
+ENDS
+
+;-----------------------------------------------------------------
+; Initializes IRQ handling library.
+;
+; OUTPUT:
+;	CF = 0 if successful; 1, otherwise.
+;-----------------------------------------------------------------
+global	IRQInit : NEAR
+
+;-----------------------------------------------------------------
+; Uninitializes IRQ handling library.
+;
+; OUTPUT:
+;	CF = 0 if successful; 1, otherwise.
+;-----------------------------------------------------------------
+global	IRQUninit : NEAR
+
+;-----------------------------------------------------------------
+; Sets a protected mode interrupt handler that will be called from
+; both protected and real mode (via callback).
+;
+; INPUT:
+;	AL = IRQ number
+;	CS:EBX -> Interrupt Service Routine
+;	ECX = Bytes to lock from ISR start
+;
+; OUTPUT:
+;	DS:ESI = Pointer to IRQHookData or NULL if error
+;-----------------------------------------------------------------
+global	IRQHook : NEAR
+
+;-----------------------------------------------------------------
+; Restores interrupts handlers and callbacks set with IRQHook for
+; an IRQ.
+;
+; INPUT:
+;	DS:ESI -> IRQHookData structure returned by IRQHook
+;
+; OUTPUT:
+;	CF = 0 and EAX = 0, if success
+;	CF = 1 and EAX != 0, if error
+;-----------------------------------------------------------------
+global IRQRestore : NEAR

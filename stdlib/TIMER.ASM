@@ -12,29 +12,7 @@ JUMPS
 .model flat
 .code
 
-INCLUDE		irq.inc
-
-Trm_reg         STRUC
-        rm_edi          dd ?
-        rm_esi          dd ?
-        rm_ebp          dd ?
-                        dd ?
-        rm_ebx          dd ?
-        rm_edx          dd ?
-        rm_ecx          dd ?
-        rm_eax          dd ?
-        rm_flags        dw ?
-        rm_es           dw ?
-        rm_ds           dw ?
-        rm_fs           dw ?
-        rm_gs           dw ?
-        rm_ip           dw ?
-        rm_cs           dw ?
-        rm_sp           dw ?
-        rm_ss           dw ?
-ENDS
-
-
+		INCLUDE	irq.inc
         INCLUDE timer.inc
         INCLUDE dpmi.inc
 		INCLUDE stderror.inc
