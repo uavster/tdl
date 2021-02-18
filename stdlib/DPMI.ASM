@@ -67,6 +67,7 @@ UnlockMem       proc
         int     31h
 		and		eax,0ffffh
 		jc		unlock_mem_error
+		clc
 		ret
 		
 		unlock_mem_error:

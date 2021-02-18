@@ -7,6 +7,7 @@ JUMPS
 include irq.inc
 include dpmi.inc
 include alloc.inc
+include stderror.inc
 
 NUM_IRQS			EQU 16
 MASTER_IRQ_BASE		EQU 8
@@ -34,7 +35,7 @@ rm_common_handler	proc
 		push	ds es fs gs
 		pushad
 		movzx	eax,al
-		mov		esi,[irq_hook_data_pointers+eax*4]
+		mov		esi,[offset irq_hook_data_pointers+eax*4]
 		pushfd
 		call	fword ptr [esi.pm_handler]
 		popad
@@ -81,15 +82,14 @@ endp
 ;-----------------------------------------------------------------
 IRQUninit	proc
 	; Restore all missing IRQs
-	mov		ecx,-NUM_IRQS
+	xor		al,al
 	restore_missing_irqs:
-			mov		esi,[offset irq_hook_data_pointers+NUM_IRQS*4+ecx*4]
-			push	ecx esi
+			push	eax
 			call	IRQRestore
-			pop		esi ecx
+			pop		eax
 			jc		irq_uninit_error
-			add		esi,4
-	inc		ecx
+			inc		al
+	cmp		al,NUM_IRQS
 	jnz 	restore_missing_irqs
 	
 	; Unlock common callback memory area
@@ -110,7 +110,8 @@ endp
 ;	ECX = Bytes to lock from ISR start
 ;
 ; OUTPUT:
-;	DS:ESI = Pointer to IRQHookData or NULL if error
+;	CF = 0 and EAX = 0, if success
+;	CF = 1 and EAX != 0, if error
 ;-----------------------------------------------------------------
 IRQHook		proc
 	pushfd
@@ -120,11 +121,12 @@ IRQHook		proc
 	; Allocate data structure with IRQ state
 	mov		ecx,size IRQHookData
 	call	malloc
+	mov		eax,MALLOC_ERROR
 	or		ebx,ebx
-	jz		irq_hook_error
+	jz		irq_hook_error_no_dpmi
 	mov		esi,ebx
 	pop		ecx ebx eax
-	mov		[irq_hook_data_pointers+eax*4],esi
+	mov		[offset irq_hook_data_pointers+eax*4],esi
 	; IRQ -> int number
 	mov		[esi.irq_number],al
 	cmp		al,MASTER_IRQ_BASE
@@ -140,10 +142,11 @@ IRQHook		proc
 	push	esi
 	call	LockMem
 	pop		esi
+	mov		eax,MALLOC_ERROR
 	jc		irq_hook_error
 	; Save existing RM IRQ handler
 	mov     ax,200h
-	mov     bl,8
+	mov     bl,[esi.int_number]
 	int     31h
 	jc		irq_hook_error
 	mov     [esi.rm_handler],dx
@@ -159,7 +162,7 @@ IRQHook		proc
 	mov		edx,[esi.pm_handler]
 	mov		cx,word ptr [esi.pm_handler+4]
 	mov     ax,205h
-	mov     bl,8
+	mov     bl,[esi.int_number]
 	int     31h
 	jc		irq_hook_error
 	; Get a real mode callback to our protected mode routine
@@ -179,14 +182,18 @@ IRQHook		proc
 	mov		[esi.rm_callback+2],cx
 	; Point IRQ to the real mode callback
 	mov     ax,201h
-	mov     bl,8
+	mov     bl,[esi.int_number]
 	int     31h	
 	popfd
+	xor		eax,eax
+	clc
 	ret
 	
 	irq_hook_error:
-	xor		esi,esi
+	or		eax,DPMI_ERROR
+	irq_hook_error_no_dpmi:
 	popfd
+	stc
 	ret
 endp
 
@@ -195,15 +202,20 @@ endp
 ; an IRQ.
 ;
 ; INPUT:
-;	DS:ESI -> IRQHookData structure returned by IRQHook
+;	AL = IRQ number
 ;
 ; OUTPUT:
 ;	CF = 0 and EAX = 0, if success
 ;	CF = 1 and EAX != 0, if error
 ;-----------------------------------------------------------------
 IRQRestore	proc
+	pushfd
+	cli
+	movzx	eax,al
+	mov		esi,[offset irq_hook_data_pointers+eax*4]
 	cmp		esi,0
 	jnz		hook_data_valid
+			popfd
 			xor		eax,eax
 			ret
 	hook_data_valid:
@@ -213,7 +225,7 @@ IRQRestore	proc
 			mov     ax,201h
 			mov		dx,[esi.rm_handler]
 			mov		cx,[esi.rm_handler+2]
-			mov     bl,8
+			mov     bl,[esi.int_number]
 			int     31h
 			jc		irq_restore_error
 			mov		dword ptr [esi.rm_handler],0
@@ -248,26 +260,79 @@ IRQRestore	proc
 	jz		pm_handler_unlocked
 			mov		ebx,[esi.pm_handler]
 			mov		ecx,[esi.lock_bytes]
+			push	esi
 			call	UnlockMem
+			pop		esi
 			jc		irq_restore_error
 			mov		[esi.pm_handler],0
 			mov		[esi.lock_bytes],0
 	pm_handler_unlocked:
 	; NULL data pointer
 	movzx	eax,[esi.irq_number]
-	mov		[irq_hook_data_pointers+eax*4],0
+	mov		dword ptr [offset irq_hook_data_pointers+eax*4],0
 	; Free data structure
 	mov		ebx,esi
 	call	free
-	xor		eax,eax	
+	jc		irq_restore_malloc_error
+	popfd
+	xor		eax,eax
+	ret
+	
+	irq_restore_malloc_error:
+	popfd
+	mov		eax,MALLOC_ERROR
+	stc
 	ret
 	
 	irq_restore_error:
+	popfd
 	; Free data structure
+	push	eax
 	mov		ebx,esi
 	call	free
+	pop		eax
+	or		eax,DPMI_ERROR
+	stc
+	ret
+endp
+
+;-----------------------------------------------------------------
+; Calls the original real-mode ISR from protected mode.
+;
+; INPUT:
+;	AL = IRQ number
+;
+; OUTPUT:
+;	CF = 0 and EAX = 0, if success
+;	CF = 1 and EAX != 0, if error
+;-----------------------------------------------------------------
+IRQCallRealModeHandler	proc
+	; Call real mode proc with iret frame
+	pushfd
+	cli
+	movzx	eax,al
+	mov		esi,[offset irq_hook_data_pointers+eax*4]
+	mov		edx,dword ptr [esi.rm_handler]
+	lea		edi,[esi.rm_handler_regs]
+	popfd
+	mov		ax,302h
+	xor		bh,bh
+	xor		ecx,ecx
+	push	ds
+	pop		es
+	mov		[edi.rm_ip],dx
+	shr		edx,16
+	mov		[edi.rm_cs],dx
+	mov		[edi.rm_ss],0
+	mov		[edi.rm_sp],0
+	mov		[edi.rm_flags],0	; IRQ code will expect IF to be off.
+	int		31h
+	jc		irq_call_real_mode_handler_error
 	xor		eax,eax
-	inc		eax
+	ret
+
+	irq_call_real_mode_handler_error:
+	or		eax,DPMI_ERROR
 	stc
 	ret
 endp

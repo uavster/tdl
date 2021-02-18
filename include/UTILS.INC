@@ -327,6 +327,7 @@ InitDPMI        macro
         sti
         call    InitDPMIVariables
         call    init_c_heap
+        fninit
 if STANDARD_INIT
 		call	IRQInit
 		ErrorExit "Error: Unable to initialize IRQ library"
@@ -341,7 +342,6 @@ if STANDARD_INIT
         call    InitVirtualFrameRate
         ErrorExit "Error: Unable to start virtual frame-rate"
 endif
-        fninit
 endm
 
 ; 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�

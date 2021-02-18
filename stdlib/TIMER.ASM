@@ -17,27 +17,6 @@ JUMPS
         INCLUDE dpmi.inc
 		INCLUDE stderror.inc
 
-rm_common_handler	proc
-		push	ds es fs gs
-		pushad
-		pushfd
-		call	fword ptr cs:common_handler_address
-		popad
-		pop		gs fs es ds
-
-        cld
-        lodsw
-        mov     es:[edi.rm_ip],ax
-        lodsw
-        mov     es:[edi.rm_cs],ax
-        lodsw
-        mov     es:[edi.rm_flags],ax
-        add     es:[edi.rm_sp],2*3
-        iretd
-common_handler_address		dd offset common_handler
-common_handler_address_seg	dw ?
-rm_common_handler	endp
-
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Common irq0 handler that calls all near routines in allocated slots
 ; NOTE: All registers are pushed so that routines don't need register saving
@@ -46,7 +25,7 @@ rm_common_handler	endp
 common_handler  proc far
 		IRQEnter
 		
-		mov		cs:old_irq_called,0
+		mov		old_irq_called,0
         mov     ecx,NUM_HANDLES
         mov     esi,offset handler_chain
         walk_handlers:
@@ -68,7 +47,7 @@ common_handler  proc far
         loop    walk_handlers
         all_handlers_done:
 		
-		cmp		cs:old_irq_called,0
+		cmp		old_irq_called,0
 		jnz		ack_done
 		IRQMasterAck
 		ack_done:		
@@ -82,22 +61,12 @@ common_handler  endp
 ; Routine to call old irq0 handler
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 call_old_handler        proc
+mov al,'*'
+xor byte ptr ds:[0b8000h+160*5],al
 		; Call real mode proc with iret frame
-		mov		ax,302h
-		xor		bh,bh
-		xor		ecx,ecx
-		push	ds
-		pop		es
-		mov		edi,offset rm_call_regs_old_irq
-		mov		dx,word ptr old_rm_handler
-		mov		[edi.rm_ip],dx
-		mov		dx,word ptr old_rm_handler+2
-		mov		[edi.rm_cs],dx
-		mov		[edi.rm_ss],0
-		mov		[edi.rm_sp],0
-		mov		[edi.rm_flags],0	; IRQ code will expect IF to be off.
-		int		31h
-		mov		cs:old_irq_called,1
+		xor		al,al
+		call	IRQCallRealModeHandler
+		mov		old_irq_called,1
         ret
 call_old_handler        endp
 
@@ -109,56 +78,29 @@ call_old_handler        endp
 ;
 ; INPUT -> EAX = 32bit floating point frequency to call old handler at
 ;                ( 0 if old handler will be ignored)
+; OUTPUT:
+; 	CF = 0, if successfull
+; 	CF = 1, if error
+;		EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 enable_timer    proc
+		pushfd
         cli
         test    enabled,1
         jnz     timer_already_enabled
 		mov		old_handler_freq,eax
-		mov		cs:common_handler_address_seg,cs
 		; Lock handler memory
-		mov		ebx,offset common_handler
-		mov		ecx,offset common_handler_end-offset common_handler
-		call	LockMem
 		mov		ebx,offset handler_chain
 		mov		ecx,size handler_chain
 		call	LockMem
-		; Save old IRQ handler
-        mov     ax,200h
-        mov     bl,8
-        int     31h
-        mov     old_rm_handler,dx
-		mov		old_rm_handler+2,cx
-		; Save previous protected mode interrupt handler
-        mov     ax,204h
-        mov     bl,8
-        int     31h
-        mov     old_handler,edx
-        mov     word ptr old_handler+4,cx
-		; Set new protected mode interrupt handler
-        mov     ax,205h
-        mov     bl,8
-        mov     cx,cs
-        mov     edx,offset common_handler
-        int     31h
-		; Get a real mode callback to our protected mode routine
-		push	ds es
-		push	ds
-		pop		es
-        mov     edi,offset rm_call_struct
-        push    cs
-        pop     ds
-        mov     esi,offset rm_common_handler
-        mov     ax,303h
-        int     31h
-		pop		es ds
-		mov		rm_callback_seg,cx
-		mov		rm_callback_off,dx
-		; Point timer IRQ0 to the real mode callback
-        mov     ax,201h
-        mov     bl,8
-        int     31h
-		
+		jc		enable_timer_error
+
+		xor		al,al
+		mov		ebx,offset common_handler
+		mov		ecx,offset common_handler_end-offset common_handler
+		call	IRQHook
+		jc		enable_timer_error
+
         ; first time execution of all timers allocated
         mov     ecx,NUM_HANDLES
         mov     esi,offset handler_chain
@@ -181,9 +123,14 @@ enable_timer    proc
         ; we set the enable flag
         mov     enabled,1
         timer_already_enabled:
-        sti
+        popfd
+		clc
         ret
-old_handler_freq	dd ?
+		
+		enable_timer_error:
+		popfd
+		stc
+		ret
 enable_timer    endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -191,49 +138,23 @@ enable_timer    endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 disable_timer   proc
         test    enabled,1
-        jz      timer_still_not_enabled
+        jz      timer_is_enabled
+				clc
+				ret
+		timer_is_enabled:
         mov     enabled,0                       ; timer is off
 		; Restore normal timer frequency
         mov     eax,18
         call    set_timer_freq
-		; Restore real mode interrupt handler
-        mov     ax,201h
-		mov		cx,old_rm_handler+2
-		mov		dx,old_rm_handler
-        mov     bl,8
-        int     31h
-		jc		disable_timer_error		
-		; Free real mode callback
-		mov		ax,304h
-		mov		cx,rm_callback_seg
-		mov		dx,rm_callback_off
-		int		31h
-		jc		disable_timer_error
-		; Restore protected mode interrupt handler
-        mov     edx,old_handler
-        mov     ecx,dword ptr old_handler+4     ; smaller op.code with dword 
-        mov     bl,8
-        mov     ax,205h
-        int     31h
-		jc		disable_timer_error
+		; Restore IRQ machinery
+		xor		al,al
+		call	IRQRestore
+		jc		disable_timer_leave
 		; Unlock handler memory
 		mov		ebx,offset handler_chain
 		mov		ecx,size handler_chain
 		call	UnlockMem
-		jc		disable_timer_leave
-		mov		ebx,offset common_handler
-		mov		ecx,offset common_handler_end-offset common_handler
-		call	UnlockMem
-		jc		disable_timer_leave
-        timer_still_not_enabled:
-		clc
 		disable_timer_leave:
-		ret
-		
-		disable_timer_error:
-		and		eax,0ffffh
-		or		eax,DPMI_ERROR
-		stc
 		ret
 disable_timer   endp
 
@@ -533,15 +454,8 @@ handler_chain   Ttimer NUM_HANDLES+1 dup(<>)
 hihi            db 30h
 
 .data?
-trash           dd ?
-old_handler     dd ?    ; old irq0 handler routine
-                dw ?
-old_rm_handler	dw ?
-				dw ?
-rm_callback_off dw ?
-rm_callback_seg	dw ?
-fpu_status      dw ?
-rm_call_struct	Trm_reg<?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?>
-rm_call_regs_old_irq Trm_reg<?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?>
+trash           	dd ?
+old_handler_freq	dd ?
+fpu_status      	dw ?
 
 end 

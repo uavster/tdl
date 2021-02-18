@@ -74,6 +74,7 @@ IRQHookData		STRUC
 		rm_callback		dw ?
 						dw ?
 		rm_registers	Trm_reg<>
+		rm_handler_regs Trm_reg<>
 ENDS
 
 ;-----------------------------------------------------------------
@@ -102,7 +103,8 @@ global	IRQUninit : NEAR
 ;	ECX = Bytes to lock from ISR start
 ;
 ; OUTPUT:
-;	DS:ESI = Pointer to IRQHookData or NULL if error
+;	CF = 0 and EAX = 0, if success
+;	CF = 1 and EAX != 0, if error
 ;-----------------------------------------------------------------
 global	IRQHook : NEAR
 
@@ -111,10 +113,22 @@ global	IRQHook : NEAR
 ; an IRQ.
 ;
 ; INPUT:
-;	DS:ESI -> IRQHookData structure returned by IRQHook
+;	AL = IRQ number
 ;
 ; OUTPUT:
 ;	CF = 0 and EAX = 0, if success
 ;	CF = 1 and EAX != 0, if error
 ;-----------------------------------------------------------------
 global IRQRestore : NEAR
+
+;-----------------------------------------------------------------
+; Calls the original real-mode ISR from protected mode.
+;
+; INPUT:
+;	AL = IRQ number
+;
+; OUTPUT:
+;	CF = 0 and EAX = 0, if success
+;	CF = 1 and EAX != 0, if error
+;-----------------------------------------------------------------
+global IRQCallRealModeHandler : NEAR
