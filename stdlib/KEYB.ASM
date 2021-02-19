@@ -10,6 +10,7 @@ ROUTINE_PAGES   EQU 4   ; 4Kb pages to lock for each routine
 .code
 
 INCLUDE dpmi.inc
+INCLUDE irq.inc
 
 public  enable_keyb
 public  disable_keyb
@@ -26,14 +27,9 @@ public 	is_key_pressed
 ;       registers set with a 32bit 4Gb selector
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 common_key_handler      proc far
-        push    ds es fs gs
-        pushad
-
-        mov     ax,DataSelector
-        mov     ds,ax
-        mov     es,ax
-        mov     fs,ax
-        mov     gs,ax
+		IRQEnter
+		
+		; Read key code
         xor     eax,eax
         in      al,60h
 
@@ -66,85 +62,91 @@ common_key_handler      proc far
 		jnz		chain_old_isr
 		
 		; Ack interrupt controller
-		mov		al,20h
-		mov		dx,20h
-		out		dx,al
-		popad
-		pop		gs fs es ds
-		iretd
+		IRQMasterAck
+		IRQLeave
 		
 		chain_old_isr:
-		popad
-		pop		gs fs es ds
-		; Chain with previous keyboard irq handler.
-		; Previous handler should acknowledge the keyboard controller and the master irq controller.
-		jmp fword ptr cs:old_handler
+		; Chain with RM keyboard irq handler.
+		; It should acknowledge the keyboard controller and the master irq controller.
+		mov		al,1
+		call	IRQCallRealModeHandler
+		IRQLeave
+		
 common_key_handler      endp
-
-old_handler				dd ?
-						dw ?
 
 ; offsets to call with each keyboard event
 key_array				dd 102+128 dup(-1)
 
-lock_end:       ; memory will be locked until here...
+lock_end:       ; memory will be locked down to here...
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Enables keyboard extensions (sets irq1 handler)
+;
+; OUTPUT:
+;	CF = 0, if success
+; 	CF = 1, if error
+;		EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 enable_keyb     proc
         test    keyb_enabled,1
-        jnz     keyb_already_enabled
-        mov     keyb_enabled,1
-        ; first, we lock the memory that the handler will touch
-        mov     ebx,offset common_key_handler
-        mov     ecx,offset lock_end-offset common_key_handler
-        call    LockMem
+        jz 	    enable_key_continue
+				xor		eax,eax
+				ret
+		enable_key_continue:
 
-        mov     ebx, offset keyb_map    ; Nitro!
-        mov     ecx, 128                ; Nitro!
-        call    LockMem                 ; Nitro!
-
-        ; we change irq1
-        mov     ax,204h
-        mov     bl,9
-        int     31h
-        mov     old_handler,edx
-        mov     word ptr old_handler+4,cx
-        mov     ax,205h
-        mov     bl,9
-        mov     cx,cs
-        mov     edx,offset common_key_handler
-        int     31h
+		; Initialize key map
         mov     edi, offset keyb_map    ; Nitro!
         mov     ecx, 128/4              ; Nitro!
         xor     eax, eax                ; Nitro!
         rep     stosd                   ; Nitro!
-        keyb_already_enabled:
+		
+        ; Lock the memory that the handler will touch
+        mov     ebx, offset keyb_map    ; Nitro!
+        mov     ecx, 128                ; Nitro!
+        call    LockMem                 ; Nitro!
+		jc		enable_key_error
+
+		; Hook handler on IRQ 1
+		mov		al,1
+		mov		ebx,offset common_key_handler
+		mov		ecx,offset lock_end-offset common_key_handler
+		call	IRQHook
+		jc		enable_key_error
+        mov     keyb_enabled,1
+		
+        enable_key_error:		
         ret
-keyb_enabled    dd 0
 enable_keyb     endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Disables keyboard extensions (restores irq1 handler) 
+;
+; OUTPUT:
+;	CF = 0, if success
+; 	CF = 1, if error
+;		EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 disable_keyb    proc
         test    keyb_enabled,1
-        jz      keyb_still_not_enabled
-        mov     edx,old_handler
-        mov     ecx,dword ptr old_handler+4     ; smaller op.code with dword 
-        mov     bl,9
-        mov     ax,205h
-        int     31h
-        ; now, it's time to unlock the memory to allow VM management
-        mov     ebx,offset common_key_handler
-        mov     ecx,offset lock_end-offset common_key_handler
-        call    UnlockMem
+        jnz     disable_keyb_continue
+				xor		eax,eax
+				ret
+		disable_keyb_continue:
+		
+		; Restore IRQ 1 handler
+		mov		al,1
+		call	IRQRestore
+		jc		disable_keyb_error
+		
+        ; Unlock the memory to allow VM management
         mov     ebx, offset keyb_map
         mov     ecx, 128 
         call    UnlockMem
+		jc		disable_keyb_error
+		
         mov     keyb_enabled,0
-        keyb_still_not_enabled:
+		
+        disable_keyb_error:
         ret
 disable_keyb    endp
 
@@ -225,9 +227,10 @@ is_key_pressed	proc
 is_key_pressed	endp
 
 .data
+keyb_enabled    	dd 0
 default_key_handler	dd 0
 
 .data?
 keyb_map        	db 128 dup (?)
-end
 
+end

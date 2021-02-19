@@ -338,9 +338,10 @@ if STANDARD_INIT
         call    InitDMA
         ErrorExit "Error: Unable to initialize DMA extensions"
         call    enable_keyb
+		ErrorExit "Error: Unable to initialize keyboard handler"
         xor     al,al
         call    InitVirtualFrameRate
-        ErrorExit "Error: Unable to start virtual frame-rate"
+        ErrorExit "Error: Unable to start virtual frame rate"
 endif
 endm
 
@@ -364,8 +365,9 @@ ENDM
 
 ExitAfterCall    MACRO FinalCall
         call    EndVirtualFrameRate
-        ErrorExit "Error: Unable to uninitialize virtual frame-rate"
+        ErrorExit "Error: Unable to uninitialize virtual frame rate"
         call    disable_keyb
+		ErrorExit "Error: Unable to uninitialize keyboard handler"
         call    CloseDMA
         ErrorExit "Error: Unable to uninitialize DMA extensions"
         call    UnInitSGL
