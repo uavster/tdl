@@ -35,7 +35,7 @@ rm_common_handler	proc
 		push	ds es fs gs
 		pushad
 		movzx	eax,al
-		mov		esi,[offset irq_hook_data_pointers+eax*4]
+		mov		esi,[irq_hook_data_pointers+eax*4]
 		pushfd
 		call	fword ptr [esi.pm_handler]
 		popad
@@ -67,10 +67,15 @@ IRQInit		proc
 	mov		edi,offset irq_hook_data_pointers
 	mov		ecx,NUM_IRQS
 	rep		stosd
+	mov		ebx,offset irq_hook_data_pointers
+	mov		ecx,size irq_hook_data_pointers
+	call	LockMem
+	jc		irq_init_ret
 	; Lock region of the RM common handler
 	mov		ebx,offset rm_common_handler_entry_points
 	mov		ecx,offset end_of_rm_handler_lock_area-offset rm_common_handler_entry_points
 	call	LockMem	
+	irq_init_ret:
 	ret
 endp
 
@@ -96,6 +101,10 @@ IRQUninit	proc
 	mov		ebx,offset rm_common_handler_entry_points
 	mov		ecx,offset end_of_rm_handler_lock_area-offset rm_common_handler_entry_points
 	call	UnlockMem
+	jc		irq_uninit_error
+	mov		ebx,offset irq_hook_data_pointers
+	mov		ecx,size irq_hook_data_pointers
+	call 	UnlockMem
 	irq_uninit_error:
 	ret
 endp
@@ -117,16 +126,21 @@ IRQHook		proc
 	pushfd
 	cli
 	movzx	eax,al
+	; Allocate and lock data structure with IRQ state
 	push	eax ebx ecx
-	; Allocate data structure with IRQ state
 	mov		ecx,size IRQHookData
 	call	malloc
 	mov		eax,MALLOC_ERROR
-	or		ebx,ebx
-	jz		irq_hook_error_no_dpmi
 	mov		esi,ebx
-	pop		ecx ebx eax
-	mov		[offset irq_hook_data_pointers+eax*4],esi
+	or		ebx,ebx
+	pop		ecx ebx edx
+	jz		irq_hook_error_no_dpmi
+	push	edx ebx ecx esi
+	mov		ecx,size IRQHookData
+	call	LockMem
+	pop		esi ecx ebx eax
+	jc		irq_hook_error
+	mov		[irq_hook_data_pointers+eax*4],esi
 	; IRQ -> int number
 	mov		[esi.irq_number],al
 	cmp		al,MASTER_IRQ_BASE
@@ -212,7 +226,7 @@ IRQRestore	proc
 	pushfd
 	cli
 	movzx	eax,al
-	mov		esi,[offset irq_hook_data_pointers+eax*4]
+	mov		esi,[irq_hook_data_pointers+eax*4]
 	cmp		esi,0
 	jnz		hook_data_valid
 			popfd
@@ -269,8 +283,13 @@ IRQRestore	proc
 	pm_handler_unlocked:
 	; NULL data pointer
 	movzx	eax,[esi.irq_number]
-	mov		dword ptr [offset irq_hook_data_pointers+eax*4],0
-	; Free data structure
+	mov		[irq_hook_data_pointers+eax*4],0
+	; Unlock and free data structure
+	mov		ebx,esi
+	mov		ecx,size IRQHookData
+	push	esi
+	call	UnlockMem
+	pop		esi
 	mov		ebx,esi
 	call	free
 	jc		irq_restore_malloc_error
@@ -311,7 +330,7 @@ IRQCallRealModeHandler	proc
 	pushfd
 	cli
 	movzx	eax,al
-	mov		esi,[offset irq_hook_data_pointers+eax*4]
+	mov		esi,[irq_hook_data_pointers+eax*4]
 	mov		edx,dword ptr [esi.rm_handler]
 	lea		edi,[esi.rm_handler_regs]
 	popfd
