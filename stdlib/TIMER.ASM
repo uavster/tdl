@@ -61,8 +61,6 @@ common_handler  endp
 ; Routine to call old irq0 handler
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 call_old_handler        proc
-mov al,'*'
-xor byte ptr ds:[0b8000h+160*5],al
 		; Call real mode proc with iret frame
 		xor		al,al
 		call	IRQCallRealModeHandler
