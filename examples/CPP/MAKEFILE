@@ -1,9 +1,3 @@
-# ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-# Makefile pel tunel amb reflexi¢ raytracejat.
-# ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-
-# ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-
 #DEBUG = 1 
 INCDIR = $(TDLPATH)\h
 LIBDIR = $(TDLPATH)\lib
@@ -28,8 +22,6 @@ LFLAGS = system DarkX
         wcc386 $(CFLAGS) $?
 .cpp.obj:
         wpp386 $(CFLAGS) $?
-
-# ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 all: test.exe
 
