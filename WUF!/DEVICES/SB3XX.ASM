@@ -77,20 +77,12 @@ Init    proc
 		jc		init_error
         call    SBReset
         jc      init_error
-        ; Save old IRQ
-        mov     ax,204h
-        mov     ebx,SBirq
-        add     bl,8
-        int     31h
-        mov     OldIRQ.IRQOffset,edx
-        mov     OldIRQ.IRQSegment,cx
-        ; Allocate IRQ
-        mov     ax,205h
-        mov     ebx,SBirq
-        add     bl,8
-        mov     cx,cs
-        mov     edx,offset PlayIRQ
-        int     31h
+		; Set up the IRQ handler
+		mov		eax,SBirq
+		mov		ebx,offset PlayIRQ
+		mov		ecx,offset end_of_play_irq-offset PlayIRQ
+		call	IRQHook
+		jc		init_error
 		; Allocate DMA recording buffer
         mov     ecx,DMA_REC_BUFFER_LENGTH
         call    AllocDMABuffer
@@ -119,12 +111,9 @@ Terminate       proc
         call    SBReset
         jc      terminate_error
         ; Restoring IRQ
-        mov     ax,205h
-        mov     ebx,SBirq
-        add     bl,8
-        mov     edx,OldIRQ.IRQOffset
-        mov     cx,OldIRQ.IRQSegment
-        int     31h
+		mov		eax,SBirq
+		call 	IRQRestore
+		jc		terminate_error
         ; Freeing buffers
 		call	FreePlaybackDMABuffers
 		jc		terminate_error
@@ -273,6 +262,7 @@ PlayIRQ         proc
 		; Acknowledge PIC/s and return
 		IRQAck	SBirq
 		IRQLeave
+end_of_play_irq:
 PlayIRQ         endp
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
@@ -495,13 +485,6 @@ SB3xxDriverName		db "SB3XX",0
 ; Device properties for playback
 PlayProps       	SoundProperties <>
 PlayCapabilityIndex	dd ?
-
-IRQVector       STRUC
-        IRQOffset       dd ?
-        IRQSegment      dw ?
-ENDS
-
-OldIRQ          IRQVector <>
 
 PlayBuff        SoundBuffer <>
 RecBuff         SoundBuffer <>
