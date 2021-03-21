@@ -132,3 +132,18 @@ global IRQRestore : NEAR
 ;	CF = 1 and EAX != 0, if error
 ;-----------------------------------------------------------------
 global IRQCallRealModeHandler : NEAR
+
+;-----------------------------------------------------------------
+; Returns the InDOS and ErrorMode flags.
+;
+; If the InDOS flags is not zero, the IRQ can only call DOS
+; services 01h thru 0Ch safely. If the ErrorMode flag is not zero,
+; the IRQ must not call any DOS services.
+;
+; OUTPUT:
+;   AL = ErrorMode flag
+;   AH = InDOS flag
+;	Upper EAX word is 0
+;	All other registers are preserved
+;-----------------------------------------------------------------
+global IRQDOSFlags : NEAR

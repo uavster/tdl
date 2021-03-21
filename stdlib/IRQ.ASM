@@ -60,6 +60,19 @@ end_of_rm_handler_lock_area	LABEL
 ;	CF = 0 if successful; 1, otherwise.
 ;-----------------------------------------------------------------
 IRQInit		proc
+	; Get address of DOS flags
+	push	dword ptr 21h
+	mov		ah,34h
+	mov		RealStackCopy,0
+	call	RealInterrupt
+	jc		irq_init_ret
+	; ES:BX -> InDOS flag
+	movzx	eax,RealESSegment
+	shl		eax,4
+	movzx	ebx,bx
+	add		eax,ebx
+	dec		eax		; Previous byte is ErrorFlag
+	mov		dos_flags_address,eax
 	; Initialize pointers to IRQ data structures
 	xor		eax,eax
 	push	ds
@@ -356,7 +369,27 @@ IRQCallRealModeHandler	proc
 	ret
 endp
 
+;-----------------------------------------------------------------
+; Returns the InDOS and ErrorMode flags.
+;
+; If the InDOS flags is not zero, the IRQ can only call DOS
+; services 01h thru 0Ch safely. If the ErrorMode flag is not zero,
+; the IRQ must not call any DOS services.
+;
+; OUTPUT:
+;   AL = ErrorMode flag
+;   AH = InDOS flag
+;	Upper EAX word is 0
+;	All other registers are preserved
+;-----------------------------------------------------------------
+IRQDOSFlags	proc
+	mov		eax,dos_flags_address
+	movzx	eax,word ptr [eax]
+	ret
+endp
+
 .data?
 irq_hook_data_pointers	dd NUM_IRQS dup(?)
+dos_flags_address		dd ?
 
 end
