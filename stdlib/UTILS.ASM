@@ -880,12 +880,9 @@ PTSlab2:
 
 PrintChar       proc
         push    ebx edx ecx eax
-        mov     PRCbuff,al
-        mov     bx,1
-        mov     ah,40h
-        mov     edx,offset PRCbuff
-        mov     ecx,1
-        int     21h
+		mov		ah,2
+		mov		dl,al
+		int		21h
         pop     eax ecx edx ebx
         ret
 PRCbuff db      ?
