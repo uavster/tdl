@@ -79,6 +79,7 @@ IRQInit		proc
 	pop		es
 	mov		edi,offset irq_hook_data_pointers
 	mov		ecx,NUM_IRQS
+	cld
 	rep		stosd
 	mov		ebx,offset irq_hook_data_pointers
 	mov		ecx,size irq_hook_data_pointers
