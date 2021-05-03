@@ -11,34 +11,59 @@
         INCLUDE waveload.inc
 		include assert.inc
 
+PROTECTED_MODE_LOOP		EQU 0
+WAIT_KEY_WITH_BIOS		EQU 1
+POLL_KEY_WITH_BIOS		EQU 2
+POLL_KEY_WITH_DOS		EQU 3
+
+; Select the different main loop modes above to see how
+; the frequency of switching between real and protected
+; modes impacts performance.
+MAIN_LOOP_METHOD		EQU PROTECTED_MODE_LOOP
+
+
 KeyHandler	proc
 		sub		eax,2
         mov     eax,[wav_ptr+eax*4]
         call    PlaySound
-		xor		eax,eax		; Do not chain with old ISR
+		xor		eax,eax		; Do not chain with default ISR
 		ret
 		endp
 
 DefaultKeyHandler	proc
-		xor		eax,eax		; Do not chain with old ISR
+		xor		eax,eax		; Do not chain with default ISR
 		ret
 		endp
 		
 EscHandler	proc
 		mov		exit_loop,1
-		xor		eax,eax		; Do not chain with old ISR
+		xor		eax,eax		; Do not chain with default ISR
+IF MAIN_LOOP_METHOD NE PROTECTED_MODE_LOOP
+		inc 	eax			; Chain with default ISR
+ENDIF
 		ret
 		endp
 
 MixerCallback	proc
+		; Do not call printf if a DOS service was interrupted, 
+		; as it would reenter DOS through service 40h, which might crash.
+		call	IRQDOSFlags
+		test	eax,eax
+		jnz		leave_callback
+		
+		; Show symbol in sequence.
 		movzx	eax,tick_index
 		mov		al,[eax+offset tick_sequence]
 		mov		tick_message,al
 		mov		esi,offset tick_message
+
 		call	printf
 		inc		tick_index
 		and		tick_index,3
+
+		leave_callback:
 		ret
+		
 tick_message	db ?,13,0
 tick_index		db 0
 tick_sequence	db "|/-\"
@@ -98,7 +123,7 @@ start:
 				mov     wlen,ebx
 				push	esi
 				mov     esi,offset info_msg
-				call    Printf
+				call    printf
 				pop		esi		
 				inc		esi
 		jmp		load_files
@@ -108,8 +133,36 @@ start:
 		LPrintS "Press keys 1-4 to mix the four different samples above. ESC to quit."
 		
         wait_loop:
+IF MAIN_LOOP_METHOD EQ PROTECTED_MODE_LOOP
 		cmp		exit_loop,0
-        jz	    wait_loop
+		jz	    wait_loop
+ELSE
+IF MAIN_LOOP_METHOD EQ WAIT_KEY_WITH_BIOS
+		xor 	ah,ah
+		int     16h
+		cmp     al,27
+		jnz     wait_loop
+ELSE
+IF MAIN_LOOP_METHOD EQ POLL_KEY_WITH_BIOS
+		mov     ah,1
+		int     16h
+		jz      wait_loop
+		xor     ah,ah
+		int     16h
+		cmp     al,27
+		jnz     wait_loop
+ELSE
+IF MAIN_LOOP_METHOD EQ POLL_KEY_WITH_DOS
+		mov 	ah,6
+		mov 	dl,0ffh
+		int 	21h
+		jz 		wait_loop
+		cmp 	al,27
+		jnz 	wait_loop
+ENDIF
+ENDIF
+ENDIF
+ENDIF
 
         call    WUFClose
         ErrorExit "Error closing wuF!"
