@@ -38,6 +38,7 @@ ClearMixingBuffer	proc
 		mov		ecx,NumOutputBytes
 		shr		ecx,2
 		xor		eax,eax
+		cld
 		rep		stosd
 		and		ecx,011b
 		jz		no_bytes_left
@@ -485,14 +486,18 @@ endif
 		mov		MixingBufferOffset,0
 		tick_loop:
 			; Samples to process = min(missing tick samples, missing mixer buffer samples)
-			mov		ebp,MissingTickSamples
-			shr		ebp,8
 			mov		eax,MissingMixerBufferSamples
+			mov		ebp,MissingTickSamples
+			shl		eax,8
 			cmp		ebp,eax
 			jbe		not_over_buffer_end
 					mov		ebp,eax
 			not_over_buffer_end:
-			add		MixingBufferOffset,ebp
+			test	ebp,ebp
+			jz		no_samples_to_play
+			mov		eax,ebp
+			shr		eax,8
+			add		MixingBufferOffset,eax
 			mov		edi,MixingBufferOffset
 			shl		edi,2	; 4 bytes per mixer sample
 			mov		cl,NumOutputChannels
@@ -505,6 +510,7 @@ endif
 			mov		nchannels,al
 			walk_channels:
 				push	ebp
+				sar		ebp,8
 				mov		eax,ChannelPool
 				add		eax,CurrentChannelOffset
 				mov     esi,[eax.ChanWave]
@@ -525,7 +531,7 @@ endif
 					add		eax,CurrentChannelOffset
 					; Atomic freeing of the channel
 					mov     [eax.ChanWave],0
-					; The channel may have been allocated by a higher priority IRQ at this point: don't touch it.
+					; The channel may have been allocated from a higher priority IRQ at this point: don't touch it.
 					jmp		no_wave_in_channel
 					channel_continues:
 					mov		eax,ChannelPool
@@ -536,7 +542,8 @@ endif
 				pop		ebp
 			dec     nchannels
 			jnz     walk_channels
-			sal 	ebp,8
+			
+			no_samples_to_play:
 			add 	MissingTickSamples,ebp
 			jg		tick_samples_not_expired
 				; End of tick
@@ -558,7 +565,6 @@ endif
 		; Mixer buffer processed
 		
 		dont_mix_anything:
-
 		; Compress mixing buffer into output buffer
 		mov		esi,MixingBuffer
 		mov		ecx,NumOutputSamples
