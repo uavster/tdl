@@ -159,7 +159,7 @@ IRQHook		proc
 	mov		[esi.irq_number],al
 	cmp		al,MASTER_IRQ_BASE
 	jb		low_irq
-			add		eax,SLAVE_IRQ_BASE-MASTER_IRQ_BASE
+			add		eax,SLAVE_IRQ_BASE-MASTER_IRQ_BASE*2
 	low_irq:
 	add		eax,MASTER_IRQ_BASE
 	mov		[esi.int_number],al

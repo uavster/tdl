@@ -46,7 +46,8 @@ ENDM
 
 IRQSlaveAck		MACRO
 		mov		al,20h
-		out		0a0h,al
+		out		0a0h,al		; ACK slave PIC
+		out		20h,al		; ACK master PIC
 ENDM
 
 IRQAck	MACRO irq_number
