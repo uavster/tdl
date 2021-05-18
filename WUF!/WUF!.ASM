@@ -22,7 +22,7 @@
 ;              EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 WUFInit         proc
-        LPrintS "Starting wuF! - Wave Buffer v0.99:"
+        LPrintS "Starting wuF! - Wave Buffer v1.00:"
 
         ; Start sound device
         LPrintS "  ş Detecting audio device..."
@@ -97,7 +97,7 @@ WUFInit         endp
 ;              EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 WUFClose        proc
-        LPrintS "Closing wuF! - Wave Buffer v0.99:"
+        LPrintS "Closing wuF! - Wave Buffer v1.00:"
         LPrintS "  ş Closing mixer..."
         call    CloseMixer
         ErrorCode eax
