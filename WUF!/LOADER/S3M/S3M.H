@@ -1,4 +1,8 @@
+// S3M file loader
+
 #include "stddef.h"
+
+// Constant-size pieces of S3M file format.
 
 typedef WORD S3MShortOffset;
 
@@ -90,3 +94,31 @@ typedef struct {
 	WORD		offset_special;
 	S3MChannel	channels[32];
 } S3MSongHeader;
+
+// Song structures in memory.
+
+typedef struct {
+	S3MInstrumentHeader	header;
+	union {
+		S3MInstrumentSampled *sampled;
+		S3MInstrumentAdlib *adlib;
+	} body;
+	S3MInstrumentFooter footer;
+	void *data;
+} S3MInstrument;
+
+typedef struct {
+	WORD num_cells;
+	S3MPatternCell *cells;
+} S3MPattern;
+
+typedef struct {
+	S3MSongHeader header;
+	S3MInstrument *instruments;
+	S3MPattern *patterns;
+	S3MChannelPans pans;
+} S3MSong;
+
+// Loads an S3M file into memory.
+// Returns a pointer to the song structure, or NULL if error.
+S3MSong *LoadS3M(const char *file_path);
