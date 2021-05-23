@@ -20,7 +20,7 @@ void *malloc(DWORD dwSize);
                        modify [eax ecx] \
                        value  [ebx];
 
-void free(void *pv);
+void free(const void *pv);
 #pragma aux free "*" parm   [ebx] \
                      modify [eax ebx ecx];
 

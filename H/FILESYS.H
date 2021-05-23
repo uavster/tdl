@@ -17,12 +17,12 @@
 #define SEEK_CUR    1   // current file position
 #define SEEK_END    2   // end of file
 
-DWORD ttl_open(char *szName, DWORD dwAccess);
+DWORD ttl_open(const char *szName, DWORD dwAccess);
 #pragma aux ttl_open "*" parm [edx] [eax] \
                          modify [eax] \
                          value [eax];
 
-DWORD ttl_create(char *szName);
+DWORD ttl_create(const char *szName);
 #pragma aux ttl_create "*" parm   [edx] \
                            modify [eax] \
                            value  [eax];
