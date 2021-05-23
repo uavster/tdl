@@ -4,6 +4,8 @@
 
 // Constant-size pieces of S3M file format.
 
+#pragma pack(push, 1)
+
 typedef WORD S3MShortOffset;
 
 typedef struct {
@@ -77,7 +79,7 @@ typedef struct {
 	BYTE 		file_type;
 	WORD 		reserved;
 	WORD 		num_orders;
-	WORD 		num_instrumens;
+	WORD 		num_instruments;
 	WORD 		num_patterns;
 	WORD 		flags;
 	WORD 		tracker_version;
@@ -94,6 +96,8 @@ typedef struct {
 	WORD		offset_special;
 	S3MChannel	channels[32];
 } S3MSongHeader;
+
+#pragma pack(pop)
 
 // Song structures in memory.
 
@@ -122,3 +126,4 @@ typedef struct {
 // Loads an S3M file into memory.
 // Returns a pointer to the song structure, or NULL if error.
 S3MSong *LoadS3M(const char *file_path);
+void FreeS3M(const S3MSong *song);
