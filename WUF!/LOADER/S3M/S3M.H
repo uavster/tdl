@@ -21,30 +21,27 @@ typedef struct {
 typedef struct {
 	BYTE	type;
 	BYTE	file_name[12];
-} S3MInstrumentHeader;
-
-typedef struct {
-	S3MLongOffset		offset;
-	DWORD				length;
-	DWORD				loop_start;
-	DWORD				loop_end;
-	BYTE				default_volume;
-	BYTE				reserved;
-	BYTE				is_packed;
-	BYTE				flags;
-} S3MInstrumentSampled;
-
-typedef struct {
-	BYTE				reserved[3];
-	BYTE				unnamed[16];
-} S3MInstrumentAdlib;
-
-typedef struct {
+	union {
+		struct {
+			S3MLongOffset		offset;
+			DWORD				length;
+			DWORD				loop_start;
+			DWORD				loop_end;
+			BYTE				default_volume;
+			BYTE				reserved;
+			BYTE				is_packed;
+			BYTE				flags;
+		} sampled;
+		struct {
+			BYTE				reserved[3];
+			BYTE				specs[16];
+		} adlib;
+	} spec;
 	DWORD		tuning_hz;
 	BYTE		reserved[12];
 	BYTE		name[28];
 	DWORD		magic;
-} S3MInstrumentFooter;
+} S3MInstrumentHeader;
 
 typedef struct {
 	WORD		size;
@@ -103,16 +100,11 @@ typedef struct {
 
 typedef struct {
 	S3MInstrumentHeader	header;
-	union {
-		S3MInstrumentSampled *sampled;
-		S3MInstrumentAdlib *adlib;
-	} body;
-	S3MInstrumentFooter footer;
 	void *data;
 } S3MInstrument;
 
 typedef struct {
-	WORD num_cells;
+	S3MPatternHeader header;
 	S3MPatternCell *cells;
 } S3MPattern;
 
