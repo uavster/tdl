@@ -9,7 +9,7 @@ INCDIR = $(TDLPATH)\include
 DEFDIR = $(TDLPATH)\defaults
 
 .path.c = $(TDLPATH)\STDLIB;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\LOADER
-.path.cpp = $(TDLPATH)\WUF!\LOADER\S3M
+.path.cpp = $(TDLPATH)\STDLIB;$(TDLPATH)\WUF!\LOADER\S3M
 .path.asm = $(TDLPATH)\STDLIB;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\BLITTER;$(TDLPATH)\SPUF!\LOADER;$(TDLPATH)\SPUF!;$(TDLPATH)\SPUF!\SLI;$(TDLPATH)\SPUF!\GFX;$(TDLPATH)\WUF!;$(TDLPATH)\WUF!\DEVICES;$(TDLPATH)\3D\RENDER;$(TDLPATH)\3D\LOADER;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\PLAYER;$(TDLPATH)\3D;$(TDLPATH)\WUF!\MIXER;$(TDLPATH)\WUF!\LOADER;$(TDLPATH)\WUF!\LOADER\WAV;$(TDLPATH)\WUF!\LOADER\S3M
 .path.obj = $(TDLPATH)\OBJS
 .path.mac = $(INCDIR)
@@ -78,6 +78,7 @@ $(TDLPATH)\lib\wpp.obj:			wpp.obj
 
 
 c0tt.obj:       c0tt.asm        utils.inc       dpmi.asm        alloc.inc       dma.inc         dma.asm memmgr.asm
+new.obj:		new.cpp
 wpp.obj:		wpp.asm
 stdc.obj:       stdc.asm
 stdio.obj:      stdio.c         stdio.h         string.h
@@ -180,7 +181,7 @@ s3m.obj:		s3m.cpp
 #load_xm.obj:    load_xm.asm
 #sb.obj:         sb.asm          sb.inc
 
-tdl.lib:        stdc.obj        stdio.obj       count.obj       dpmi.obj	irq.obj\
+tdl.lib:        stdc.obj        new.obj	stdio.obj       count.obj       dpmi.obj	irq.obj\
                 litt16.obj      framerat.obj    sglmain.obj\
                 utils.obj       assert.obj		vga.obj         draw8x8g.obj\
                 draw4x4g.obj    grid.obj\

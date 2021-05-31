@@ -1,6 +1,7 @@
 #include "tdl.h"
 
 #define MAGIC_NUMBER	3456
+
 class MyClass {
 public:
 	MyClass() : a(MAGIC_NUMBER) {
@@ -9,7 +10,7 @@ public:
 	~MyClass() {
 		printf("Destructor\n");
 	}
-	MyFunction() {
+	void MyFunction() {
 		printf("Member function; a = %dn\n", a);
 	}
 
