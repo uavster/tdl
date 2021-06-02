@@ -99,14 +99,14 @@ DetectBLASTER   proc
 		mov		SBEnvResult,-1
         GetEnvVar "BLASTER"
         jc      wrong_env_var
-		
-		push	eax
+
+		push	ebp eax
 		mov		ebp,esp
 		loop_params:
-		mov		esi,[ebp]
+		mov		esi,ss:[ebp]
 		mov		edi,offset TempBuffer
 		call	GetCommandParam
-		mov		[ebp],esi
+		mov		ss:[ebp],esi
 		mov		al,[edi]
 		or		al,al
 		jz		got_all_params
@@ -153,7 +153,7 @@ DetectBLASTER   proc
 		jmp		loop_params
 		
 		got_all_params:
-		pop		eax
+		pop		eax ebp
 		; Minimum configuration: port, irq and dma
 		cmp		SBbase,-1
 		je		wrong_env_var
