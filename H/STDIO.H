@@ -9,7 +9,9 @@
   extern "C" {
 #endif
 
-void printf(char *,...);
+void printf(const char *,...);
+#pragma aux PrintFormatted "*" 	parm   [esi] \
+								modify [eax ebx ecx edx esi edi ebp 8087];
 
 #ifdef __cplusplus
   };
