@@ -307,6 +307,7 @@ COFLab3:
 GetCommandParam proc
         push    edi
         xor     ecx,ecx
+		cld
 GCPlab3:
         lodsb
 		or		al,al
