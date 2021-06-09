@@ -57,6 +57,10 @@ public __wcpp_4_fs_handler_
 __wcpp_4_fs_handler_:
         retn
 
+public __wcpp_4_fs_handler_rtn__
+__wcpp_4_fs_handler_rtn__:
+        retn
+		
 public _setjmp_
 _setjmp_:
         retn
@@ -65,8 +69,20 @@ public __argc
 __argc:
         retn
 
+public __wcpp_4_throw__
+__wcpp_4_throw__:
+        retn
+
 public __wcpp_4_catch_done__
 __wcpp_4_catch_done__:
+        retn
+
+public __compiled_under_generic
+__compiled_under_generic:
+        retn
+		
+public __wcpp_4_destruct_all__
+__wcpp_4_destruct_all__:
         retn
 
 end

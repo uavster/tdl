@@ -10,12 +10,13 @@ DEFDIR = $(TDLPATH)\defaults
 
 .path.c = $(TDLPATH)\STDLIB;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\LOADER
 .path.cpp = $(TDLPATH)\STDLIB;$(TDLPATH)\WUF!\LOADER\S3M
-.path.asm = $(TDLPATH)\STDLIB;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\BLITTER;$(TDLPATH)\SPUF!\LOADER;$(TDLPATH)\SPUF!;$(TDLPATH)\SPUF!\SLI;$(TDLPATH)\SPUF!\GFX;$(TDLPATH)\WUF!;$(TDLPATH)\WUF!\DEVICES;$(TDLPATH)\3D\RENDER;$(TDLPATH)\3D\LOADER;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\PLAYER;$(TDLPATH)\3D;$(TDLPATH)\WUF!\MIXER;$(TDLPATH)\WUF!\LOADER;$(TDLPATH)\WUF!\LOADER\WAV;$(TDLPATH)\WUF!\LOADER\S3M
+.path.asm = $(TDLPATH)\STDLIB;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\BLITTER;$(TDLPATH)\SPUF!\LOADER;$(TDLPATH)\SPUF!;$(TDLPATH)\SPUF!\SLI;$(TDLPATH)\SPUF!\GFX;$(TDLPATH)\WUF!;$(TDLPATH)\WUF!\DEVICES;$(TDLPATH)\3D\RENDER;$(TDLPATH)\3D\LOADER;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\PLAYER;$(TDLPATH)\3D;$(TDLPATH)\WUF!\MIXER;$(TDLPATH)\WUF!\LOADER;$(TDLPATH)\WUF!\LOADER\WAV
 .path.obj = $(TDLPATH)\OBJS
 .path.mac = $(INCDIR)
 .path.inc = $(INCDIR)
 .path.def = $(HDIR);$(INCDIR)
 .path.h = $(HDIR)
+.path.hpp = $(HDIR)
 .path.lib = $(TDLPATH)\lib
 
 WLIBOPTS=/q
@@ -25,14 +26,14 @@ WLIBOPTS=/q
 !if $d(DEBUG)
 
 COPTS = -db -d4 -w3 -fpi87 -fp5 -zdp -zu -bt=dos -i$(HDIR) -oneatx -s -zq -3r
-CCOPTS = -4r -hw -db -d2 -fpi87 -fp3 -i$(HDIR) -mf -w5 -ze -zp4 -zdp -zl
+CCOPTS = -4r -hw -db -d2 -fpi87 -fp3 -i$(HDIR) -mf -w5 -ze -zp4 -zdp -zl -xs
 ASMOPTS = /m6 /mx /zi /w-aln /t /i. /i$(INCDIR) /i$(TDLPATH)\NEWSGL /d__DEBUG__=1
 LNKOPT = system tx32 debug all op q
 
 !else
 
 COPTS = -w3 -fpi87 -fp5 -zdp -zu -bt=dos -i$(HDIR) -oneatx -s -zq -3r -wcd=302
-CCOPTS = -4r -fpi87 -fp3 -i$(HDIR) -mf -w5 -ze -zdp -zl
+CCOPTS = -4r -fpi87 -fp3 -i$(HDIR) -mf -w5 -ze -zdp -zl -xs
 ASMOPTS = /m6 /mx /w-aln /t /i. /i$(INCDIR) /i$(DEFDIR) /i$(TDLPATH)\NEWSGL /d__DEBUG__=0
 LNKOPT = system tx32 op q
 
@@ -171,7 +172,9 @@ sb4xx.obj:      sb4xx.inc      	sb4xx.asm       dma.inc         dma.asm         
 mixer.obj:      mixer.asm       mixer.inc       wuf!.inc
 waveload.obj:   waveload.asm    waveload.inc    wav.asm         wav.inc
 wav.obj:        wav.asm         wav.inc         memmgr.asm      alloc.inc       filesys.asm     filesys.inc     waveload.asm     waveload.inc
-s3m.obj:		s3m.cpp
+s3m_.obj:		s3m_.cpp		s3m.h
+except.obj:		except.cpp		except.hpp		string.h		utils.asm
+s3m.obj:		s3m.cpp			s3m.hpp			s3m_.cpp		s3m.h			except.cpp		except.hpp
 
 #----------- Player ---------------
 #player.obj:     player.asm      player.inc      sb.inc
@@ -181,7 +184,7 @@ s3m.obj:		s3m.cpp
 #load_xm.obj:    load_xm.asm
 #sb.obj:         sb.asm          sb.inc
 
-tdl.lib:        stdc.obj        new.obj	stdio.obj       count.obj       dpmi.obj	irq.obj\
+tdl.lib:        stdc.obj        new.obj		except.obj	stdio.obj       count.obj       dpmi.obj	irq.obj\
                 litt16.obj      framerat.obj    sglmain.obj\
                 utils.obj       assert.obj		vga.obj         draw8x8g.obj\
                 draw4x4g.obj    grid.obj\
@@ -195,7 +198,7 @@ tdl.lib:        stdc.obj        new.obj	stdio.obj       count.obj       dpmi.obj
                 blt32-24.obj    blt32-32.obj    clip.obj\
                 loader.obj      sli.obj         pcx.obj         fli.obj\
                 sbuffer.obj     gentri.obj      line.obj\
-                wuf!.obj        sounddev.obj    sb1xx.obj       sb200.obj	sb201.obj sb3xx.obj	sb4xx.obj	mixer.obj       sbhard.obj      waveload.obj    wav.obj	s3m.obj\
+                wuf!.obj        sounddev.obj    sb1xx.obj       sb200.obj	sb201.obj sb3xx.obj	sb4xx.obj	mixer.obj       sbhard.obj      waveload.obj    wav.obj	s3m_.obj	s3m.obj\
                 dma.obj         list.obj        alpha.obj\
                 3ds.obj\
                 uniload.obj     stdc.obj        render.obj\

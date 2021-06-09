@@ -2,28 +2,35 @@
 
 #include "stddef.h"
 
+#ifndef __S3M_HEADER__
+#define __S3M_HEADER__
+
+#ifdef __cplusplus
+  extern "C" {
+#endif
+
 // Constant-size pieces of S3M file format.
 
 #pragma pack(push, 1)
 
-typedef WORD S3MShortOffset;
+typedef WORD TS3MShortOffset;
 
 typedef struct {
 	BYTE		high;
 	WORD		low;
-} S3MLongOffset;
+} TS3MLongOffset;
 
 typedef struct {
 	BYTE	is_disabled:1;
 	BYTE	type:7;
-} S3MChannel;
+} TS3MChannel;
 
 typedef struct {
 	BYTE	type;
 	BYTE	file_name[12];
 	union {
 		struct {
-			S3MLongOffset		offset;
+			TS3MLongOffset		offset;
 			DWORD				length;
 			DWORD				loop_start;
 			DWORD				loop_end;
@@ -41,11 +48,11 @@ typedef struct {
 	BYTE		reserved[12];
 	BYTE		name[28];
 	DWORD		magic;
-} S3MInstrumentHeader;
+} TS3MInstrumentHeader;
 
 typedef struct {
 	WORD		size;
-} S3MPatternHeader;
+} TS3MPatternHeader;
 
 typedef struct {
 	BYTE		has_fx:1;
@@ -57,18 +64,18 @@ typedef struct {
 	BYTE		volume;
 	BYTE		fx_type;
 	BYTE		fx_value;
-} S3MPatternCell;
+} TS3MPatternCell;
 
 typedef struct {
 	BYTE		reserved1:2;
 	BYTE		has_custom_pan:1;
 	BYTE		reserved2:1;
 	BYTE		pan:4;
-} S3MChannelPan;
+} TS3MChannelPan;
 
 typedef struct {
-	S3MChannelPan	channel_pans[32];
-} S3MChannelPans;
+	TS3MChannelPan	channel_pans[32];
+} TS3MChannelPans;
 
 typedef struct {
 	BYTE 		module_name[28];
@@ -91,31 +98,38 @@ typedef struct {
 	BYTE		has_custom_pan;
 	BYTE		reserved2[8];
 	WORD		offset_special;
-	S3MChannel	channels[32];
-} S3MSongHeader;
+	TS3MChannel	channels[32];
+} TS3MSongHeader;
 
 #pragma pack(pop)
 
 // Song structures in memory.
 
 typedef struct {
-	S3MInstrumentHeader	header;
+	TS3MInstrumentHeader	header;
 	void *data;
-} S3MInstrument;
+} TS3MInstrument;
 
 typedef struct {
-	S3MPatternHeader header;
-	S3MPatternCell *cells;
-} S3MPattern;
+	TS3MPatternHeader header;
+	TS3MPatternCell *cells;
+} TS3MPattern;
 
 typedef struct {
-	S3MSongHeader header;
-	S3MInstrument *instruments;
-	S3MPattern *patterns;
-	S3MChannelPans pans;
-} S3MSong;
+	TS3MSongHeader header;
+	BYTE *orders;
+	TS3MInstrument *instruments;
+	TS3MPattern *patterns;
+	TS3MChannelPans pans;
+} TS3MSong;
 
 // Loads an S3M file into memory.
 // Returns a pointer to the song structure, or NULL if error.
-S3MSong *LoadS3M(const char *file_path);
-void FreeS3M(const S3MSong *song);
+TS3MSong *LoadS3M(const char *file_path);
+void FreeS3M(TS3MSong *song);
+
+#ifdef __cplusplus
+  }
+#endif
+
+#endif
