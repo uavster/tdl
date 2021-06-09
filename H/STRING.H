@@ -13,13 +13,17 @@
   extern "C" {
 #endif
 
-DWORD StringLength(char *);
+int StringLength(const char *);
 #pragma aux StringLength "*" parm   [esi]\
-                             modify [eax ebx ecx edx esi edi ebp]\
                              value  [ecx];
+
+#define strlen StringLength
 
 void PushToString(char *,char);
 #pragma aux PushToString "*" parm   [esi] [dl];
+
+void strcpy(const char *src, char *dst);
+#pragma aux CopyString "*" parm	[esi] [edi];
 
 #ifdef __cplusplus
   };
