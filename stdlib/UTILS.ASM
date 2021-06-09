@@ -269,6 +269,7 @@ SEElab4:
 
 CopyString      proc
         push    eax esi edi
+		cld
 COSLab1:
         lodsb
         stosb
