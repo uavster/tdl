@@ -1,0 +1,2 @@
+test.cpp(5): Error! E029: col(29) symbol 'WUFLoadWave' has not been declared 
+test.cpp(36): Error! E029: col(58) symbol 'WUFPlaySound' has not been declared 

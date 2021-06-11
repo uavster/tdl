@@ -3,32 +3,44 @@
 #include "filesys.h"
 #include "stdio.h"
 
-#define read_field(field, file) \
-	(ttl_read(&field, sizeof(field), file) == sizeof(field))
+// The size is passed directly instead of deriving it with sizeof(field), 
+// as the field instance may be not be in a tightly packed structure, even if
+// its definition is.
+#define read_field(field, size, file) \
+	(ttl_read(field, size, file) == size)
 
 #define INSTRUMENT_TYPE_SAMPLE			1
 #define INSTRUMENT_TYPE_ADLIB_MELODY	2
 #define INSTRUMENT_TYPE_ADLIB_DRUM		3
 
+#define S3M_SONG_TYPE_ST3_MODULE	16
+#define S3M_SONG_MAGIC1_VALUE 0x1A
+#define S3M_SONG_MAGIC2_VALUE ((int)'S' | ((int)'C' << 8) | ((int)'R' << 16) | ((int)'M' << 24))
+#define S3M_INSTRUMENT_MAGIC_VALUE ((int)'S' | ((int)'C' << 8) | ((int)'R' << 16) | ((int)'S' << 24))
+
 static bool LoadS3MInstrument(int instrument_offset, TS3MInstrument &instrument, DWORD f) {
 	if (ttl_seek(f, instrument_offset, SEEK_SET) != instrument_offset) {
 		return false;
 	}
-	if (!read_field(instrument.header, f)) {
+	if (!read_field(&instrument.header, sizeof(TS3MInstrumentHeader), f)) {
 		return false;
 	}	
-	if (instrument.header.type == INSTRUMENT_TYPE_SAMPLE) {
-		instrument.data = new BYTE[instrument.header.spec.sampled.length];
-		if (instrument.data == NULL) {
-			return false;
-		}
-		DWORD data_offset = ((DWORD)instrument.header.spec.sampled.offset.high << 16) | ((DWORD)instrument.header.spec.sampled.offset.low);
-		if (ttl_seek(f, data_offset, SEEK_SET) != data_offset) {
-			return false;
-		}
-		if (ttl_read(instrument.data, instrument.header.spec.sampled.length, f) != instrument.header.spec.sampled.length) {
-			return false;
-		}
+	if (instrument.header.type != INSTRUMENT_TYPE_SAMPLE) {
+		return false;
+	}
+	if (instrument.header.magic != S3M_INSTRUMENT_MAGIC_VALUE) {
+		return false;
+	}
+	instrument.data = new BYTE[instrument.header.spec.sampled.length];
+	if (instrument.data == NULL) {
+		return false;
+	}
+	DWORD data_offset = ((DWORD)instrument.header.spec.sampled.offset.high << 16) | ((DWORD)instrument.header.spec.sampled.offset.low);
+	if (ttl_seek(f, data_offset, SEEK_SET) != data_offset) {
+		return false;
+	}
+	if (!read_field(instrument.data, instrument.header.spec.sampled.length, f)) {
+		return false;
 	}
 	return true;
 }
@@ -37,14 +49,14 @@ static bool LoadS3MPattern(int pattern_offset, TS3MPattern &pattern, DWORD f) {
 	if (ttl_seek(f, pattern_offset, SEEK_SET) != pattern_offset) {
 		return false;
 	}
-	if (!read_field(pattern.header, f)) {
+	if (!read_field(&pattern.header, sizeof(TS3MPatternHeader), f)) {
 		return false;
 	}
 	pattern.cells = (TS3MPatternCell *)new BYTE[pattern.header.size];
 	if (pattern.cells == NULL) {
 		return false;
 	}
-	return ttl_read(pattern.cells, pattern.header.size, f) == pattern.header.size;
+	return read_field(pattern.cells, pattern.header.size, f);
 }
 
 static void SafeDeleteBuffer(void **p) {
@@ -74,20 +86,24 @@ TS3MSong *LoadS3M(const char *file_path) {
 	if (song == NULL) {
 		goto error;
 	}
-	if (!read_field(song->header, f)) {
+	if (!read_field(&song->header, sizeof(TS3MSongHeader), f)) {
 		goto error;
 	}
 
+	// Check file type and magic numbers.
+	if (song->header.magic1 != S3M_SONG_MAGIC1_VALUE ||
+		song->header.magic2 != S3M_SONG_MAGIC2_VALUE ||
+		song->header.file_type != S3M_SONG_TYPE_ST3_MODULE) {
+		goto error;
+	}
+	
 	// Load song orders.
 	song->orders = new BYTE[song->header.num_orders];
 	if (song->orders == NULL) {
 		goto error;
 	}
-	{
-		int bytes_read = ttl_read(song->orders, song->header.num_orders, f);
-		if (bytes_read != song->header.num_orders) {
-			goto error;
-		}
+	if (!read_field(song->orders, song->header.num_orders, f)) {
+		goto error;
 	}
 
 	// Load instrument offset table.
@@ -97,9 +113,8 @@ TS3MSong *LoadS3M(const char *file_path) {
 		goto error;
 	}
 	{
-		int instrument_offsets_size = num_instruments * sizeof(TS3MShortOffset);
-		int bytes_read = ttl_read(instrument_offsets, instrument_offsets_size, f);
-		if (bytes_read != instrument_offsets_size) {
+		const int instrument_offsets_size = num_instruments * sizeof(TS3MShortOffset);
+		if (!read_field(instrument_offsets, instrument_offsets_size, f)) {
 			goto error;
 		}
 	}
@@ -112,13 +127,13 @@ TS3MSong *LoadS3M(const char *file_path) {
 	}
 	{
 		int pattern_offsets_size = num_patterns * sizeof(TS3MShortOffset);
-		if (ttl_read(pattern_offsets, pattern_offsets_size, f) != pattern_offsets_size) {
+		if (!read_field(pattern_offsets, pattern_offsets_size, f)) {
 			goto error;
 		}
 	}
 	
 	// Load S3M footer.
-	if (ttl_read(&song->pans, sizeof(song->pans), f) != sizeof(song->pans)) {
+	if (!read_field(&song->pans, sizeof(song->pans), f)) {
 		goto error;
 	}
 	
@@ -129,7 +144,7 @@ TS3MSong *LoadS3M(const char *file_path) {
 	}
 	{
 		for (int i = 0; i < num_instruments; ++i) {
-			if (!LoadS3MInstrument(instrument_offsets[i], song->instruments[i], f)) {
+			if (!LoadS3MInstrument(16 * instrument_offsets[i], song->instruments[i], f)) {
 				goto error;
 			}
 		}
@@ -143,7 +158,7 @@ TS3MSong *LoadS3M(const char *file_path) {
 	}
 	{
 		for (int j = 0; j < num_patterns; ++j) {
-			if (!LoadS3MPattern(pattern_offsets[j], song->patterns[j], f)) {
+			if (!LoadS3MPattern(16 * pattern_offsets[j], song->patterns[j], f)) {
 				goto error;
 			}
 		}

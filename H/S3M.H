@@ -25,9 +25,17 @@ typedef struct {
 	BYTE	type:7;
 } TS3MChannel;
 
+typedef enum {
+	TypeUnknown = 0, Sampled = 1, AdlibMelody = 2, AdlibDrum = 3
+} ES3MInstrumentType;
+
+typedef enum {
+	PackingUnknown = 0, Unpacked = 1, DP30ADPCM = 2
+} ES3MInstrumentPacking;
+
 typedef struct {
 	BYTE	type;
-	BYTE	file_name[12];
+	char	file_name[12];
 	union {
 		struct {
 			TS3MLongOffset		offset;
@@ -36,7 +44,7 @@ typedef struct {
 			DWORD				loop_end;
 			BYTE				default_volume;
 			BYTE				reserved;
-			BYTE				is_packed;
+			BYTE				packing;
 			BYTE				flags;
 		} sampled;
 		struct {
@@ -46,7 +54,7 @@ typedef struct {
 	} spec;
 	DWORD		tuning_hz;
 	BYTE		reserved[12];
-	BYTE		name[28];
+	char		name[28];
 	DWORD		magic;
 } TS3MInstrumentHeader;
 
@@ -78,7 +86,7 @@ typedef struct {
 } TS3MChannelPans;
 
 typedef struct {
-	BYTE 		module_name[28];
+	char 		module_name[28];
 	BYTE 		magic1;
 	BYTE 		file_type;
 	WORD 		reserved;

@@ -3,15 +3,48 @@
 
 #include "s3m.h"
 
+typedef ES3MInstrumentType S3MInstrumentType;
+typedef ES3MInstrumentPacking S3MInstrumentPacking;
+
+class S3MInstrument {
+public:
+	friend class S3MSong;
+	const char *Name() const;
+	const S3MInstrumentType Type() const;
+	int DefaultVolume() const;
+	bool HasLoop() const;
+	DWORD LoopStart() const;
+	DWORD LoopEnd() const;
+	bool IsStereo() const;
+	bool Is16Bit() const;
+	S3MInstrumentPacking Packing() const;
+
+protected:
+	const TS3MInstrument &Instrument() const;
+
+private:	
+	TS3MSong *song_;
+	int index_;
+};
+
 class S3MSong {
 public:
 	S3MSong(const char *file_path);
 	virtual ~S3MSong();
 	
-	const char *Name();
+	bool IsLoaded() const;
+	
+	const char *Name() const;
+	
+	int NumOrders() const;
+	int NumInstruments() const;
+	int NumPatterns() const;
+
+	const S3MInstrument *Instrument(const int instrument_index) const;
 	
 private:
 	TS3MSong *song_;
+	S3MInstrument *instruments_;
 };
 
 #endif
