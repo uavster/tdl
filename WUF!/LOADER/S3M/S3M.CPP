@@ -30,7 +30,7 @@ const char *S3MSong::Name() const {
 }
 
 int S3MSong::NumOrders() const {
-	return song_->header.num_orders;
+	return song_->header.num_orders - 1;
 }
 
 int S3MSong::NumInstruments() const {
@@ -92,4 +92,23 @@ S3MInstrumentPacking S3MInstrument::Packing() const {
 		return PackingUnknown;
 	}
 	return (S3MInstrumentPacking)(Instrument().header.spec.sampled.packing + 1);
+}
+
+DWORD S3MInstrument::C2Frequency() const {
+	return Instrument().header.c2_frequency;
+}
+
+DWORD S3MInstrument::NumSamples() const {
+	return Instrument().header.spec.sampled.length;
+}
+
+void *S3MInstrument::Samples() const {
+	return Instrument().data;
+}
+
+const BYTE S3MSong::Order(const int order_index) const {
+	if (order_index < 0 || order_index >= NumOrders()) {
+		return -1;
+	}
+	return song_->orders[order_index];
 }

@@ -3,16 +3,6 @@
 #include "except.hpp"
 
 int main() {
-	WUFInit();
-/*
-	SoundProperties play_props;
-	WUFGetProperties(&play_props, NULL);
-
-	printf("\n");
-	printf("Sampling rate: %dn", play_props.SPSamplingRate); printf(" Hz\n");
-	printf("Bits per sample: %dn", play_props.SPBitsPerSample); printf("\n");
-	printf("Number of channels: %dn", play_props.SPNumChannels); printf("\n");
-*/
 	S3MSong song("a.s3m");
 	if (!song.IsLoaded()) {
 		printf("Unable to load song.\n");
@@ -24,15 +14,23 @@ int main() {
 	printf(song.Name());
 	printf("\n");
 	printf("Num. patterns: %dn\n", song.NumPatterns());
-	printf("Num. instruments: %dn\n", song.NumInstruments());
-	printf("Num. orders: %dn\n", song.NumOrders());
+	
+	printf("Orders:");
+	for (int i = 0; i < song.NumOrders(); ++i) {
+		printf(" %dn", song.Order(i));
+	}	
 	printf("\n");
 	
-	for (int i = 0; i < song.NumInstruments(); ++i) {
+	for (i = 0; i < song.NumInstruments(); ++i) {
+		if (song.Instrument(i) == NULL) {
+			printf("Error retrieving instrument %dn\n", i);
+			return 2;
+		}
+		const S3MInstrument &instrument = *song.Instrument(i);
 		printf("Instrument %dn: ", i);
-		printf(song.Instrument(i)->Name());
-		printf(" [");
-		switch(song.Instrument(i)->Type()) {
+		printf(instrument.Name());
+		printf("\n");
+		switch(instrument.Type()) {
 			case Sampled:
 				printf("Sampled"); break;
 			case AdlibMelody:
@@ -42,29 +40,26 @@ int main() {
 			case TypeUnknown:
 				printf("Unknown"); break;
 		}
-		printf("]\n");
+		printf(" vol:%dn", instrument.DefaultVolume());
+		if (instrument.HasLoop()) {
+			printf(" loop:%dn,%dn", instrument.LoopStart(), instrument.LoopEnd());
+		}
+		if (instrument.IsStereo()) {
+			printf(" stereo");
+		} else {
+			printf(" mono");
+		}
+		if (instrument.Is16Bit()) {
+			printf(" 16bit");
+		} else {
+			printf(" 8bit");
+		}
+		printf(" pack:%dn", instrument.Packing());
+		printf(" C2freq:%dn", instrument.C2Frequency());
+		printf(" Num.samples:%dn", instrument.NumSamples());
+		printf("\n");
 	}
 	printf("\n");
 	
-/*	try {
-		S3MSong song("b.s3m");
-	} catch(const Exception &e) {
-		printf(e.Description());
-	}
-*/
-
-/*
-	bool do_loop = true;
-	while(do_loop) {
-		if (kbhit()) {
-			switch(getch()) {
-				case 27: do_loop = false; break;
-			}
-		}
-	}
-*/
-	
-	WUFClose();
-
 	return 0;
 }

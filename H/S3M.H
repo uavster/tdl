@@ -52,7 +52,7 @@ typedef struct {
 			BYTE				specs[16];
 		} adlib;
 	} spec;
-	DWORD		tuning_hz;
+	DWORD		c2_frequency;
 	BYTE		reserved[12];
 	char		name[28];
 	DWORD		magic;

@@ -9,6 +9,7 @@ typedef ES3MInstrumentPacking S3MInstrumentPacking;
 class S3MInstrument {
 public:
 	friend class S3MSong;
+
 	const char *Name() const;
 	const S3MInstrumentType Type() const;
 	int DefaultVolume() const;
@@ -18,6 +19,9 @@ public:
 	bool IsStereo() const;
 	bool Is16Bit() const;
 	S3MInstrumentPacking Packing() const;
+	DWORD C2Frequency() const;
+	DWORD NumSamples() const;
+	void *Samples() const;
 
 protected:
 	const TS3MInstrument &Instrument() const;
@@ -41,6 +45,8 @@ public:
 	int NumPatterns() const;
 
 	const S3MInstrument *Instrument(const int instrument_index) const;
+	
+	const BYTE Order(const int order_index) const;
 	
 private:
 	TS3MSong *song_;
