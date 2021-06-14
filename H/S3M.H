@@ -85,6 +85,30 @@ typedef struct {
 	TS3MChannelPan	channel_pans[32];
 } TS3MChannelPans;
 
+typedef enum {
+	ScreamTracker = 1, 
+	ImagoOrpheus = 2, 
+	ImpulseTracker = 3, 
+	SchismTracker = 4, 	// Up to v0.50; later versions encode a timestamp in the version value
+	OpenMPT = 5, 
+	BeRoTracker = 6, 
+	CreamTracker = 7, 
+	Camoto = 12			// Version value is 0xCA00
+} ES3MTrackerID;
+
+const char *TrackerNameFromID(ES3MTrackerID id);
+
+typedef struct {
+	WORD version_minor:8;
+	WORD version_major:4;
+	WORD id:4;
+} TS3MTrackerVersion;
+
+typedef enum {
+	Signed = 1,
+	Unsigned = 2
+} ES3MSamplesFormat;
+
 typedef struct {
 	char 		module_name[28];
 	BYTE 		magic1;
@@ -94,7 +118,7 @@ typedef struct {
 	WORD 		num_instruments;
 	WORD 		num_patterns;
 	WORD 		flags;
-	WORD 		tracker_version;
+	TS3MTrackerVersion tracker_version;
 	WORD 		samples_format;
 	DWORD		magic2;
 	BYTE		global_volume;

@@ -112,3 +112,58 @@ const BYTE S3MSong::Order(const int order_index) const {
 	}
 	return song_->orders[order_index];
 }
+
+bool S3MSong::HasVolumeOptimization() const {
+	return song_->header.flags & 0x8;
+}
+
+bool S3MSong::HasAmigaLimits() const {
+	return song_->header.flags & 0x10;
+}
+
+S3MTrackerID S3MSong::TrackerID() const {
+	return (S3MTrackerID)song_->header.tracker_version.id;
+}
+
+S3MTrackerVersion S3MSong::TrackerVersion() const {
+	S3MTrackerVersion version;
+	version.parts.major = song_->header.tracker_version.version_major;
+	version.parts.minor = song_->header.tracker_version.version_minor;
+	return version;
+}
+
+const char *S3MSong::TrackerName() const {
+	return TrackerNameFromID(TrackerID());
+}
+
+S3MSamplesFormat S3MSong::SamplesFormat() const {
+	return (S3MSamplesFormat)song_->header.samples_format;
+}
+
+bool S3MSong::AreSamplesSigned() const {
+	return SamplesFormat() == Signed;
+}
+
+BYTE S3MSong::GlobalVolume() const {
+	return song_->header.global_volume;
+}
+
+BYTE S3MSong::MasterVolume() const {
+	return song_->header.master_volume;
+}
+
+BYTE S3MSong::InitialSpeed() const {
+	return song_->header.initial_speed;
+}
+
+BYTE S3MSong::InitialTempo() const {
+	return song_->header.initial_tempo;
+}
+
+bool S3MSong::IsStereo() const {
+	return song_->header.is_stereo != 0;
+}
+
+bool S3MSong::HasCustomPan() const {
+	return song_->header.has_custom_pan != 0;
+}

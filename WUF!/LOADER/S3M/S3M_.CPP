@@ -197,3 +197,28 @@ void FreeS3M(TS3MSong *song) {
 		delete song;
 	}
 }
+
+const char *TrackerNameFromID(ES3MTrackerID id) {
+	static const char scream[] = "Scream Tracker";
+	static const char imago[] = "Imago Orpheus";
+	static const char impulse[] = "Impulse Tracker";
+	static const char schism[] = "Schism Tracker";
+	static const char openmpt[] = "OpenMPT";	
+	static const char bero[] = "BeRO Tracker";
+	static const char cream[] = "Cream Tracker";
+	static const char camoto[] = "Camoto/libgamemusic";
+	static const char unknown[] = "Unknown";
+	
+	switch(id) {
+		case ScreamTracker: return scream;
+		case ImagoOrpheus: return imago;
+		case ImpulseTracker: return impulse;
+		case SchismTracker: return schism;
+		case OpenMPT: return openmpt;
+		case BeRoTracker: return bero;
+		case CreamTracker: return cream;
+		case Camoto: return camoto;
+		default: return unknown;
+	}
+}
+
