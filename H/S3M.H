@@ -63,16 +63,17 @@ typedef struct {
 } TS3MPatternHeader;
 
 typedef struct {
-	BYTE		has_fx:1;
+	BYTE		has_effect:1;
 	BYTE		has_volume:1;
 	BYTE		has_note_and_instrument:1;
 	BYTE		channel_number:5;
-	BYTE		note;
-	BYTE		instrument;
-	BYTE		volume;
-	BYTE		fx_type;
-	BYTE		fx_value;
-} TS3MPatternCell;
+	// Depending on the flags above, the following fields may follow:
+	// BYTE		note;
+	// BYTE		instrument;
+	// BYTE		volume;
+	// BYTE		fx_type;
+	// BYTE		fx_value;
+} TS3MPatternCellHeader;
 
 typedef struct {
 	BYTE		reserved1:2;
@@ -144,7 +145,9 @@ typedef struct {
 
 typedef struct {
 	TS3MPatternHeader header;
-	TS3MPatternCell *cells;
+	BYTE *cells;	// Compact array of TS3MPatternCellHeader, each followed by a variable payload.
+	int num_rows;
+	int row_indices[64];
 } TS3MPattern;
 
 typedef struct {

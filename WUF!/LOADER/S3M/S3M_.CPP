@@ -52,11 +52,41 @@ static bool LoadS3MPattern(int pattern_offset, TS3MPattern &pattern, DWORD f) {
 	if (!read_field(&pattern.header, sizeof(TS3MPatternHeader), f)) {
 		return false;
 	}
-	pattern.cells = (TS3MPatternCell *)new BYTE[pattern.header.size];
+	pattern.cells = new BYTE[pattern.header.size];
 	if (pattern.cells == NULL) {
 		return false;
 	}
-	return read_field(pattern.cells, pattern.header.size, f);
+	if (!read_field(pattern.cells, pattern.header.size, f)) {
+		return false;
+	}
+	// Build row index.
+	pattern.num_rows = 0;
+	int i = 0;
+	pattern.row_indices[pattern.num_rows] = i;
+	while (i < pattern.header.size) {
+		TS3MPatternCellHeader cell_header = *(TS3MPatternCellHeader *)&pattern.cells[i];
+		if (!cell_header.has_effect && !cell_header.has_volume && !cell_header.has_note_and_instrument) {
+			++pattern.num_rows;
+			++i;
+			if (i < pattern.header.size) {
+				pattern.row_indices[pattern.num_rows] = i;
+			}
+		}
+		else {
+			if (cell_header.has_effect) {
+				i += 2;
+			}
+			if (cell_header.has_volume) {
+				++i;
+			}
+			if (cell_header.has_note_and_instrument) {
+				i += 2;
+			}
+		}
+	}
+	++pattern.num_rows;
+
+	return true;
 }
 
 static void SafeDeleteBuffer(void **p) {
@@ -161,6 +191,12 @@ TS3MSong *LoadS3M(const char *file_path) {
 			if (!LoadS3MPattern(16 * pattern_offsets[j], song->patterns[j], f)) {
 				goto error;
 			}
+BYTE *ptr = (BYTE *)song->patterns[j].cells;
+for (int i = 0; i < song->patterns[j].header.size - sizeof(song->patterns[j].header); ++i, ++ptr) {
+	printf("%dhn ", (unsigned int)*ptr);
+}
+printf("\n");
+getch();
 		}
 	}
 	SAFE_DELETE_BUFFER(pattern_offsets);

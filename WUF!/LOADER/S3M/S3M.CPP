@@ -8,9 +8,24 @@ S3MSong::S3MSong(const char *file_name) {
 		return;
 	}
 	instruments_ = new S3MInstrument[NumInstruments()];
-	for (int i = 0; i < NumInstruments(); ++i) {
-		instruments_[i].song_ = song_;
-		instruments_[i].index_ = i;
+	{
+		for (int i = 0; i < NumInstruments(); ++i) {
+			instruments_[i].song_ = song_;
+			instruments_[i].index_ = i;
+		}
+	}
+
+	patterns_ = new S3MPattern[NumPatterns()];
+	{
+		for (int i = 0; i < NumPatterns(); ++i) {
+			patterns_[i].song_ = song_;
+			patterns_[i].index_ = i;
+			for (int j = 0; j < patterns_[i].NumRows(); ++j) {
+				const S3MPattern &pattern = patterns_[i].Pattern();
+				patterns_[i].rows_[j].cells_ = &pattern.cells[pattern.row_indices_[j]];
+				patterns_[i].rows_[j].num_bytes_ = pattern.header.size;
+			}
+		}
 	}
 }
 
@@ -22,6 +37,8 @@ S3MSong::~S3MSong() {
 	if (song_ == NULL) {
 		return;
 	}
+	delete [] patterns_;
+	delete [] instruments_;
 	delete song_;
 }
 
@@ -46,6 +63,17 @@ const S3MInstrument *S3MSong::Instrument(const int instrument_index) const {
 		return NULL;
 	}
 	return &instruments_[instrument_index];
+}
+
+const S3MPattern *S3MSong::Pattern(const int pattern_index) const {
+	if (pattern_index < 0 || pattern_index >= NumPatterns()) {
+		return NULL;
+	}
+	return &patterns_[pattern_index];
+}
+
+const TS3MPattern &S3MPattern::Pattern() const {
+	return song_->patterns[index_];
 }
 
 const TS3MInstrument &S3MInstrument::Instrument() const {
@@ -167,3 +195,141 @@ bool S3MSong::IsStereo() const {
 bool S3MSong::HasCustomPan() const {
 	return song_->header.has_custom_pan != 0;
 }
+
+// S3MPatternRowIterator S3MPattern::begin() const {
+	// return S3MPatternRowIterator(this, 0);
+// }
+
+// S3MPatternRowIterator S3MPattern::end() const {
+	// return S3MPatternRowIterator(this, kEndRowIndex);
+// }
+
+int S3MPattern::NumRows() const {
+	return Pattern().num_rows;
+}
+
+const S3MRow *S3MPattern::Row(int row_index) const {
+	if (row_index < 0 || row_index >= NumRows()) {
+		return NULL;
+	}
+	return &rows_[row_index];
+}
+
+S3MCellIterator S3MRow::begin() const {
+	return S3MCellIterator(num_bytes_, cells_, 0);
+}
+
+S3MCellIterator S3MRow::end() const {
+	return S3MCellIterator(num_bytes_, cells_, num_bytes_);
+}
+
+S3MCellIterator::S3MCellIterator(int num_bytes, const TS3MPatternCellHeader *cells, int byte_index) : byte_index_(byte_index), num_bytes_(num_bytes), cells_(cells) {}
+
+void S3MCellIterator::operator++() {
+	if (byte_index_ >= num_bytes_) {
+		return;
+	}
+	const TS3MPatternCellHeader &cell_header = *(TS3MPatternCellHeader *)&cells_[byte_index_];
+	byte_index_++;	// Skip header
+	if (cell_header.has_effect) {
+		byte_index_ += 2;
+	}
+	if (cell_header.has_volume) {
+		byte_index_++;
+	}
+	if (cell_header.has_note_and_instrument) {
+		byte_index_ += 2;
+	}
+}
+
+void S3MCellIterator::operator+=(int increment) {
+	for (int i = 0; i < increment; ++i) {
+		(*this)++;
+	}
+}
+
+bool S3MCellIterator::operator==(const S3MCellIteator &it) const {
+	return byte_index_ == it.byte_index_;
+}
+
+S3MCell S3MCellIterator::Cell() const {
+	return S3MCell(&cells_[byte_index_]);
+}
+
+S3MCell::S3MCell(const BYTE *cell) : cell_(cell) {}
+
+BYTE S3MCell::ChannelNumber() const {
+	return ((TS3MPatternCell *)cell)->channel_number;
+}
+
+bool S3MCell::HasNoteAndInstrument() const {
+	return ((TS3MPatternCell *)cell)->has_note_and_instrument;
+}
+
+BYTE S3MCell::Note() const {
+	return cell_[0];
+}
+
+BYTE S3MCell::Instrument() const {
+	return cell_[1];
+}
+
+bool S3MCell::HasVolume() const {
+	return ((TS3MPatternCell *)cell)->has_volume;
+}
+
+BYTE S3MCell::Volume() const {
+	if (HasNoteAndInstrument()) {
+		return cell_[2];
+	} else {
+		return cell_[0];
+	}
+}
+
+bool S3MCell::HasEffect() const {
+	return ((TS3MPatternCell *)cell)->has_effect;
+}
+
+char S3MCell::Effect() const {
+	int index = 0;
+	if (HasNoteAndInstrument()) {
+		index += 2;
+	}
+	if (HasVolume()) {
+		index++;
+	}
+	return cell_[index];
+}
+
+BYTE S3MCell::EffectValue() const {
+	int index = 1;
+	if (HasNoteAndInstrument()) {
+		index += 2;
+	}
+	if (HasVolume()) {
+		index++;
+	}
+	return cell_[index];
+}
+
+
+// S3MPatternRowIterator::S3MPatternRowIterator(const S3MPattern *pattern, int row) : pattern_(pattern), current_row_(row) {
+// }
+
+// S3MPatternRowIterator S3MPatternRowIterator::operator++() {
+	// return S3MPatternRowIterator(current_row_++);
+// }
+
+// void S3MPatternRowIterator::operator+=(int offset) {
+	// current_row += offset;
+// }
+
+// void S3MPatternRowIterator::operator-=(int offset) {
+	// current_row -= offset;
+// }
+
+	// S3MPatternRowIterator &S3MPatternRowIterator::operator=(int row) {
+	// current_row = row;
+	// return *this;
+// }
+

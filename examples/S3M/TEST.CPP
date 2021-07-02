@@ -109,7 +109,7 @@ int main() {
 			break;
 		}
 		if (k == 13) {
-		
+			
 			++i;
 			if (i >= song.NumPatterns()) {
 				break;
