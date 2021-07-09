@@ -21,9 +21,14 @@ S3MSong::S3MSong(const char *file_name) {
 			patterns_[i].song_ = song_;
 			patterns_[i].index_ = i;
 			for (int j = 0; j < patterns_[i].NumRows(); ++j) {
-				const S3MPattern &pattern = patterns_[i].Pattern();
-				patterns_[i].rows_[j].cells_ = &pattern.cells[pattern.row_indices_[j]];
-				patterns_[i].rows_[j].num_bytes_ = pattern.header.size;
+				const TS3MPattern &pattern = patterns_[i].Pattern();
+				patterns_[i].rows_[j].cells_ = &pattern.cells[pattern.row_indices[j]];
+				if (j > 0) {
+					patterns_[i].rows_[j - 1].num_bytes_ = patterns_[i].rows_[j].cells_ - patterns_[i].rows_[j - 1].cells_ - sizeof(TS3MPatternCellHeader);
+				}
+			}
+			if (j > 0) {
+				patterns_[i].rows_[j - 1].num_bytes_ = patterns_[i].Pattern().header.size - sizeof(patterns_[i].Pattern().header) - patterns_[i].Pattern().row_indices[j - 1] - sizeof(TS3MPatternCellHeader);
 			}
 		}
 	}
@@ -223,11 +228,12 @@ S3MCellIterator S3MRow::end() const {
 	return S3MCellIterator(num_bytes_, cells_, num_bytes_);
 }
 
-S3MCellIterator::S3MCellIterator(int num_bytes, const TS3MPatternCellHeader *cells, int byte_index) : byte_index_(byte_index), num_bytes_(num_bytes), cells_(cells) {}
+S3MCellIterator::S3MCellIterator(int num_bytes, const BYTE *cells, int byte_index) : byte_index_(byte_index), num_bytes_(num_bytes), cells_(cells) {}
 
-void S3MCellIterator::operator++() {
+S3MCellIterator S3MCellIterator::operator++(int) {
+	S3MCellIterator it = *this;
 	if (byte_index_ >= num_bytes_) {
-		return;
+		return it;
 	}
 	const TS3MPatternCellHeader &cell_header = *(TS3MPatternCellHeader *)&cells_[byte_index_];
 	byte_index_++;	// Skip header
@@ -240,16 +246,21 @@ void S3MCellIterator::operator++() {
 	if (cell_header.has_note_and_instrument) {
 		byte_index_ += 2;
 	}
+	return it;
 }
 
 void S3MCellIterator::operator+=(int increment) {
-	for (int i = 0; i < increment; ++i) {
+	for (int i = 0; i < increment && byte_index_ < num_bytes_; ++i) {
 		(*this)++;
 	}
 }
 
-bool S3MCellIterator::operator==(const S3MCellIteator &it) const {
+bool S3MCellIterator::operator==(const S3MCellIterator &it) const {
 	return byte_index_ == it.byte_index_;
+}
+
+bool S3MCellIterator::operator!=(const S3MCellIterator &it) const {
+	return byte_index_ != it.byte_index_;
 }
 
 S3MCell S3MCellIterator::Cell() const {
@@ -259,50 +270,77 @@ S3MCell S3MCellIterator::Cell() const {
 S3MCell::S3MCell(const BYTE *cell) : cell_(cell) {}
 
 BYTE S3MCell::ChannelNumber() const {
-	return ((TS3MPatternCell *)cell)->channel_number;
+	return ((TS3MPatternCellHeader *)cell_)->channel_number;
 }
 
 bool S3MCell::HasNoteAndInstrument() const {
-	return ((TS3MPatternCell *)cell)->has_note_and_instrument;
+	return ((TS3MPatternCellHeader *)cell_)->has_note_and_instrument;
 }
 
 BYTE S3MCell::Note() const {
-	return cell_[0];
+	return cell_[1] & 0xf;
+}
+
+char S3MCell::NoteLetter() const {
+	const static char letters[] = {'C', 'C', 'D', 'D', 'E', 'F', 'F', 'G', 'G', 'A', 'A', 'B'};
+	return letters[Note() % 12];
+}
+
+bool S3MCell::IsSemitone() const {
+	const static bool is_semitone[] = {false, true, false, true, false, false, true, false, true, false, true, false};
+	return is_semitone[Note() % 12];
+}
+
+BYTE S3MCell::Octave() const {
+	return ((cell_[1] >> 4) & 0xf) + 1;
+}
+
+void S3MCell::GetNoteName(char *name) const {
+	if (HasNoteAndInstrument()) {
+		name[0] = NoteLetter();
+		name[1] = IsSemitone() ? '#' : '-';
+		name[2] = Octave() + '0';
+	} else {
+		name[0] = '.';
+		name[1] = '.';
+		name[2] = '.';
+	}
+	name[3] = '\0';
 }
 
 BYTE S3MCell::Instrument() const {
-	return cell_[1];
+	return cell_[2];
 }
 
 bool S3MCell::HasVolume() const {
-	return ((TS3MPatternCell *)cell)->has_volume;
+	return ((TS3MPatternCellHeader *)cell_)->has_volume;
 }
 
 BYTE S3MCell::Volume() const {
 	if (HasNoteAndInstrument()) {
-		return cell_[2];
+		return cell_[3];
 	} else {
-		return cell_[0];
+		return cell_[1];
 	}
 }
 
 bool S3MCell::HasEffect() const {
-	return ((TS3MPatternCell *)cell)->has_effect;
+	return ((TS3MPatternCellHeader *)cell_)->has_effect;
 }
 
 char S3MCell::Effect() const {
-	int index = 0;
+	int index = 1;
 	if (HasNoteAndInstrument()) {
 		index += 2;
 	}
 	if (HasVolume()) {
 		index++;
 	}
-	return cell_[index];
+	return cell_[index] - 1 + 'A';
 }
 
 BYTE S3MCell::EffectValue() const {
-	int index = 1;
+	int index = 2;
 	if (HasNoteAndInstrument()) {
 		index += 2;
 	}

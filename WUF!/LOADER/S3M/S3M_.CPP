@@ -63,16 +63,22 @@ static bool LoadS3MPattern(int pattern_offset, TS3MPattern &pattern, DWORD f) {
 	pattern.num_rows = 0;
 	int i = 0;
 	pattern.row_indices[pattern.num_rows] = i;
-	while (i < pattern.header.size) {
-		TS3MPatternCellHeader cell_header = *(TS3MPatternCellHeader *)&pattern.cells[i];
-		if (!cell_header.has_effect && !cell_header.has_volume && !cell_header.has_note_and_instrument) {
+	int total_bytes = pattern.header.size - sizeof(pattern.header);
+	while (i < total_bytes) {
+		if (*(BYTE *)&pattern.cells[i] == 0) {
 			++pattern.num_rows;
+			if (pattern.num_rows > 64) {
+				printf("S3M pattern has more than 64 rows.\n");
+				return false;
+			}
 			++i;
-			if (i < pattern.header.size) {
+			if (i < total_bytes) {
 				pattern.row_indices[pattern.num_rows] = i;
 			}
 		}
 		else {
+			TS3MPatternCellHeader cell_header = *(TS3MPatternCellHeader *)&pattern.cells[i];		
+			++i;
 			if (cell_header.has_effect) {
 				i += 2;
 			}
@@ -84,7 +90,6 @@ static bool LoadS3MPattern(int pattern_offset, TS3MPattern &pattern, DWORD f) {
 			}
 		}
 	}
-	++pattern.num_rows;
 
 	return true;
 }
@@ -191,18 +196,17 @@ TS3MSong *LoadS3M(const char *file_path) {
 			if (!LoadS3MPattern(16 * pattern_offsets[j], song->patterns[j], f)) {
 				goto error;
 			}
-BYTE *ptr = (BYTE *)song->patterns[j].cells;
-for (int i = 0; i < song->patterns[j].header.size - sizeof(song->patterns[j].header); ++i, ++ptr) {
-	printf("%dhn ", (unsigned int)*ptr);
-}
-printf("\n");
-getch();
+// BYTE *ptr = (BYTE *)song->patterns[j].cells;
+// for (int i = 0; i < song->patterns[j].header.size - sizeof(song->patterns[j].header); ++i, ++ptr) {
+	// printf("%dhn ", (unsigned int)*ptr);
+// }
+// printf("\n");
+// getch();
 		}
 	}
 	SAFE_DELETE_BUFFER(pattern_offsets);
 	
 	ttl_close(f);
-	
 	return song;
 	
 error:
@@ -257,4 +261,3 @@ const char *TrackerNameFromID(ES3MTrackerID id) {
 		default: return unknown;
 	}
 }
-

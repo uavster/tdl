@@ -2,6 +2,8 @@
 #include "s3m.hpp"
 #include "except.hpp"
 
+#define kMaxRowsPerPage		23
+
 int main() {
 	S3MSong song("a.s3m");
 	if (!song.IsLoaded()) {
@@ -109,9 +111,66 @@ int main() {
 			break;
 		}
 		if (k == 13) {
-			
+			int kk = -1;
+			for (int row_index = 0; row_index < song.Pattern(i)->NumRows(); ++row_index) {
+				if (row_index > 0 && (row_index % kMaxRowsPerPage == 0)) {
+					printf("Press ENTER to continue showing pattern %dn, or ESC to leave.\n", i);
+					kk = -1;
+					while(kk != 27 && kk != 13) {
+						kk = getch();
+					}
+					if (kk == 27) {
+						i = song.NumPatterns(); 
+						break;
+					}
+				}
+				int channel_number = 0;
+				const S3MRow *row = song.Pattern(i)->Row(row_index);
+				printf("%dn: ", row_index);
+				for (S3MCellIterator it = row->begin(); it != row->end(); it++) {
+					// Unused previous channels.
+					for (; channel_number < it.Cell().ChannelNumber(); ++channel_number) {
+						printf("... .. .. ...");
+						if (channel_number < 31) {
+							printf("|");
+						}
+					}
+					++channel_number;
+					// Print cell data.
+					if (it.Cell().HasNoteAndInstrument()) {
+						char note_name[4];
+						it.Cell().GetNoteName(note_name);
+						printf(note_name);
+						printf(" %dn ", it.Cell().Instrument());
+					} else {
+						printf("... .. ");
+					}
+					if (it.Cell().HasVolume()) {
+						printf("%dn ", it.Cell().Volume());
+					} else {
+						printf(".. ");
+					}
+					if (it.Cell().HasEffect()) {
+						char effect_name[2];
+						effect_name[0] = it.Cell().Effect();
+						effect_name[1] = '\0';
+						printf(effect_name);
+						printf("%dhn", it.Cell().EffectValue());
+					} else {
+						printf("...");
+					}
+					if (channel_number < 31) {
+						printf("|");
+					}
+				}
+				printf("\n");
+			}
 			++i;
 			if (i >= song.NumPatterns()) {
+				if (kk != 27) {
+					printf("Press any key to leave.\n");
+					getch();
+				}
 				break;
 			}
 		}

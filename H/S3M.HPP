@@ -33,6 +33,10 @@ public:
 	
 	bool HasNoteAndInstrument() const;
 	BYTE Note() const;
+	char NoteLetter() const;
+	bool IsSemitone() const;
+	BYTE Octave() const;
+	void GetNoteName(char *name) const;
 	BYTE Instrument() const;
 	
 	bool HasVolume() const;
@@ -53,18 +57,19 @@ class S3MCellIterator {
 public:
 	friend class S3MRow;
 
-	void operator++();	
+	S3MCellIterator operator++(int);	
 	void operator+=(int increment);
-	bool operator==(const S3MCellIteator &it) const;
+	bool operator==(const S3MCellIterator &it) const;
+	bool operator!=(const S3MCellIterator &it) const;
 	S3MCell Cell() const;
 
 protected:
-	S3MCellIterator(int num_bytes, const TS3MPatternCellHeader *cells, int byte_index);
+	S3MCellIterator(int num_bytes, const BYTE *cells, int byte_index);
 
 private:
 	int byte_index_;
 	int num_bytes_;
-	const TS3MPatternCellHeader *cells_;
+	const BYTE *cells_;
 };
 
 class S3MRow {
@@ -76,7 +81,7 @@ public:
 
 private:
 	int num_bytes_;
-	const TS3MPatternCellHeader *cells_;
+	const BYTE *cells_;
 };
 
 class S3MPattern {
@@ -92,7 +97,7 @@ protected:
 private:
 	TS3MSong *song_;
 	int index_;
-	const S3MRow rows_[64];
+	S3MRow rows_[64];
 };
 
 class S3MInstrument {

@@ -63,10 +63,10 @@ typedef struct {
 } TS3MPatternHeader;
 
 typedef struct {
-	BYTE		has_effect:1;
-	BYTE		has_volume:1;
-	BYTE		has_note_and_instrument:1;
 	BYTE		channel_number:5;
+	BYTE		has_note_and_instrument:1;
+	BYTE		has_volume:1;
+	BYTE		has_effect:1;
 	// Depending on the flags above, the following fields may follow:
 	// BYTE		note;
 	// BYTE		instrument;
