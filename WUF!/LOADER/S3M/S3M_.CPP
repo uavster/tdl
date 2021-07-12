@@ -67,8 +67,8 @@ static bool LoadS3MPattern(int pattern_offset, TS3MPattern &pattern, DWORD f) {
 	while (i < total_bytes) {
 		if (*(BYTE *)&pattern.cells[i] == 0) {
 			++pattern.num_rows;
-			if (pattern.num_rows > 64) {
-				printf("S3M pattern has more than 64 rows.\n");
+			if (pattern.num_rows > kS3MMaxRows) {
+				printf("S3M pattern has more than %dn rows.\n", kS3MMaxRows);
 				return false;
 			}
 			++i;
@@ -168,8 +168,10 @@ TS3MSong *LoadS3M(const char *file_path) {
 	}
 	
 	// Load S3M footer.
-	if (!read_field(&song->pans, sizeof(song->pans), f)) {
-		goto error;
+	if (song->header.has_custom_pan) {
+		if (!read_field(&song->pans, sizeof(song->pans), f)) {
+			goto error;
+		}
 	}
 	
 	// Load instruments.

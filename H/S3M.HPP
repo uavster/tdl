@@ -8,8 +8,6 @@ typedef ES3MInstrumentPacking S3MInstrumentPacking;
 typedef ES3MTrackerID S3MTrackerID;
 typedef ES3MSamplesFormat S3MSamplesFormat;
 
-#define kEndRowIndex	-1
-
 /*class S3MRowIterator {
 public:
 	friend class S3MPattern;
@@ -100,6 +98,19 @@ private:
 	S3MRow rows_[64];
 };
 
+class S3MChannel {
+public:
+	friend class S3MSong;
+	
+	bool IsEnabled() const;
+	// 0..15, being 0=left and 15=right.
+	BYTE Pan() const;
+	
+private:
+	TS3MSong *song_;
+	BYTE index_;
+};
+
 class S3MInstrument {
 public:
 	friend class S3MSong;
@@ -165,11 +176,13 @@ public:
 	const BYTE Order(const int order_index) const;	
 	const S3MPattern *Pattern(const int pattern_index) const;
 	const S3MInstrument *Instrument(const int instrument_index) const;
-		
+	const S3MChannel *Channel(const int channel_index) const;
+	
 private:
 	TS3MSong *song_;
 	S3MInstrument *instruments_;
 	S3MPattern *patterns_;
+	S3MChannel channels_[kS3MMaxChannels];
 };
 
 #endif

@@ -14,6 +14,13 @@ S3MSong::S3MSong(const char *file_name) {
 			instruments_[i].index_ = i;
 		}
 	}
+	
+	{
+		for (int i = 0; i < kS3MMaxChannels; ++i) {
+			channels_[i].song_ = song_;
+			channels_[i].index_ = i;
+		}
+	}
 
 	patterns_ = new S3MPattern[NumPatterns()];
 	{
@@ -75,6 +82,13 @@ const S3MPattern *S3MSong::Pattern(const int pattern_index) const {
 		return NULL;
 	}
 	return &patterns_[pattern_index];
+}
+
+const S3MChannel *S3MSong::Channel(const int channel_index) const {
+	if (channel_index < 0 || channel_index >= kS3MMaxChannels) {
+		return NULL;
+	}
+	return &channels_[channel_index];
 }
 
 const TS3MPattern &S3MPattern::Pattern() const {
@@ -350,6 +364,17 @@ BYTE S3MCell::EffectValue() const {
 	return cell_[index];
 }
 
+bool S3MChannel::IsEnabled() const {
+	return !song_->header.channels[index_].is_disabled;
+}
+
+BYTE S3MChannel::Pan() const {
+	if (song_->pans.channel_pans[index_].has_custom_pan) {
+		return song_->pans.channel_pans[index_].pan;
+	} else {
+		return song_->header.channels[index_].type < 8 ? 0 : 15;
+	}
+}
 
 // S3MPatternRowIterator::S3MPatternRowIterator(const S3MPattern *pattern, int row) : pattern_(pattern), current_row_(row) {
 // }

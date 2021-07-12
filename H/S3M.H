@@ -9,6 +9,9 @@
   extern "C" {
 #endif
 
+#define kS3MMaxChannels 32
+#define kS3MMaxRows 64
+
 // Constant-size pieces of S3M file format.
 
 #pragma pack(push, 1)
@@ -21,8 +24,8 @@ typedef struct {
 } TS3MLongOffset;
 
 typedef struct {
-	BYTE	is_disabled:1;
 	BYTE	type:7;
+	BYTE	is_disabled:1;
 } TS3MChannel;
 
 typedef enum {
@@ -76,10 +79,10 @@ typedef struct {
 } TS3MPatternCellHeader;
 
 typedef struct {
-	BYTE		reserved1:2;
-	BYTE		has_custom_pan:1;
-	BYTE		reserved2:1;
 	BYTE		pan:4;
+	BYTE		reserved2:1;
+	BYTE		has_custom_pan:1;
+	BYTE		reserved1:2;
 } TS3MChannelPan;
 
 typedef struct {
@@ -125,13 +128,13 @@ typedef struct {
 	BYTE		global_volume;
 	BYTE		initial_speed;
 	BYTE		initial_tempo;
-	BYTE		is_stereo:1;
 	BYTE		master_volume:7;
+	BYTE		is_stereo:1;
 	BYTE		ultra_click_removal;
 	BYTE		has_custom_pan;
 	BYTE		reserved2[8];
 	WORD		offset_special;
-	TS3MChannel	channels[32];
+	TS3MChannel	channels[kS3MMaxChannels];
 } TS3MSongHeader;
 
 #pragma pack(pop)
@@ -146,8 +149,8 @@ typedef struct {
 typedef struct {
 	TS3MPatternHeader header;
 	BYTE *cells;	// Compact array of TS3MPatternCellHeader, each followed by a variable payload.
-	int num_rows;
-	int row_indices[64];
+	BYTE num_rows;
+	WORD row_indices[64];
 } TS3MPattern;
 
 typedef struct {

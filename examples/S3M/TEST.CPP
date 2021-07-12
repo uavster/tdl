@@ -50,6 +50,20 @@ int main() {
 	printf("Amiga limits: ");
 	printf(song.HasAmigaLimits() ? "yes" : "no");
 	printf("\n");
+	printf("Channels: ");
+	for (i = 0; i < kS3MMaxChannels; ++i) {
+		printf("%dn:", i + 1);
+		if (song.Channel(i) == NULL) {
+			continue;
+		}
+		if (!song.Channel(i)->IsEnabled()) {
+			printf("OFF");
+		} else {
+			printf("%dn", song.Channel(i)->Pan()); 
+		}
+		printf(" ");
+	}
+	printf("\n");
 	printf("\nPress ENTER to see instruments, or ESC to leave.\n", i);
 	int k = 0;
 	while(k != 13 && k != 27) {
