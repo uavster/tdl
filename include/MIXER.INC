@@ -4,6 +4,9 @@
 ; Author: Ignacio Mellado Bataller (a.k.a. B52 / the DarkRising)
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
+SPECIFIC_CHANNEL		EQU 0
+ANY_FREE_CHANNEL		EQU 1
+
 ; Sound digital channel structure
 TChannel        STRUC
         ChanWave        dd ?    ; Pointer to TWave structure or NULL if not active
@@ -45,6 +48,9 @@ global  CloseMixer : NEAR
 ; can be played, while triggering sounds with the keyboard, for instance.
 ;
 ; INPUT  : EAX -> TWave structure
+;		   If BH == SPECIFIC_CHANNEL, BL contains the channel number on which to play.
+;		   If BH == ANY_FREE_CHANNEL, the sound is played on any free channel greater 
+;		   or equal than BL.
 ;
 ; OUTPUT : CF = 0 if channel found
 ;               EAX = NO_ERROR

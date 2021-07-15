@@ -197,7 +197,9 @@ smc_tmp	dd ?
 SetMixerCallback	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Looks for a free channel
+; Looks for a free channel at or above a given number
+;
+; INPUT  : BL = Channel number at or above which to search for a free channel
 ;
 ; OUTPUT : CF = 0 if channel found
 ;               EAX -> Free channel
@@ -206,7 +208,12 @@ SetMixerCallback	endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SearchFreeChannel       proc
         movzx   ecx,MaxInputChannels
-        mov     eax,ChannelPool
+		movzx	ebx,bl
+		sub		ecx,ebx
+		mov		eax,size TChannel
+		xor		edx,edx
+		mul		ebx
+        add     eax,ChannelPool
         parse_channels:
                 cmp     [eax.ChanWave],0
                 jz      found_free_chan
@@ -229,6 +236,9 @@ SearchFreeChannel       endp
 ; can be played, while triggering sounds with the keyboard, for instance.
 ;
 ; INPUT  : EAX -> TWave structure
+;		   If BH == SPECIFIC_CHANNEL, BL contains the channel number on which to play.
+;		   If BH == ANY_FREE_CHANNEL, the sound is played on any free channel greater 
+;		   or equal than BL.
 ;
 ; OUTPUT : CF = 0 if channel found
 ;               EAX = NO_ERROR
@@ -236,12 +246,22 @@ SearchFreeChannel       endp
 ;               EAX = NO_FREE_CHANNELS
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 PlaySound       proc
-        mov		ebx,eax
-        call    SearchFreeChannel
-        ErrorCode eax
+		mov		esi,eax
+		cmp		bh,ANY_FREE_CHANNEL
+		jne		channel_specified
+				call    SearchFreeChannel
+				ErrorCode eax
+				jmp		got_channel
+		channel_specified:
+				xor		edx,edx
+				mov		eax,size TChannel
+				movzx	ebx,bl
+				mul		ebx				
+				add		eax,ChannelPool
+		got_channel:
 		push	eax
 		xor		edx,edx
-		mov		eax,[TWave ptr ebx.BaseRate]
+		mov		eax,[TWave ptr esi.BaseRate]
 		shl		eax,8
 		div		MixFreq
 		mov		edx,eax
@@ -249,7 +269,7 @@ PlaySound       proc
 		mov		[TChannel ptr eax.SampleIncrement],edx
         mov     [TChannel ptr eax.CurrentSample],0
 		; Atomic allocation of the channel
-        mov     [TChannel ptr eax.ChanWave],ebx
+        mov     [TChannel ptr eax.ChanWave],esi
 		xor		eax,eax
 		clc		
         ret

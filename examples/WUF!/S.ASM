@@ -21,10 +21,23 @@ POLL_KEY_WITH_DOS		EQU 3
 ; modes impacts performance.
 MAIN_LOOP_METHOD		EQU PROTECTED_MODE_LOOP
 
+NUM_RESERVED_CHANNELS	EQU 4
 
-KeyHandler	proc
-		sub		eax,2
+ReservedChannelKeyHandler	proc
+		sub		eax,Key_1
+		mov		bh,SPECIFIC_CHANNEL
+		mov		bl,al
         mov     eax,[wav_ptr+eax*4]
+        call    PlaySound
+		xor		eax,eax		; Do not chain with default ISR
+		ret
+		endp
+
+AnyFreeChannelKeyHandler	proc
+		sub		eax,Key_5
+        mov     eax,[wav_ptr+eax*4]
+		mov		bh,ANY_FREE_CHANNEL
+		mov		bl,NUM_RESERVED_CHANNELS
         call    PlaySound
 		xor		eax,eax		; Do not chain with default ISR
 		ret
@@ -75,18 +88,33 @@ start:
 		mov		al,Key_ESC
 		mov		ebx,offset EscHandler
 		call	add_key
+		
 		mov		al,Key_1
-		mov		ebx,offset KeyHandler
+		mov		ebx,offset ReservedChannelKeyHandler
 		call	add_key
 		mov		al,Key_2
-		mov		ebx,offset KeyHandler
+		mov		ebx,offset ReservedChannelKeyHandler
 		call	add_key
 		mov		al,Key_3
-		mov		ebx,offset KeyHandler
+		mov		ebx,offset ReservedChannelKeyHandler
 		call	add_key
 		mov		al,Key_4
-		mov		ebx,offset KeyHandler
+		mov		ebx,offset ReservedChannelKeyHandler
 		call	add_key
+		
+		mov		al,Key_5
+		mov		ebx,offset AnyFreeChannelKeyHandler
+		call	add_key
+		mov		al,Key_6
+		mov		ebx,offset AnyFreeChannelKeyHandler
+		call	add_key
+		mov		al,Key_7
+		mov		ebx,offset AnyFreeChannelKeyHandler
+		call	add_key
+		mov		al,Key_8
+		mov		ebx,offset AnyFreeChannelKeyHandler
+		call	add_key
+		
 		mov		ebx,offset DefaultKeyHandler
 		call	add_default_key
 		
@@ -130,7 +158,7 @@ start:
 
 		loading_done:
 		LPrintS ""
-		LPrintS "Press keys 1-4 to mix the four different samples above. ESC to quit."
+		LPrintS "Press keys 1-4 to play the four samples above in channels 0-3, with a one-to-one mapping. Press keys 5-8 to play them in any available channel. ESC to quit."
 		
         wait_loop:
 IF MAIN_LOOP_METHOD EQ PROTECTED_MODE_LOOP
