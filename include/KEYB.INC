@@ -93,3 +93,5 @@ Key_6			equ		7
 Key_7			equ		8
 Key_8			equ		9
 Key_9			equ		10
+Key_Q			equ		10h
+Key_A			equ		1eh
