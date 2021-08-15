@@ -64,7 +64,8 @@ HARDWARE_ERROR      EQU 11 SHL 16
 MIXER_ERROR         EQU 12 SHL 16
 
    NO_FREE_CHANNELS     EQU MIXER_ERROR OR 1
-   
+   FREQUENCY_TOO_HIGH   EQU MIXER_ERROR OR 2
+
 DPMI_ERROR			EQU 13 SHL 16	; Low word is DPMI error code
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�

@@ -51,11 +51,17 @@ global  CloseMixer : NEAR
 ;		   If BH == SPECIFIC_CHANNEL, BL contains the channel number on which to play.
 ;		   If BH == ANY_FREE_CHANNEL, the sound is played on any free channel greater 
 ;		   or equal than BL.
+;		   ECX = Frequency multiplier (fixed point 8.24)
+;		   EDX = Volume multiplier (fixed point 16.16)
+;		   ESI = Sample offset
 ;
-; OUTPUT : CF = 0 if channel found
+; OUTPUT : CF = 0 if no error
 ;               EAX = NO_ERROR
-;          CF = 1 if no free channels
-;               EAX = NO_FREE_CHANNELS
+;				BL = Channel playing the sound
+;          CF = 1 if error
+;               EAX = Error code
+;					NO_FREE_CHANNELS: No available channels
+;					FREQUENCY_TOO_HIGH: Base frequency * multiplier > 16,776,960 Hz
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 global  PlaySound : NEAR
 

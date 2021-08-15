@@ -23,11 +23,14 @@ MAIN_LOOP_METHOD		EQU PROTECTED_MODE_LOOP
 
 NUM_RESERVED_CHANNELS	EQU 4
 
+FREQ_MULTIPLIER_INCREMENT	EQU (1 SHL (24 - 4))	; 1/16 in fixed point 8.24
+
 ReservedChannelKeyHandler	proc
 		sub		eax,Key_1
 		mov		bh,SPECIFIC_CHANNEL
 		mov		bl,al
         mov     eax,[wav_ptr+eax*4]
+		mov		ecx,frequency_multiplier
         call    PlaySound
 		xor		eax,eax		; Do not chain with default ISR
 		ret
@@ -38,6 +41,7 @@ AnyFreeChannelKeyHandler	proc
         mov     eax,[wav_ptr+eax*4]
 		mov		bh,ANY_FREE_CHANNEL
 		mov		bl,NUM_RESERVED_CHANNELS
+		mov		ecx,frequency_multiplier
         call    PlaySound
 		xor		eax,eax		; Do not chain with default ISR
 		ret
@@ -54,6 +58,21 @@ EscHandler	proc
 IF MAIN_LOOP_METHOD NE PROTECTED_MODE_LOOP
 		inc 	eax			; Chain with default ISR
 ENDIF
+		ret
+		endp
+		
+IncFreqMultiplier	proc
+		add		frequency_multiplier,FREQ_MULTIPLIER_INCREMENT
+		ret
+		endp
+		
+DecFreqMultiplier	proc
+		cmp		frequency_multiplier,FREQ_MULTIPLIER_INCREMENT
+		jb		zero_freq_multiplier
+				sub		frequency_multiplier,FREQ_MULTIPLIER_INCREMENT
+				ret
+		zero_freq_multiplier:
+		mov		frequency_multiplier,0
 		ret
 		endp
 
@@ -115,6 +134,13 @@ start:
 		mov		ebx,offset AnyFreeChannelKeyHandler
 		call	add_key
 		
+		mov		al,Key_Q
+		mov		ebx,offset IncFreqMultiplier
+		call	add_key
+		mov		al,Key_A
+		mov		ebx,offset DecFreqMultiplier
+		call	add_key
+		
 		mov		ebx,offset DefaultKeyHandler
 		call	add_default_key
 		
@@ -158,7 +184,7 @@ start:
 
 		loading_done:
 		LPrintS ""
-		LPrintS "Press keys 1-4 to play the four samples above in channels 0-3, with a one-to-one mapping. Press keys 5-8 to play them in any available channel. ESC to quit."
+		LPrintS "Keys 1-4 to play the four samples above in channels 0-3, with a one-to-one mapping. Keys 5-8 to play them in any available channel. Q/A to increase/decrease frequency multiplier. ESC to quit."
 		
         wait_loop:
 IF MAIN_LOOP_METHOD EQ PROTECTED_MODE_LOOP
@@ -221,6 +247,7 @@ wrate           dd ?
 wbps			dd ?
 wcps			dd ?
 exit_loop		db 0
+frequency_multiplier	dd 1 SHL 24	; Fixed point 8.24
 
 comment #
 sound_struc     TWave <0,offset my_sound,50000,44000,?>

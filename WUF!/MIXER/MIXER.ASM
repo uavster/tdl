@@ -202,7 +202,9 @@ SetMixerCallback	endp
 ; INPUT  : BL = Channel number at or above which to search for a free channel
 ;
 ; OUTPUT : CF = 0 if channel found
-;               EAX -> Free channel
+;				EAX = NO_ERROR
+;               BL = Free channel number
+;				ECX -> Pointer to free channel's TChannel structure
 ;          CF = 1 if no free channels
 ;               EAX = NO_FREE_CHANNELS
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -218,12 +220,15 @@ SearchFreeChannel       proc
                 cmp     [eax.ChanWave],0
                 jz      found_free_chan
                 add     eax,size TChannel
+				inc		bl
         loop    parse_channels
-        stc
         mov     eax,NO_FREE_CHANNELS
+        stc
         ret
 
         found_free_chan:
+		mov		ecx,eax
+		xor		eax,eax
         clc
         ret
 SearchFreeChannel       endp
@@ -235,22 +240,33 @@ SearchFreeChannel       endp
 ; TODO: make it reentrant with atomic allocation of channels, so that a module
 ; can be played, while triggering sounds with the keyboard, for instance.
 ;
-; INPUT  : EAX -> TWave structure
-;		   If BH == SPECIFIC_CHANNEL, BL contains the channel number on which to play.
+; INPUT  : EAX = Pointer to TWave structure of sample to play in channel
+;		   If BH == SPECIFIC_CHANNEL, BL contains the number of the channel on 
+;		   which to play.
 ;		   If BH == ANY_FREE_CHANNEL, the sound is played on any free channel greater 
 ;		   or equal than BL.
+;		   ECX = Frequency multiplier (fixed point 8.24)
+;		   EDX = Volume multiplier (fixed point 16.16)
+;		   ESI = Sample offset
 ;
-; OUTPUT : CF = 0 if channel found
+; OUTPUT : CF = 0 if no error
 ;               EAX = NO_ERROR
-;          CF = 1 if no free channels
-;               EAX = NO_FREE_CHANNELS
+;				BL = Channel playing the sound
+;          CF = 1 if error
+;               EAX = Error code
+;					NO_FREE_CHANNELS: No available channels
+;					FREQUENCY_TOO_HIGH: Base frequency * multiplier > 16,776,960 Hz
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 PlaySound       proc
 		mov		esi,eax
 		cmp		bh,ANY_FREE_CHANNEL
 		jne		channel_specified
+				push	ecx
 				call    SearchFreeChannel
+				pop		edi
 				ErrorCode eax
+				mov		eax,ecx
+				mov		ecx,edi
 				jmp		got_channel
 		channel_specified:
 				xor		edx,edx
@@ -260,10 +276,24 @@ PlaySound       proc
 				add		eax,ChannelPool
 		got_channel:
 		push	eax
-		xor		edx,edx
+		; EDX:EAX = base_frequency * (multiplier << 24)
 		mov		eax,[TWave ptr esi.BaseRate]
-		shl		eax,8
+		mul		ecx
+		; EAX = (base_frequency * (multiplier << 24)) >> 16
+		cmp		edx,0ffffh
+		jbe		resulting_freq_ok
+				mov		eax,FREQUENCY_TOO_HIGH
+				stc
+				ret
+		resulting_freq_ok:
+		shr		eax,16
+		mov		ecx,edx
+		shl		ecx,16
+		or		eax,ecx
+		shr		edx,16
+		; EAX = ((base_frequency * (multiplier << 24)) >> 16) / mixing_frequency
 		div		MixFreq
+		; EDX = (((Base frequency * (multiplier << 24)) >> 16) / mixing_frequency)
 		mov		edx,eax
 		pop		eax
 		mov		[TChannel ptr eax.SampleIncrement],edx
@@ -274,6 +304,27 @@ PlaySound       proc
 		clc		
         ret
 PlaySound       endp
+
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Sets the properties of a channel
+;
+; INPUT  : BL = Channel number
+; 		   EAX = Pointer to TWave structure of sample to play in channel, or null
+;		   to leave it as is.
+;		   ECX = Frequency multiplier (fixed point 16.16)
+;		   DL = Volume (0..64)
+;		   DH = Panning (?..?)
+;
+; OUTPUT : CF = 0 if channel found
+;               EAX = NO_ERROR
+;				BL = Channel playing the sound
+;          CF = 1 if no free channels
+;               EAX = NO_FREE_CHANNELS
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetChannelProperties	proc
+		ret
+SetChannelProperties	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Mixes an active channel on a mono output buffer
