@@ -103,6 +103,144 @@ tick_sequence	db "|/-\"
 		
 start:
         InitDPMI
+
+
+		mov		ecx,65*256*4*2
+		call	malloc
+;		ErrorCode MALLOC_ERROR
+		mov		VolumeTables,ebx
+		push	ds
+		pop		es
+		mov		edi,ebx
+		cld
+		xor		ecx,ecx
+		loop_volumes:
+				xor		ebx,ebx
+				loop_sample_values:
+						mov		eax,ecx
+						movsx	edx,bl
+						imul	edx
+						sal		eax,8
+						stosd
+				inc		bl
+				jnz		loop_sample_values
+		inc		ecx
+		cmp		ecx,65
+		jnz		loop_volumes
+
+		xor		ecx,ecx
+		loop_volumes2:
+				xor		ebx,ebx
+				loop_sample_values2:
+						mov		eax,ecx
+						movzx	edx,bl
+						imul	edx
+						sal		eax,8
+						stosd
+				inc		bl
+				jnz		loop_sample_values2
+		inc		ecx
+		cmp		ecx,65
+		jnz		loop_volumes2
+		
+fstcw word ptr test1
+or test1,(1 SHL 10) OR (1 SHL 11)
+fldcw word ptr test1
+mov		ebx,0
+test_table_mults_16_0:
+mov		eax,-32768; -32768	;-30789
+test_table_mults_16:
+push	eax ebx
+		
+mov		esi,VolumeTables
+mov		edx,ebx
+shl		edx,8+2
+lea		esi,[esi+edx]
+sal		ebx,8
+
+; TODO: Positives are floored, but negatives are ceiled.
+mov		ecx,eax
+xor		edx,edx
+mov		dl,ah
+mov		eax,[esi+edx*4]
+mov		dl,cl
+
+mov		edx,[esi+edx*4+65*256*4]
+
+		; mov		edx,[esi+edx*4]
+		; mov		ecx,edx
+		; mov		edx,1
+		; cmp		ecx,80000000h
+		; sbb		edx,0		
+		; shl		edx,16
+		; add		edx,ecx
+		
+sar		edx,8
+add		eax,edx
+sar		eax,6
+
+		mov		ecx,1
+		cmp		eax,80000000h
+		sbb		ecx,0
+		add		eax,ecx
+		
+
+pop ebx ecx
+push ecx ebx
+
+mov edi,eax
+mov test1,ecx
+fild test1
+mov test1,ebx
+fild test1
+fmulp
+mov test1,64
+fild test1
+fdivp
+fistp test1
+mov ecx,test1
+; mov eax,ecx
+; imul ebx
+; sar eax,6
+; mov ecx,eax
+
+pop ebx eax
+
+cmp edi,ecx
+jz all_good
+pushad
+mov dividend,eax
+mov divisor,ebx
+mov result,ecx
+mov result2,edi
+mov esi,offset msg_test
+call printf
+popad
+all_good:
+
+inc eax
+cmp	eax,32767
+jnz test_table_mults_16
+inc ebx
+cmp ebx,65
+jnz test_table_mults_16_0
+mov ah,4ch
+int 21h
+dividend dd ?
+divisor dd ?
+result dd ?
+result2 dd ?
+test1 dd ?
+
+msg_test db "%dhn"
+		dd offset dividend
+		db "/%dhn"
+		dd offset divisor		
+		db "=%dhn"
+		dd offset result
+		db "!=%dhn"
+		dd offset result2
+		db " ",0
 		
 		mov		al,Key_ESC
 		mov		ebx,offset EscHandler
@@ -269,5 +407,5 @@ ENDM
 #
 .data?
 wav_ptr			dd ?,?,?,?
-
+VolumeTables	dd ?
 end start
