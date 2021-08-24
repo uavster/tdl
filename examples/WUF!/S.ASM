@@ -145,7 +145,13 @@ fstcw word ptr test1
 or test1,(1 SHL 10) OR (1 SHL 11)
 fldcw word ptr test1
 mov		ebx,0
+
 test_table_mults_16_0:
+mov		esi,VolumeTables
+mov		edx,ebx
+shl		edx,8+2
+lea		esi,[esi+edx]
+
 mov		eax,-32768; 0ffffa3fch; -32768	;-30789
 test_table_mults_16:
 push	eax ebx
