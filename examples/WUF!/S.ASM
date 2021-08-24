@@ -120,7 +120,6 @@ start:
 						mov		eax,ecx
 						movsx	edx,bl
 						imul	edx
-						sal		eax,8
 						stosd
 				inc		bl
 				jnz		loop_sample_values
@@ -135,7 +134,6 @@ start:
 						mov		eax,ecx
 						movzx	edx,bl
 						imul	edx
-						sal		eax,8
 						stosd
 				inc		bl
 				jnz		loop_sample_values2
@@ -148,7 +146,7 @@ or test1,(1 SHL 10) OR (1 SHL 11)
 fldcw word ptr test1
 mov		ebx,0
 test_table_mults_16_0:
-mov		eax,-32768; -32768	;-30789
+mov		eax,-32768; 0ffffa3fch; -32768	;-30789
 test_table_mults_16:
 push	eax ebx
 		
@@ -156,34 +154,41 @@ mov		esi,VolumeTables
 mov		edx,ebx
 shl		edx,8+2
 lea		esi,[esi+edx]
-sal		ebx,8
 
 ; TODO: Positives are floored, but negatives are ceiled.
 mov		ecx,eax
+
 xor		edx,edx
-mov		dl,ah
-mov		eax,[esi+edx*4]
-mov		dl,cl
+cmp		eax,7fffffffh
+sbb		edx,0
+not		edx
+mov		ebx,edx
+neg		ebx
 
-mov		edx,[esi+edx*4+65*256*4]
+sar		eax,8
+xor		eax,edx
+mov		eax,[esi+eax*4]
+xor		eax,edx
+add		eax,ebx
+sal		eax,8
 
-		; mov		edx,[esi+edx*4]
-		; mov		ecx,edx
-		; mov		edx,1
-		; cmp		ecx,80000000h
-		; sbb		edx,0		
-		; shl		edx,16
-		; add		edx,ecx
-		
-sar		edx,8
-add		eax,edx
+and		ecx,0ffh
+xor		cl,dl
+;add		cl,bl
+mov		ecx,[esi+ecx*4+65*256*4]
+xor		ecx,edx
+add		ecx,ebx
+
+shl		ebx,5
+add		ecx,ebx
+add		ecx,edx
+
+add		eax,ecx
+; mov		ecx,((1 SHL 6) / 2) - 1		; Rounding
+; xor		ecx,edx
+; add		ecx,ebx
+; sub		eax,ecx
 sar		eax,6
-
-		mov		ecx,1
-		cmp		eax,80000000h
-		sbb		ecx,0
-		add		eax,ecx
-		
 
 pop ebx ecx
 push ecx ebx
@@ -206,24 +211,49 @@ mov ecx,test1
 
 pop ebx eax
 
+;int 3
+
 cmp edi,ecx
 jz all_good
-pushad
-mov dividend,eax
-mov divisor,ebx
-mov result,ecx
-mov result2,edi
-mov esi,offset msg_test
-call printf
-popad
+; pushad
+; mov dividend,eax
+; mov divisor,ebx
+; mov result,ecx
+; mov result2,edi
+; mov esi,offset msg_test
+; call printf
+; popad
+sub ecx,edi
+jge not_neg
+neg ecx
+not_neg:
+add error_accum,ecx
+inc num_errors
 all_good:
+inc total_cases
 
 inc eax
-cmp	eax,32767
+cmp	eax,32768
 jnz test_table_mults_16
 inc ebx
 cmp ebx,65
 jnz test_table_mults_16_0
+
+mov test1,100
+fild test1
+fild num_errors
+fidiv total_cases
+fmulp
+fstp error_percent
+
+fild error_accum
+fidiv num_errors
+fabs
+fstp avg_error
+
+mov esi,offset summary_txt
+call printf
+
 mov ah,4ch
 int 21h
 dividend dd ?
@@ -231,6 +261,11 @@ divisor dd ?
 result dd ?
 result2 dd ?
 test1 dd ?
+num_errors dd 0
+total_cases dd 0
+error_percent dq 0
+error_accum dd 0
+avg_error dq 0
 
 msg_test db "%dhn"
 		dd offset dividend
@@ -242,6 +277,16 @@ msg_test db "%dhn"
 		dd offset result2
 		db " ",0
 		
+summary_txt db "Total errors: %dn"
+			dd offset num_errors
+			db " / %dn"
+			dd offset total_cases
+			db " = %dfn"
+			dd offset error_percent
+			db "%%  |Avg. error|: %dfn"
+			dd offset avg_error
+			db 13,10,0
+
 		mov		al,Key_ESC
 		mov		ebx,offset EscHandler
 		call	add_key
