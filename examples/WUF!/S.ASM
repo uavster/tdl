@@ -155,9 +155,6 @@ mov		edx,ebx
 shl		edx,8+2
 lea		esi,[esi+edx]
 
-; TODO: Positives are floored, but negatives are ceiled.
-mov		ecx,eax
-
 xor		edx,edx
 cmp		eax,7fffffffh
 sbb		edx,0
@@ -165,30 +162,21 @@ not		edx
 mov		ebx,edx
 neg		ebx
 
-sar		eax,8
-xor		eax,edx
-mov		eax,[esi+eax*4]
 xor		eax,edx
 add		eax,ebx
-sal		eax,8
+mov		ecx,eax
 
-and		ecx,0ffh
-xor		cl,dl
-;add		cl,bl
+shr		eax,8
+mov		eax,[esi+eax*4+65*256*4]
+shl		eax,8
+
+xor		ch,ch
 mov		ecx,[esi+ecx*4+65*256*4]
-xor		ecx,edx
-add		ecx,ebx
-
-shl		ebx,5
-add		ecx,ebx
-add		ecx,edx
 
 add		eax,ecx
-; mov		ecx,((1 SHL 6) / 2) - 1		; Rounding
-; xor		ecx,edx
-; add		ecx,ebx
-; sub		eax,ecx
-sar		eax,6
+shr		eax,6
+xor		eax,edx
+add		eax,ebx
 
 pop ebx ecx
 push ecx ebx
