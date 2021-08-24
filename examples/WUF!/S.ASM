@@ -149,21 +149,15 @@ test_table_mults_16_0:
 mov		eax,-32768; 0ffffa3fch; -32768	;-30789
 test_table_mults_16:
 push	eax ebx
-		
+
 mov		esi,VolumeTables
 mov		edx,ebx
 shl		edx,8+2
 lea		esi,[esi+edx]
 
-xor		edx,edx
 cmp		eax,7fffffffh
-sbb		edx,0
-not		edx
-mov		ebx,edx
-neg		ebx
+ja		is_negative
 
-xor		eax,edx
-add		eax,ebx
 mov		ecx,eax
 
 shr		eax,8
@@ -175,8 +169,25 @@ mov		ecx,[esi+ecx*4+65*256*4]
 
 add		eax,ecx
 shr		eax,6
-xor		eax,edx
-add		eax,ebx
+
+jmp 	done_sample
+
+is_negative:
+neg		eax
+mov		ecx,eax
+
+shr		eax,8
+mov		eax,[esi+eax*4+65*256*4]
+shl		eax,8
+
+xor		ch,ch
+mov		ecx,[esi+ecx*4+65*256*4]
+
+add		eax,ecx
+shr		eax,6
+neg		eax
+
+done_sample:
 
 pop ebx ecx
 push ecx ebx
@@ -242,8 +253,8 @@ fstp avg_error
 mov esi,offset summary_txt
 call printf
 
-mov ah,4ch
-int 21h
+Exit
+
 dividend dd ?
 divisor dd ?
 result dd ?
