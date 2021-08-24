@@ -156,43 +156,16 @@ mov		eax,-32768; 0ffffa3fch; -32768	;-30789
 test_table_mults_16:
 push	eax ebx
 
-mov		esi,VolumeTables
-mov		edx,ebx
-shl		edx,8+2
-lea		esi,[esi+edx]
-
 cmp		eax,7fffffffh
 ja		is_negative
-
-mov		ecx,eax
-
-shr		eax,8
-mov		eax,[esi+eax*4+65*256*4]
-shl		eax,8
-
-xor		ch,ch
-mov		ecx,[esi+ecx*4+65*256*4]
-
-add		eax,ecx
-shr		eax,6
-
-jmp 	done_sample
-
+imul	ebx
+sar		eax,6
+jmp		done_sample
 is_negative:
 neg		eax
-mov		ecx,eax
-
-shr		eax,8
-mov		eax,[esi+eax*4+65*256*4]
-shl		eax,8
-
-xor		ch,ch
-mov		ecx,[esi+ecx*4+65*256*4]
-
-add		eax,ecx
-shr		eax,6
+imul	ebx
+sar		eax,6
 neg		eax
-
 done_sample:
 
 pop ebx ecx
