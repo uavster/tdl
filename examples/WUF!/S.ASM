@@ -156,8 +156,8 @@ mov		eax,-32768; 0ffffa3fch; -32768	;-30789
 test_table_mults_16:
 push	eax ebx
 
-cmp		eax,7fffffffh
-ja		is_negative
+cmp		eax,0
+jl		is_negative
 imul	ebx
 sar		eax,6
 jmp		done_sample
