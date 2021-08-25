@@ -86,9 +86,14 @@ DRIVER_VGA_ErrorExit:
 
 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ;³  Desinicializacion del driver
+;³	Input: AL = 0 for verbose, 1 for silent
+;³	Output: EAX = SGL_OK, CF = 0
 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 DRIVER_VGA_UnInit   proc
+			or		al,al
+			jnz		drvga_uninit_silent
             eprint   DRVGA_text2
+			drvga_uninit_silent:
             mov     eax, SGL_OK
             clc
             ret

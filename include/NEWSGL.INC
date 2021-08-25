@@ -76,6 +76,7 @@ TMODE   ends
 ; 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
     global      InitSGL             : near
     global      UnInitSGL           : near
+	global		UnInitSGLSilently	: near
     global      SetVideoMode        : near
     global      UnSetVideoMode      : near
     global      GetAvailPage        : near

@@ -378,9 +378,31 @@ ExitAfterCall    MACRO FinalCall
         jmp     EndOfProgram
 ENDM
 
+ExitSilentlyAfterCall    MACRO FinalCall
+        call    EndVirtualFrameRate
+        ErrorExit "Error: Unable to uninitialize virtual frame rate"
+        call    disable_keyb
+		ErrorExit "Error: Unable to uninitialize keyboard handler"
+        call    CloseDMA
+        ErrorExit "Error: Unable to uninitialize DMA extensions"
+        call    UnInitSGLSilently
+        ErrorExit "Error: Unable to uninitialize graphic system"
+		call	IRQUninit
+		ErrorExit "Error: Unable to uninitialize IRQ library"
+        call	FinalCall
+        jmp     EndOfProgram
+ENDM
+
 Exit	MACRO
 Local	empty_call
 		ExitAfterCall empty_call		
+empty_call:
+		ret
+ENDM		
+
+ExitSilently	MACRO
+Local	empty_call
+		ExitSilentlyAfterCall empty_call		
 empty_call:
 		ret
 ENDM		

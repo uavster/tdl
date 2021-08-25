@@ -594,17 +594,23 @@ DRIVER_VBE_ErrorExit2:
             endp
 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ;³  Desinicializacion del driver
+;³	Input: AL = 0 for verbose, 1 for silent
+;³	Output: EAX = SGL_OK, CF = 0
 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 DRIVER_VBE_UnInit   proc
             ;   Liberamos la memoria base alojada
+			push	eax
             mov     ax, 101h
             mov     dx, BaseMemorySelector
             int     31h
+			pop		eax
             jc      VBE_UnInit_ExitError
 
+			or		al,al
+			jnz		drvbe_uninit_silent
             ;   Texto de salida
-
             eprint  DRVBE_text2
+			drvbe_uninit_silent:
 
             mov     eax, SGL_OK
             clc

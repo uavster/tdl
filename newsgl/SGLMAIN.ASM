@@ -219,7 +219,7 @@ ADDMODE_ErrorExit:
 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ;³    UnInitSGL:        Funcion para desinicializar el interfaz de video.
 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-;³      Entrada:        Nada.
+;³      Entrada:        AL = 0 for verbose output, or 1 for silent output.
 ;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ;³      Salida:         Si hay carry
 ;³                           Error al finalizar la libreria
@@ -231,7 +231,21 @@ ADDMODE_ErrorExit:
 SGL_text4   db '   ş Shutting down drivers...',13,10,0
 SGL_text5   db '   ş SGL uninstalled ok!',13,10,0
 .code
-UnInitSGL   proc
+
+; Default verbose uninitialization
+UnInitSGL	proc
+			xor		al,al
+			call	UnInitSGL_
+			ret
+			endp
+
+UnInitSGLSilently	proc
+			mov		al,1
+			call	UnInitSGL_
+			ret
+			endp
+			
+UnInitSGL_  proc
 ; Evitamos k se modifike EBP para ser compatible con C
             push    ebp
 
@@ -246,25 +260,38 @@ UnInitSGL   proc
 
             cmp     insideMode, -1                      ; B52
             jne     dont_reset_mode                     ; B52
+			push	eax
             mov     eax, 3  ; modo texto 80x25
             call    UnSetVideoMode
+			pop		eax
             dont_reset_mode:                            ; B52
 
+			or		al,al
+			jnz		silent_uninit0
 ; Imprimimos esos textos explicativos mu chulis
+			push	eax
             eprint   SGL_text1
             eprint   SGL_text4
-
+			pop		eax
+			silent_uninit0:
 ; Inicializamos todos los drivers disponibles
 
+			push	eax
             Call    DRIVER_VGA_UnInit
+			pop		eax
             jc      SGL_ErrorExit
+			push	eax
             Call    DRIVER_VBE_UnInit
+			pop		eax
             jc      SGL_ErrorExit
 ;            Call    DRIVER_VBEAF_UnInit
 ;            jc      SGL_ErrorExit
 
+			or		al,al
+			jnz		silent_uninit1
             eprint   SGL_text5
-
+			silent_uninit1:
+			
             mov     InsideSGL, 0
             mov     eax, SGL_OK
             clc
