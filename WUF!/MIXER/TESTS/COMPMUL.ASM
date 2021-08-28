@@ -53,7 +53,7 @@ GenerateExpecteResults proc
 	pop		eax
 	
 	; Create multiplication table for LUT tests
-	mov		ecx,65*256*4
+	mov		ecx,65*256*4*2
 	call	malloc
 	ErrorExit "Unable to allocate multiplication table."
 	mov		volume_table,ebx
@@ -62,6 +62,7 @@ GenerateExpecteResults proc
 	mov		edi,ebx
 	cld
 	
+	; Unsigned table
 	xor		ecx,ecx
 	loop_volumes:
 			xor		ebx,ebx
@@ -75,6 +76,21 @@ GenerateExpecteResults proc
 	inc		ecx
 	cmp		ecx,65
 	jnz		loop_volumes
+	
+	; Signed table
+	xor		ecx,ecx
+	loop_volumes_s:
+			xor		ebx,ebx
+			loop_sample_values_s:
+					mov		eax,ecx
+					movsx	edx,bl
+					imul	edx
+					stosd
+			inc		bl
+			jnz		loop_sample_values_s
+	inc		ecx
+	cmp		ecx,65
+	jnz		loop_volumes_s
 	ret
 endp
 
@@ -242,6 +258,64 @@ BranchlessVolumeTableTest proc
 	ret
 endp
 
+BranchlessApproxVolumeTableTest proc
+	cld
+	mov		edi,results_table
+	; tmp = Volume
+	mov		tmp,0
+	branchless_approx_table_volume_loop:
+		mov		esi,volume_table
+		mov		edx,tmp
+		shl		edx,8+2
+		lea		esi,[esi+edx]
+		; EBP = Sample value
+		mov		ebp,-32768
+		branchless_approx_table_sample_loop:
+			mov		eax,ebp
+			mov		ecx,ebp
+
+			xor		edx,edx
+			cmp		eax,7fffffffh
+			sbb		edx,0
+			not		edx
+			mov		ebx,edx
+			neg		ebx
+
+			sar		eax,8
+			xor		eax,edx
+			mov		eax,[esi+eax*4+65*256*4]
+			xor		eax,edx
+			add		eax,ebx
+			sal		eax,8
+
+			and		ecx,0ffh
+			xor		cl,dl
+			;add		cl,bl
+			mov		ecx,[esi+ecx*4]
+			xor		ecx,edx
+			add		ecx,ebx
+
+			shl		ebx,5
+			add		ecx,ebx
+			add		ecx,edx
+
+			add		eax,ecx
+			; mov		ecx,((1 SHL 6) / 2) - 1		; Rounding
+			; xor		ecx,edx
+			; add		ecx,ebx
+			; sub		eax,ecx
+			sar		eax,6
+
+			stosw
+		inc 	ebp
+		cmp		ebp,32768
+		jnz 	branchless_approx_table_sample_loop
+	inc 	tmp
+	cmp 	tmp,NUM_VOLUME_LEVELS
+	jnz 	branchless_approx_table_volume_loop
+	ret
+endp
+
 ; Input:
 ;	EBX -> Test procedure to call
 ;	EDX -> Name of the test
@@ -294,6 +368,9 @@ RunTest	proc
 	fild	tmp	
 	mov		tmp,NUM_VOLUME_LEVELS*65536
 	fidiv	tmp
+	mov		tmp,100
+	fild	tmp
+	fmulp
 	fstp	test_mismatch_ratio
 	mov		tmp,edx
 	mov		esi,offset test_results_msg1
@@ -306,7 +383,7 @@ RunTest	proc
 	jz		no_mismatches
 		fild	tmp
 		mov		tmp,ebx
-		fdiv	tmp
+		fidiv	tmp
 		fstp	test_avg_error
 	no_mismatches:
 	mov		esi,offset test_results_msg2
@@ -328,6 +405,11 @@ RunTests proc
 	mov		ebx,offset BranchlessVolumeTableTest
 	mov		edx,offset branchless_volume_table_test_name
 	call	RunTest
+	
+	mov 	ebx,offset BranchlessApproxVolumeTableTest
+	mov		edx,offset branchless_approx_volume_table_test_name
+	call	RunTest
+	
 	ret
 endp
 
@@ -382,9 +464,10 @@ test_results_msg1	db ", mismatch %dfn"
 test_results_msg2	db ", avg.|error| %dfn"
 					dd offset test_avg_error					
 					db 13,10,0
-branched_imul_test_name				db "Branched IMUL",0
-branched_volume_table_test_name		db "Branched table",0
-branchless_volume_table_test_name	db "Branchless table",0
+branched_imul_test_name						db "Branched IMUL",0
+branched_volume_table_test_name				db "Branched table",0
+branchless_volume_table_test_name			db "Branchless table",0
+branchless_approx_volume_table_test_name	db "Branchless approx. table",0
 
 .data?
 tmp					dd ?
