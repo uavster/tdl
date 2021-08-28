@@ -199,25 +199,46 @@ endp
 BranchlessVolumeTableTest proc
 	cld
 	mov		edi,results_table
-	; EBX = Volume
-	xor		ebx,ebx	
+	; tmp = Volume
+	mov		tmp,0
 	branchless_table_volume_loop:
 		mov		esi,volume_table
-		mov		edx,ebx
+		mov		edx,tmp
 		shl		edx,8+2
 		lea		esi,[esi+edx]
-		; EDX = Sample value
-		mov		edx,-32768
+		; EBP = Sample value
+		mov		ebp,-32768
 		branchless_table_sample_loop:
-			mov		eax,edx
+			mov		eax,ebp
+			xor		edx,edx
+			cmp		eax,7fffffffh
+			sbb		edx,0
+			not		edx
+			mov		ebx,edx
+			neg		ebx
+
+			xor		eax,edx
+			add		eax,ebx
+			mov		ecx,eax
+
+			shr		eax,8
+			mov		eax,[esi+eax*4]
+			shl		eax,8
+
+			xor		ch,ch
+			add		eax,[esi+ecx*4]
+
+			shr		eax,6
+			xor		eax,edx
+			add		eax,ebx
 
 			stosw
-		inc 	edx
-		cmp		edx,32768
-		jnz 	branched_table_sample_loop
-	inc 	ebx
-	cmp 	ebx,NUM_VOLUME_LEVELS
-	jnz 	branched_table_volume_loop
+		inc 	ebp
+		cmp		ebp,32768
+		jnz 	branchless_table_sample_loop
+	inc 	tmp
+	cmp 	tmp,NUM_VOLUME_LEVELS
+	jnz 	branchless_table_volume_loop
 	ret
 endp
 
@@ -304,6 +325,9 @@ RunTests proc
 	mov		edx,offset branched_volume_table_test_name
 	call	RunTest
 	
+	mov		ebx,offset BranchlessVolumeTableTest
+	mov		edx,offset branchless_volume_table_test_name
+	call	RunTest
 	ret
 endp
 
@@ -360,6 +384,8 @@ test_results_msg2	db ", avg.|error| %dfn"
 					db 13,10,0
 branched_imul_test_name				db "Branched IMUL",0
 branched_volume_table_test_name		db "Branched table",0
+branchless_volume_table_test_name	db "Branchless table",0
+
 .data?
 tmp					dd ?
 timer_ticks			dd ?
