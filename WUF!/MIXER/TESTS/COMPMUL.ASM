@@ -316,6 +316,72 @@ BranchlessApproxVolumeTableTest proc
 	ret
 endp
 
+BranchlessImulTest proc
+	cld
+	mov		edi,results_table
+	; ESI = Volume
+	xor		esi,esi
+	branchless_imul_volume_loop:
+		; EBP = Sample value
+		mov		ebp,-32768
+		branchless_imul_sample_loop:
+			mov		eax,ebp
+			; if eax >= 0 -> ecx = ebx = 0
+			; if eax < 0 -> ecx = 0ffffffffh, ebx = 1
+			xor		ecx,ecx
+			cmp		eax,7fffffffh
+			sbb		ecx,0
+			not		ecx
+			mov		ebx,ecx
+			neg		ebx
+			
+			; neg eax == xor eax,ecx; add eax,ebx
+			xor		eax,ecx
+			add		eax,ebx
+			imul	esi
+			sar		eax,6
+			; neg eax == xor eax,ecx; add eax,ebx
+			xor		eax,ecx
+			add		eax,ebx
+			
+			stosw
+		inc 	ebp
+		cmp		ebp,32768
+		jnz 	branchless_imul_sample_loop
+	inc 	esi
+	cmp 	esi,NUM_VOLUME_LEVELS
+	jnz 	branchless_imul_volume_loop
+	ret
+endp
+
+ApproxIMUL proc
+	cld
+	mov		edi,results_table
+	; EBX = Volume
+	xor		ebx,ebx
+	approx_imul_volume_loop:
+		; EBP = Sample value
+		mov		ebp,-32768
+		approx_imul_sample_loop:
+			mov		eax,ebp		
+			; mov		ecx,eax
+			; neg		ecx
+			; cmp		ecx,7fffffffh
+			; sbb		eax,0
+			imul	ebx
+			sar		eax,6			
+			; cmp		ecx,7fffffffh
+			; adc		eax,0
+			stosw
+		inc 	ebp
+		cmp		ebp,32768
+		jnz 	approx_imul_sample_loop
+	inc 	ebx
+	cmp 	ebx,NUM_VOLUME_LEVELS
+	jnz 	approx_imul_volume_loop
+	ret
+endp
+
 ; Input:
 ;	EBX -> Test procedure to call
 ;	EDX -> Name of the test
@@ -398,6 +464,10 @@ RunTests proc
 	mov		edx,offset branched_imul_test_name
 	call	RunTest
 	
+	mov		ebx,offset BranchlessImulTest
+	mov		edx,offset branchless_imul_test_name
+	call	RunTest
+	
 	mov		ebx,offset BranchedVolumeTableTest
 	mov		edx,offset branched_volume_table_test_name
 	call	RunTest
@@ -409,7 +479,10 @@ RunTests proc
 	mov 	ebx,offset BranchlessApproxVolumeTableTest
 	mov		edx,offset branchless_approx_volume_table_test_name
 	call	RunTest
-	
+
+	mov		ebx,offset ApproxIMUL
+	mov		edx,offset approx_imul_test_name
+	call 	RunTest
 	ret
 endp
 
@@ -468,6 +541,8 @@ branched_imul_test_name						db "Branched IMUL",0
 branched_volume_table_test_name				db "Branched table",0
 branchless_volume_table_test_name			db "Branchless table",0
 branchless_approx_volume_table_test_name	db "Branchless approx. table",0
+branchless_imul_test_name					db "Branchless IMUL",0
+approx_imul_test_name						db "Approx. IMUL",0
 
 .data?
 tmp					dd ?
