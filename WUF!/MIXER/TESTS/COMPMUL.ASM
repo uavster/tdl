@@ -172,40 +172,41 @@ BranchedVolumeTableTest proc
 		lea		esi,[esi+edx]
 		; EDX = Sample value
 		mov		edx,-32768
+		; Theoretical avg. loop cycles = 27.5
 		branched_table_sample_loop:
-			mov		eax,edx
-			cmp		eax,7fffffffh
-			ja		branched_table_is_negative
-				mov		ecx,eax
+			mov		eax,edx	; 1
+			cmp		eax,7fffffffh	; 1
+			ja		branched_table_is_negative	; 1 (not jump) or 3 (jump)
+				mov		ecx,eax	; 1
 
-				shr		eax,8
-				mov		eax,[esi+eax*4]
-				shl		eax,8
+				shr		eax,8	; 2
+				mov		eax,[esi+eax*4]	; 1
+				shl		eax,8	; 2
 
-				xor		ch,ch
-				add		eax,[esi+ecx*4]
+				xor		ch,ch	; 1
+				add		eax,[esi+ecx*4]	; 2	(may be better as mov+add in 386)
 
-				shr		eax,6
+				shr		eax,6	; 2
 
-				jmp 	branched_table_done_sample
+				jmp 	branched_table_done_sample	; 3
 			branched_table_is_negative:
-				neg		eax
-				mov		ecx,eax
+				neg		eax		; 1
+				mov		ecx,eax	; 1
 
-				shr		eax,8
-				mov		eax,[esi+eax*4]
-				shl		eax,8
+				shr		eax,8	; 2
+				mov		eax,[esi+eax*4]	; 1
+				shl		eax,8	; 2
 
-				xor		ch,ch
-				add		eax,[esi+ecx*4]
+				xor		ch,ch	; 1
+				add		eax,[esi+ecx*4]	; 2
 
-				shr		eax,6
-				neg		eax
+				shr		eax,6	; 2
+				neg		eax		; 1
 			branched_table_done_sample:
-			stosw
-		inc 	edx
-		cmp		edx,32768
-		jnz 	branched_table_sample_loop
+			stosw	; 5
+		inc 	edx		; 1
+		cmp		edx,32768	; 1
+		jnz 	branched_table_sample_loop	; 3
 	inc 	ebx
 	cmp 	ebx,NUM_VOLUME_LEVELS
 	jnz 	branched_table_volume_loop
