@@ -52,6 +52,31 @@ GenerateExpecteResults proc
 	jnz 	true_table_volume_loop
 	pop		eax
 	
+	ret
+endp
+
+IncTimerTicks proc
+	inc		timer_ticks
+	ret
+endp
+
+SetUp proc
+	mov 	timer_ticks,0
+
+	mov		eax,timer_freq
+	mov		ebx,offset IncTimerTicks
+	call	add_timer
+	ErrorExit "Unable to add timer."
+	
+	mov		ecx,NUM_VOLUME_LEVELS*65536*2
+	call	malloc
+	ErrorExit "Unable to allocate results table"
+	mov		results_table,ebx
+	
+	LPrintS "Generating true results table..."
+	call	GenerateExpecteResults
+
+	LPrintS "Generating volume tables..."
 	; Create multiplication table for LUT tests
 	mov		ecx,65*256*4*2
 	call	malloc
@@ -91,33 +116,14 @@ GenerateExpecteResults proc
 	inc		ecx
 	cmp		ecx,65
 	jnz		loop_volumes_s
-	ret
-endp
-
-IncTimerTicks proc
-	inc		timer_ticks
-	ret
-endp
-
-SetUp proc
-	mov 	timer_ticks,0
-
-	mov		eax,timer_freq
-	mov		ebx,offset IncTimerTicks
-	call	add_timer
-	ErrorExit "Unable to add timer."
 	
-	mov		ecx,NUM_VOLUME_LEVELS*65536*2
-	call	malloc
-	ErrorExit "Unable to allocate results table"
-	mov		results_table,ebx
-	
-	LPrintS "Generating true results table..."
-	call	GenerateExpecteResults
 	ret
 endp
 
 TearDown proc
+	mov		ebx,volume_table
+	call	free
+	
 	mov		ebx,results_table
 	call	free
 
