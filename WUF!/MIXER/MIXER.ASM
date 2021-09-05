@@ -191,6 +191,9 @@ ifdef DEBUG_MIXER_PERFORMANCE
 		call	remove_timer
 		call	PrintMixerPerf
 endif
+		mov		ebx,VolumeTable
+		call	free
+		ErrorCode FREE_ERROR
         mov     ebx,MixingBuffer
         call    free
         ErrorCode FREE_ERROR
