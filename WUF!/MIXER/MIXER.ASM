@@ -279,7 +279,7 @@ SearchFreeChannel       endp
 ;		   If BH == ANY_FREE_CHANNEL, the sound is played on any free channel greater 
 ;		   or equal than BL.
 ;		   ECX = Frequency multiplier (fixed point 8.24)
-;		   EDX = Volume multiplier (fixed point 16.16)
+;		   EDX = Volume multiplier (0-64)
 ;		   ESI = Sample offset
 ;
 ; OUTPUT : CF = 0 if no error
@@ -294,27 +294,30 @@ PlaySound       proc
 		mov		esi,eax
 		cmp		bh,ANY_FREE_CHANNEL
 		jne		channel_specified
-				push	ecx
+				push	ecx edx
 				call    SearchFreeChannel
-				pop		edi
+				pop		edx edi
 				ErrorCode eax
 				mov		eax,ecx
 				mov		ecx,edi
 				jmp		got_channel
 		channel_specified:
+				push	edx
 				xor		edx,edx
 				mov		eax,size TChannel
 				movzx	ebx,bl
 				mul		ebx				
 				add		eax,ChannelPool
+				pop		edx
 		got_channel:
-		push	eax
+		push	eax edx
 		; EDX:EAX = base_frequency * (multiplier << 24)
 		mov		eax,[TWave ptr esi.BaseRate]
 		mul		ecx
 		; EAX = (base_frequency * (multiplier << 24)) >> 16
 		cmp		edx,0ffffh
 		jbe		resulting_freq_ok
+				pop		edx eax
 				mov		eax,FREQUENCY_TOO_HIGH
 				stc
 				ret
@@ -327,10 +330,11 @@ PlaySound       proc
 		; EAX = ((base_frequency * (multiplier << 24)) >> 16) / mixing_frequency
 		div		MixFreq
 		; EDX = (((Base frequency * (multiplier << 24)) >> 16) / mixing_frequency)
-		mov		edx,eax
-		pop		eax
-		mov		[TChannel ptr eax.SampleIncrement],edx
+		mov		ebx,eax
+		pop		edx eax
+		mov		[TChannel ptr eax.SampleIncrement],ebx
         mov     [TChannel ptr eax.CurrentSample],0
+		mov		[TChannel ptr eax.Volume],edx
 		; Atomic allocation of the channel
         mov     [TChannel ptr eax.ChanWave],esi
 		xor		eax,eax
@@ -477,33 +481,110 @@ MixChannelToMono	endp
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 MixChannelToStereo	proc
 		; Number of loops = min(NumOutputSamples, esi.WaveLen - eax.CurrentSample) 
-		mov		eax,[TChannel ptr eax.SampleIncrement]
-		mov		sample_increment,eax
+		mov		ecx,[TChannel ptr eax.SampleIncrement]
+		mov		sample_increment,ecx
+		; Volume table offset
+		mov		ecx,[TChannel ptr eax.Volume]
+		shl		ecx,8+2
+		add		ecx,VolumeTable
+		mov		volume_table_ptr,ecx
+		mov		ecx,[esi.WaveLen]
+		mov		wave_len,ecx
+		; Choose inner loop depending on sample type
 		test    [esi.WaveType],1
 		jz      its_8_bits_s
 				; 16-bit signed samples
 				test    [esi.WaveType],10b
 				jz      mono16_s
+				mov		esi,volume_table_ptr
 				stereo16_s:
 						; Stereo, 16 bits
+						
+						; Precondition: EDX = Current sample index (fixed point 24.8)
+						; Load left channel sample in EAX
 						mov		ecx,edx
 						shr		ecx,8
 						mov     eax,[ebx+ecx*4]
-						movsx   ecx,ax	; ecx = left channel
+						movsx   eax,ax	; eax = left channel
+						; Scale by volume
+						cmp		eax,7fffffffh	; 1
+						ja		stereo16_s_left_is_negative	; 1 (not jump) or 3 (jump)
+							mov		ecx,eax	; 1
+
+							shr		eax,8	; 2
+							mov		eax,[esi+eax*4]	; 1
+							shl		eax,8	; 2
+							xor		ch,ch	; 1
+							add		eax,[esi+ecx*4]	; 2	(may be better as mov+add in 386)
+
+							shr		eax,6	; 2
+
+							jmp 	stereo16_s_left_volume_done	; 3
+						stereo16_s_left_is_negative:
+							neg		eax		; 1
+							mov		ecx,eax	; 1
+
+							shr		eax,8	; 2
+							mov		eax,[esi+eax*4]	; 1
+							shl		eax,8	; 2
+
+							xor		ch,ch	; 1
+							add		eax,[esi+ecx*4]	; 2
+
+							shr		eax,6	; 2
+							neg		eax		; 1
+						stereo16_s_left_volume_done:
+						rol		eax,EXPANSION_BITS
+						add		[edi+ebp*8],eax
+						
+						; Precondition: EDX = Current sample index (fixed point 24.8)
+						; Load right channel sample in EAX
+						mov		ecx,edx
+						shr		ecx,8
+						mov     eax,[ebx+ecx*4]
 						shr		eax,16
 						movsx	eax,ax	; eax = right channel
-						rol		ecx,EXPANSION_BITS
+						; Scale by volume
+						cmp		eax,7fffffffh	; 1
+						ja		stereo16_s_right_is_negative	; 1 (not jump) or 3 (jump)
+							mov		ecx,eax	; 1
+
+							shr		eax,8	; 2
+							mov		eax,[esi+eax*4]	; 1
+							shl		eax,8	; 2
+
+							xor		ch,ch	; 1
+							add		eax,[esi+ecx*4]	; 2	(may be better as mov+add in 386)
+
+							shr		eax,6	; 2
+
+							jmp 	stereo16_s_right_volume_done	; 3
+						stereo16_s_right_is_negative:
+							neg		eax		; 1
+							mov		ecx,eax	; 1
+
+							shr		eax,8	; 2
+							mov		eax,[esi+eax*4]	; 1
+							shl		eax,8	; 2
+
+							xor		ch,ch	; 1
+							add		eax,[esi+ecx*4]	; 2
+
+							shr		eax,6	; 2
+							neg		eax		; 1
+						stereo16_s_right_volume_done:
 						rol		eax,EXPANSION_BITS
-						add		[edi+ebp*8],ecx
 						add		[edi+ebp*8+4],eax
+						
 						inc		ebp
 						jz		no_samp_end_s
 						add     edx,sample_increment
-						mov		ecx,[esi.WaveLen]
+						mov		ecx,wave_len
 						shl		ecx,8
 						cmp     edx,ecx
 						jb		stereo16_s
 						jmp		wave_mixed_s
+						
 				mono16_s:
 						; Mono, 16 bits												
 						mov		ecx,edx
@@ -520,6 +601,7 @@ MixChannelToStereo	proc
 						cmp     edx,ecx
 						jb		mono16_s
 						jmp     wave_mixed_s
+						
 		its_8_bits_s:
 				; 8-bit unsigned samples
 				test	[esi.WaveType],10b
@@ -856,7 +938,9 @@ NumOutputSamples		dd ?
 NumOutputBytes			dd ?
 MixingBuffer			dd ?
 CurrentChannelOffset    dd ?
+wave_len				dd ?
 sample_increment		dd ?
+volume_table_ptr		dd ?
 VolumeTable				dd ?
 
 MissingMixerBufferSamples	dd ?

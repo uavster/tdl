@@ -25,11 +25,15 @@ NUM_RESERVED_CHANNELS	EQU 4
 
 FREQ_MULTIPLIER_INCREMENT	EQU (1 SHL (24 - 4))	; 1/16 in fixed point 8.24
 
+CHANNEL_VOLUME_INCREMENT	EQU 1
+CHANNEL_VOLUME_MAX			EQU 64
+
 ReservedChannelKeyHandler	proc
 		sub		eax,Key_1
 		mov		bh,SPECIFIC_CHANNEL
 		mov		bl,al
         mov     eax,[wav_ptr+eax*4]
+		mov		edx,channel_volume
 		mov		ecx,frequency_multiplier
         call    PlaySound
 		xor		eax,eax		; Do not chain with default ISR
@@ -41,6 +45,7 @@ AnyFreeChannelKeyHandler	proc
         mov     eax,[wav_ptr+eax*4]
 		mov		bh,ANY_FREE_CHANNEL
 		mov		bl,NUM_RESERVED_CHANNELS
+		mov		edx,channel_volume
 		mov		ecx,frequency_multiplier
         call    PlaySound
 		xor		eax,eax		; Do not chain with default ISR
@@ -73,6 +78,26 @@ DecFreqMultiplier	proc
 				ret
 		zero_freq_multiplier:
 		mov		frequency_multiplier,0
+		ret
+		endp
+		
+IncChannelVolume	proc
+		cmp		channel_volume,CHANNEL_VOLUME_MAX-CHANNEL_VOLUME_INCREMENT
+		ja		max_channel_volume
+				add		channel_volume,CHANNEL_VOLUME_INCREMENT
+				ret
+		max_channel_volume:
+		mov		channel_volume,CHANNEL_VOLUME_MAX
+		ret
+		endp
+		
+DecChannelVolume	proc
+		cmp		channel_volume,CHANNEL_VOLUME_INCREMENT
+		jb		zero_channel_volume
+				sub		channel_volume,CHANNEL_VOLUME_INCREMENT
+				ret
+		zero_channel_volume:
+		mov		channel_volume,0
 		ret
 		endp
 
@@ -139,6 +164,13 @@ start:
 		call	add_key
 		mov		al,Key_A
 		mov		ebx,offset DecFreqMultiplier
+		call	add_key
+		
+		mov		al,Key_W
+		mov		ebx,offset IncChannelVolume
+		call	add_key
+		mov		al,Key_S
+		mov		ebx,offset DecChannelVolume
 		call	add_key
 		
 		mov		ebx,offset DefaultKeyHandler
@@ -248,6 +280,7 @@ wbps			dd ?
 wcps			dd ?
 exit_loop		db 0
 frequency_multiplier	dd 1 SHL 24	; Fixed point 8.24
+channel_volume			dd 64
 
 comment #
 sound_struc     TWave <0,offset my_sound,50000,44000,?>

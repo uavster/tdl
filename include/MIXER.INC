@@ -12,6 +12,7 @@ TChannel        STRUC
         ChanWave        dd ?    ; Pointer to TWave structure or NULL if not active
 		SampleIncrement	dd ?	; Fixed point 24.8
         CurrentSample   dd ?	; Fixed point 24.8
+		Volume			dd ?	; Volume from 0 (silent) to 64 (original volume)
 ENDS
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
@@ -52,7 +53,7 @@ global  CloseMixer : NEAR
 ;		   If BH == ANY_FREE_CHANNEL, the sound is played on any free channel greater 
 ;		   or equal than BL.
 ;		   ECX = Frequency multiplier (fixed point 8.24)
-;		   EDX = Volume multiplier (fixed point 16.16)
+;		   EDX = Volume multiplier (0-64)
 ;		   ESI = Sample offset
 ;
 ; OUTPUT : CF = 0 if no error
