@@ -93,29 +93,29 @@ OpenMixer       proc
         call    malloc
         ErrorCode MALLOC_ERROR
         mov     MixingBuffer,ebx
-		; Create channel volume tables.
-		; There is one table per volume level between 0 and 64. The index to the volume table is the sample
-		; value in signed format.
-		; Each int32_t table entry at (volume,sample) contains (volume*(sample << 8)), 
+		
+		; Create channel volume table.
+		; Each int32_t table entry at (volume,sample) contains (volume*sample), 
 		; where sample is within [0,255], and volume is within [0,64].
 		; How to scale samples by their volume:
-		; 8-bit: scaled_sample = volume_table[volume][sample] >> (8 + 6)
-		; 16-bit: scaled_sample = (volume_table[volume][sample >> 8] + (volume_table[volume][sample & 0xff] >> 8)) >> 6
+		; 8-bit: scaled_sample = sing(sample) * volume_table[volume][abs(sample)] >> 6
+		; 16-bit: scaled_sample = sign(sample) * ((volume_table[volume][abs(sample) >> 8] << 8) + volume_table[volume][abs(sample) & 0xff]) >> 6
 		mov		ecx,65*256*4
 		call	malloc
-		ErrorCode MALLOC_ERROR
-		mov		VolumeTables,ebx
+		ErrorExit "Unable to allocate volume table."
+		mov		VolumeTable,ebx
 		push	ds
 		pop		es
 		mov		edi,ebx
+		cld
+		
 		xor		ecx,ecx
 		loop_volumes:
 				xor		ebx,ebx
 				loop_sample_values:
 						mov		eax,ecx
-						sal		eax,8
-						movsx	ebx,bl
-						imul	ebx
+						movzx	edx,bl
+						imul	edx
 						stosd
 				inc		bl
 				jnz		loop_sample_values
@@ -123,25 +123,6 @@ OpenMixer       proc
 		cmp		ecx,65
 		jnz		loop_volumes
 		
-		; mov		eax,-30789
-		; mov		bl,59
-		
-		; Pointer to volume table for current volume.
-		; mov		esi,VolumeTables
-		; movzx	edx,bl
-		; shl		edx,8+2
-		; lea		esi,[esi+edx]
-		
-		; Scale int16 sample.
-		; xor		edx,edx
-		; mov		dl,ah
-		; mov		edx,[esi+edx*4]
-		; and		eax,0ffh
-		; mov		eax,[esi+eax*4]
-		; sar		eax,8
-		; add		eax,edx
-		; sar		eax,6
-;		int 3
 ifdef DEBUG_MIXER_PERFORMANCE
 		; Set up performance debugging
 		xor		eax,eax
@@ -873,7 +854,7 @@ NumOutputBytes			dd ?
 MixingBuffer			dd ?
 CurrentChannelOffset    dd ?
 sample_increment		dd ?
-VolumeTables			dd ?
+VolumeTable				dd ?
 
 MissingMixerBufferSamples	dd ?
 MixingBufferOffset		dd ?
