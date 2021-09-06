@@ -570,6 +570,43 @@ sample_loop:
 		jb		sample_loop
 endm
 
+MixMonoS16WithVolume macro
+local sample_loop
+sample_loop:
+		mov		ecx,edx
+		shr		ecx,8
+		movsx   eax,word ptr [ebx+ecx*2]
+		ScaleSampleByVolume16
+		rol		eax,EXPANSION_BITS
+		add		[edi+ebp*8],eax
+		add		[edi+ebp*8+4],eax
+		inc		ebp
+		jz		no_samp_end_s
+		add     edx,sample_increment
+		mov		ecx,wave_len
+		shl		ecx,8
+		cmp     edx,ecx
+		jb		sample_loop
+endm
+
+MixMonoS16 macro
+local sample_loop
+sample_loop:
+		mov		ecx,edx
+		shr		ecx,8
+		movsx   eax,word ptr [ebx+ecx*2]
+		rol		eax,EXPANSION_BITS
+		add		[edi+ebp*8],eax
+		add		[edi+ebp*8+4],eax
+		inc		ebp
+		jz		no_samp_end_s
+		add     edx,sample_increment
+		mov		ecx,wave_len
+		shl		ecx,8
+		cmp     edx,ecx
+		jb		sample_loop
+endm
+
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Mixes an active channel on a stereo output buffer
 ;
@@ -610,21 +647,14 @@ MixChannelToStereo	proc
 								jmp		wave_mixed_s
 				
 				mono16_s:
-						; Mono, 16 bits												
-						mov		ecx,edx
-						shr		ecx,8
-						movsx   eax,word ptr [ebx+ecx*2]
-						rol		eax,EXPANSION_BITS
-						add		[edi+ebp*8],eax
-						add		[edi+ebp*8+4],eax
-						inc		ebp
-						jz		no_samp_end_s
-						add     edx,sample_increment
-						mov		ecx,[esi.WaveLen]
-						shl		ecx,8
-						cmp     edx,ecx
-						jb		mono16_s
-						jmp     wave_mixed_s
+						mov		esi,volume_table_ptr
+						cmp		[TChannel ptr eax.Volume],64
+						jb		mix_with_volume_m16
+								MixMonoS16
+								jmp		wave_mixed_s
+						mix_with_volume_m16:
+								MixMonoS16WithVolume
+								jmp     wave_mixed_s
 						
 		its_8_bits_s:
 				; 8-bit unsigned samples
