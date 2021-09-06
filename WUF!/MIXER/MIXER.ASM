@@ -364,10 +364,29 @@ SetChannelProperties	proc
 SetChannelProperties	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; All macros below share the same interface.
+;
 ; INPUT  : EAX = Signed 16-bit sample
 ;		   ESI -> LUT for the sample volume
 ; OUTPUT : EAX = Signed 16-bit sample scaled by volume
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+ScaleSampleByVolume8	macro
+	local	is_negative_u8
+	local	volume_done_u8
+	cmp		eax,7fffffffh	; 1
+	ja		is_negative_u8	; 1 (not jump) or 3 (jump)
+			mov		eax,[esi+eax*4]	; 1
+			shr		eax,6	; 2
+			jmp 	volume_done_u8	; 3
+	is_negative_u8:
+			neg		eax		; 1
+			mov		eax,[esi+eax*4]	; 1
+			shr		eax,6	; 2
+			neg		eax		; 1
+	volume_done_u8:
+endm
+
 ScaleSampleByVolume16	macro
 	local	is_negative_s16
 	local	volume_done_s16
@@ -607,6 +626,95 @@ sample_loop:
 		jb		sample_loop
 endm
 
+MixStereoU8WithVolume macro
+local sample_loop
+sample_loop:
+		mov		eax,edx
+		shr		eax,8
+		mov		cx,[ebx+eax*2]
+		sub		ch,128
+		sub		cl,128
+		movsx	eax,cl	; left channel
+		ScaleSampleByVolume8
+		rol		eax,8+EXPANSION_BITS
+		add		[edi+ebp*8],eax
+		movsx	eax,ch	; right channel
+		ScaleSampleByVolume8
+		rol		eax,8+EXPANSION_BITS
+		add		[edi+ebp*8+4],eax
+		inc		ebp
+		jz		no_samp_end_s
+		add     edx,sample_increment
+		mov		ecx,wave_len
+		shl		ecx,8
+		cmp     edx,ecx
+		jb		sample_loop
+endm
+
+MixStereoU8 macro
+local sample_loop
+sample_loop:
+		mov		ecx,edx
+		shr		ecx,8
+		mov		ax,[ebx+ecx*2]
+		sub		ah,128
+		sub		al,128
+		movsx	ecx,ah	; ecx = right channel
+		movsx	eax,al	; eax = left channel
+		rol		ecx,8+EXPANSION_BITS
+		rol		eax,8+EXPANSION_BITS
+		add		[edi+ebp*8],eax
+		add		[edi+ebp*8+4],ecx
+		inc		ebp
+		jz		no_samp_end_s
+		add     edx,sample_increment
+		mov		ecx,wave_len
+		shl		ecx,8
+		cmp     edx,ecx
+		jb		sample_loop
+endm
+
+MixMonoU8WithVolume macro
+local sample_loop
+sample_loop:
+		mov		ecx,edx
+		shr		ecx,8						
+		mov   	al,byte ptr [ebx+ecx]
+		sub		al,128
+		movsx	eax,al
+		ScaleSampleByVolume8		
+		rol		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
+		add		[edi+ebp*8],eax
+		add		[edi+ebp*8+4],eax
+		inc		ebp
+		jz		no_samp_end_s
+		add     edx,sample_increment
+		mov		ecx,wave_len
+		shl		ecx,8
+		cmp     edx,ecx
+		jb		sample_loop
+endm
+
+MixMonoU8 macro
+local sample_loop
+sample_loop:
+		mov		ecx,edx
+		shr		ecx,8						
+		mov   	al,byte ptr [ebx+ecx]
+		sub		al,128
+		movsx	eax,al
+		rol		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
+		add		[edi+ebp*8],eax
+		add		[edi+ebp*8+4],eax
+		inc		ebp
+		jz		no_samp_end_s
+		add     edx,sample_increment
+		mov		ecx,wave_len
+		shl		ecx,8
+		cmp     edx,ecx
+		jb		sample_loop
+endm
+
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Mixes an active channel on a stereo output buffer
 ;
@@ -660,44 +768,23 @@ MixChannelToStereo	proc
 				; 8-bit unsigned samples
 				test	[esi.WaveType],10b
 				jz		mono8_s
-				stereo8_s:
-						; Stereo, 8 bits
-						mov		ecx,edx
-						shr		ecx,8
-						mov		ax,[ebx+ecx*2]
-						sub		ah,128
-						sub		al,128
-						movsx	ecx,ah	; ecx = right channel
-						movsx	eax,al	; eax = left channel
-						rol		ecx,8+EXPANSION_BITS
-						rol		eax,8+EXPANSION_BITS
-						add		[edi+ebp*8],eax
-						add		[edi+ebp*8+4],ecx
-						inc		ebp
-						jz		no_samp_end_s
-						add     edx,sample_increment
-						mov		ecx,[esi.WaveLen]
-						shl		ecx,8
-						cmp     edx,ecx
-						jb		stereo8_s
-						jmp		wave_mixed_s
+						mov		esi,volume_table_ptr
+						cmp		[TChannel ptr eax.Volume],64
+						jb		mix_with_volume_s8
+								MixStereoU8
+								jmp		wave_mixed_s
+						mix_with_volume_s8:
+								MixStereoU8WithVolume
+								jmp		wave_mixed_s
 				mono8_s:
-						; Mono, 8 bits
-						mov		ecx,edx
-						shr		ecx,8						
-						mov   	al,byte ptr [ebx+ecx]
-						sub		al,128
-						movsx	eax,al
-						rol		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
-						add		[edi+ebp*8],eax
-						add		[edi+ebp*8+4],eax
-						inc		ebp
-						jz		no_samp_end_s
-						add     edx,sample_increment
-						mov		ecx,[esi.WaveLen]
-						shl		ecx,8
-						cmp     edx,ecx
-						jb		mono8_s
+						mov		esi,volume_table_ptr
+						cmp		[TChannel ptr eax.Volume],64
+						jb		mix_with_volume_m8
+								MixMonoU8
+								jmp		wave_mixed_s
+						mix_with_volume_m8:
+								MixMonoU8WithVolume
+								jmp		wave_mixed_s
 		wave_mixed_s:
 		stc
 		ret
