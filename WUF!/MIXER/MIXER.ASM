@@ -364,6 +364,43 @@ SetChannelProperties	proc
 SetChannelProperties	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; INPUT  : EAX = Signed 16-bit sample
+;		   ESI -> LUT for the sample volume
+; OUTPUT : EAX = Signed 16-bit sample scaled by volume
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ScaleSampleByVolume16	macro
+	local	is_negative_s16
+	local	volume_done_s16
+	cmp		eax,7fffffffh	; 1
+	ja		is_negative_s16	; 1 (not jump) or 3 (jump)
+			mov		ecx,eax	; 1
+
+			shr		eax,8	; 2
+			mov		eax,[esi+eax*4]	; 1
+			shl		eax,8	; 2
+			xor		ch,ch	; 1
+			add		eax,[esi+ecx*4]	; 2	(may be better as mov+add in 386)
+
+			shr		eax,6	; 2
+
+			jmp 	volume_done_s16	; 3
+	is_negative_s16:
+			neg		eax		; 1
+			mov		ecx,eax	; 1
+
+			shr		eax,8	; 2
+			mov		eax,[esi+eax*4]	; 1
+			shl		eax,8	; 2
+
+			xor		ch,ch	; 1
+			add		eax,[esi+ecx*4]	; 2
+
+			shr		eax,6	; 2
+			neg		eax		; 1
+	volume_done_s16:
+endm
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Mixes an active channel on a mono output buffer
 ;
 ; INPUT  : EAX -> TChannel structure
@@ -467,6 +504,73 @@ MixChannelToMono	proc
 MixChannelToMono	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; All mixing macros below share the same interface.
+;
+; INPUT  : ESI -> LUT for sample volume
+;		   EBX -> Wave data
+;		   EDX = Current sample index
+;		   EBP = -NumOutputSamples
+;		   EDI -> offset MixingBuffer + MixBytesPerSample(4) * NumOutputChannels(2) * (NumOutputSamples + MixOffsetSamples)
+;		   wave_len = Length of the wave in samples
+;		   sample_increment = Number of samples to increment the sample index at every loop (fixed point 24.8)
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+MixStereoS16WithVolume macro
+local sample_loop
+sample_loop:		
+		; Precondition: EDX = Current sample index (fixed point 24.8)
+		; Load left channel sample in EAX
+		mov		ecx,edx
+		shr		ecx,8
+		mov     eax,[ebx+ecx*4]
+		movsx   eax,ax	; eax = left channel
+		ScaleSampleByVolume16
+		rol		eax,EXPANSION_BITS
+		add		[edi+ebp*8],eax
+		
+		; Precondition: EDX = Current sample index (fixed point 24.8)
+		; Load right channel sample in EAX
+		mov		ecx,edx
+		shr		ecx,8
+		mov     eax,[ebx+ecx*4]
+		shr		eax,16
+		movsx	eax,ax	; eax = right channel
+		ScaleSampleByVolume16
+		rol		eax,EXPANSION_BITS
+		add		[edi+ebp*8+4],eax
+		
+		inc		ebp
+		jz		no_samp_end_s
+		add     edx,sample_increment
+		mov		ecx,wave_len
+		shl		ecx,8
+		cmp     edx,ecx
+		jb		sample_loop
+endm
+
+MixStereoS16 macro
+local sample_loop
+sample_loop:
+		mov		ecx,edx
+		shr		ecx,8
+		mov     eax,[ebx+ecx*4]
+		movsx   ecx,ax	; ecx = left channel
+		shr		eax,16
+		movsx	eax,ax	; eax = right channel
+		rol		ecx,EXPANSION_BITS
+		rol		eax,EXPANSION_BITS
+		add		[edi+ebp*8],ecx
+		add		[edi+ebp*8+4],eax
+		inc		ebp
+		jz		no_samp_end_s
+		add     edx,sample_increment
+		mov		ecx,wave_len
+		shl		ecx,8
+		cmp     edx,ecx
+		jb		sample_loop
+endm
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Mixes an active channel on a stereo output buffer
 ;
 ; INPUT  : EAX -> TChannel structure
@@ -496,95 +600,15 @@ MixChannelToStereo	proc
 				; 16-bit signed samples
 				test    [esi.WaveType],10b
 				jz      mono16_s
-				mov		esi,volume_table_ptr
-				stereo16_s:
-						; Stereo, 16 bits
-						
-						; Precondition: EDX = Current sample index (fixed point 24.8)
-						; Load left channel sample in EAX
-						mov		ecx,edx
-						shr		ecx,8
-						mov     eax,[ebx+ecx*4]
-						movsx   eax,ax	; eax = left channel
-						; Scale by volume
-						cmp		eax,7fffffffh	; 1
-						ja		stereo16_s_left_is_negative	; 1 (not jump) or 3 (jump)
-							mov		ecx,eax	; 1
-
-							shr		eax,8	; 2
-							mov		eax,[esi+eax*4]	; 1
-							shl		eax,8	; 2
-							xor		ch,ch	; 1
-							add		eax,[esi+ecx*4]	; 2	(may be better as mov+add in 386)
-
-							shr		eax,6	; 2
-
-							jmp 	stereo16_s_left_volume_done	; 3
-						stereo16_s_left_is_negative:
-							neg		eax		; 1
-							mov		ecx,eax	; 1
-
-							shr		eax,8	; 2
-							mov		eax,[esi+eax*4]	; 1
-							shl		eax,8	; 2
-
-							xor		ch,ch	; 1
-							add		eax,[esi+ecx*4]	; 2
-
-							shr		eax,6	; 2
-							neg		eax		; 1
-						stereo16_s_left_volume_done:
-						rol		eax,EXPANSION_BITS
-						add		[edi+ebp*8],eax
-						
-						; Precondition: EDX = Current sample index (fixed point 24.8)
-						; Load right channel sample in EAX
-						mov		ecx,edx
-						shr		ecx,8
-						mov     eax,[ebx+ecx*4]
-						shr		eax,16
-						movsx	eax,ax	; eax = right channel
-						; Scale by volume
-						cmp		eax,7fffffffh	; 1
-						ja		stereo16_s_right_is_negative	; 1 (not jump) or 3 (jump)
-							mov		ecx,eax	; 1
-
-							shr		eax,8	; 2
-							mov		eax,[esi+eax*4]	; 1
-							shl		eax,8	; 2
-
-							xor		ch,ch	; 1
-							add		eax,[esi+ecx*4]	; 2	(may be better as mov+add in 386)
-
-							shr		eax,6	; 2
-
-							jmp 	stereo16_s_right_volume_done	; 3
-						stereo16_s_right_is_negative:
-							neg		eax		; 1
-							mov		ecx,eax	; 1
-
-							shr		eax,8	; 2
-							mov		eax,[esi+eax*4]	; 1
-							shl		eax,8	; 2
-
-							xor		ch,ch	; 1
-							add		eax,[esi+ecx*4]	; 2
-
-							shr		eax,6	; 2
-							neg		eax		; 1
-						stereo16_s_right_volume_done:
-						rol		eax,EXPANSION_BITS
-						add		[edi+ebp*8+4],eax
-						
-						inc		ebp
-						jz		no_samp_end_s
-						add     edx,sample_increment
-						mov		ecx,wave_len
-						shl		ecx,8
-						cmp     edx,ecx
-						jb		stereo16_s
-						jmp		wave_mixed_s
-						
+						mov		esi,volume_table_ptr
+						cmp		[TChannel ptr eax.Volume],64
+						jb		mix_with_volume_s16
+								MixStereoS16
+								jmp		wave_mixed_s
+						mix_with_volume_s16:
+								MixStereoS16WithVolume
+								jmp		wave_mixed_s
+				
 				mono16_s:
 						; Mono, 16 bits												
 						mov		ecx,edx
