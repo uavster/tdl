@@ -68,6 +68,7 @@ ENDIF
 		
 IncFreqMultiplier	proc
 		add		frequency_multiplier,FREQ_MULTIPLIER_INCREMENT
+		xor		eax,eax		; Do not chain with default ISR
 		ret
 		endp
 		
@@ -75,9 +76,11 @@ DecFreqMultiplier	proc
 		cmp		frequency_multiplier,FREQ_MULTIPLIER_INCREMENT
 		jb		zero_freq_multiplier
 				sub		frequency_multiplier,FREQ_MULTIPLIER_INCREMENT
+				xor		eax,eax		; Do not chain with default ISR
 				ret
 		zero_freq_multiplier:
 		mov		frequency_multiplier,0
+		xor		eax,eax		; Do not chain with default ISR
 		ret
 		endp
 		
@@ -85,9 +88,11 @@ IncChannelVolume	proc
 		cmp		channel_volume,CHANNEL_VOLUME_MAX-CHANNEL_VOLUME_INCREMENT
 		ja		max_channel_volume
 				add		channel_volume,CHANNEL_VOLUME_INCREMENT
+				xor		eax,eax		; Do not chain with default ISR
 				ret
 		max_channel_volume:
 		mov		channel_volume,CHANNEL_VOLUME_MAX
+		xor		eax,eax		; Do not chain with default ISR
 		ret
 		endp
 		
@@ -95,9 +100,11 @@ DecChannelVolume	proc
 		cmp		channel_volume,CHANNEL_VOLUME_INCREMENT
 		jb		zero_channel_volume
 				sub		channel_volume,CHANNEL_VOLUME_INCREMENT
+				xor		eax,eax		; Do not chain with default ISR
 				ret
 		zero_channel_volume:
 		mov		channel_volume,0
+		xor		eax,eax		; Do not chain with default ISR
 		ret
 		endp
 
