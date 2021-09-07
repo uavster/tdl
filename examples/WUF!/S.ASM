@@ -223,7 +223,7 @@ start:
 
 		loading_done:
 		LPrintS ""
-		LPrintS "Keys 1-4 to play the four samples above in channels 0-3, with a one-to-one mapping. Keys 5-8 to play them in any available channel. Q/A to increase/decrease frequency multiplier. ESC to quit."
+		LPrintS "Keys 1-4 to play the four samples above in channels 0-3, with a one-to-one mapping. Keys 5-8 to play them in any available channel. Q/A to increase/decrease frequency multiplier. W/S increase/decrease sample volume. ESC to quit."
 		
         wait_loop:
 IF MAIN_LOOP_METHOD EQ PROTECTED_MODE_LOOP
