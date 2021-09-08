@@ -377,12 +377,12 @@ ScaleSampleByVolume8	macro
 	cmp		eax,7fffffffh	; 1
 	ja		is_negative_u8	; 1 (not jump) or 3 (jump)
 			mov		eax,[esi+eax*4]	; 1
-			shr		eax,6	; 2
+;			shr		eax,6	; 2
 			jmp 	volume_done_u8	; 3
 	is_negative_u8:
 			neg		eax		; 1
 			mov		eax,[esi+eax*4]	; 1
-			shr		eax,6	; 2
+;			shr		eax,6	; 2
 			neg		eax		; 1
 	volume_done_u8:
 endm
@@ -400,7 +400,7 @@ ScaleSampleByVolume16	macro
 			xor		ch,ch	; 1
 			add		eax,[esi+ecx*4]	; 2	(may be better as mov+add in 386)
 
-			shr		eax,6	; 2
+;			shr		eax,6	; 2
 
 			jmp 	volume_done_s16	; 3
 	is_negative_s16:
@@ -414,10 +414,22 @@ ScaleSampleByVolume16	macro
 			xor		ch,ch	; 1
 			add		eax,[esi+ecx*4]	; 2
 
-			shr		eax,6	; 2
+;			shr		eax,6	; 2
 			neg		eax		; 1
 	volume_done_s16:
 endm
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+; All mixing macros below share the same interface.
+;
+; INPUT  : ESI -> LUT for sample volume
+;		   EBX -> Wave data
+;		   EDX = Current sample index
+;		   EBP = -NumOutputSamples
+;		   EDI -> offset MixingBuffer + MixBytesPerSample(4) * NumOutputChannels(2) * (NumOutputSamples + MixOffsetSamples)
+;		   wave_len = Length of the wave in samples
+;		   sample_increment = Number of samples to increment the sample index at every loop (fixed point 24.8)
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
 MixStereoS16InMonoBuffer macro
 local sample_loop
@@ -429,6 +441,7 @@ sample_loop:
 		shr		eax,16
 		movsx	eax,ax
 		add     eax,ecx
+		rol		eax,6	; *64 (volume)
 		add		[edi+ebp*4],eax
 		inc		ebp
 		jz		no_samp_end
@@ -472,7 +485,7 @@ sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
 		movsx   eax,word ptr [ebx+ecx*2]
-		rol		eax,EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
+		rol		eax,EXPANSION_BITS+6	; Expand to match 16+1 bits in stereo16, *64 (volume)
 		add		[edi+ebp*4],eax
 		inc		ebp
 		jz		no_samp_end
@@ -512,7 +525,7 @@ sample_loop:
 		movsx	ecx,ah
 		movsx	eax,al
 		add		eax,ecx
-		rol		eax,8	; Expand to match 16+1 bits in stereo16
+		rol		eax,8+6	; Expand to match 16+1 bits in stereo16, *64 (volume)
 		add		[edi+ebp*4],eax
 		inc		ebp
 		jz		no_samp_end
@@ -558,7 +571,7 @@ sample_loop:
 		mov   	al,byte ptr [ebx+ecx]
 		sub		al,128
 		movsx	eax,al
-		rol		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
+		rol		eax,8+EXPANSION_BITS+6	; Expand to match 16+1 bits in stereo16, *64 (volume)
 		add		[edi+ebp*4],eax
 		inc		ebp
 		jz		no_samp_end
@@ -721,8 +734,8 @@ sample_loop:
 		movsx   ecx,ax	; ecx = left channel
 		shr		eax,16
 		movsx	eax,ax	; eax = right channel
-		rol		ecx,EXPANSION_BITS
-		rol		eax,EXPANSION_BITS
+		rol		ecx,EXPANSION_BITS+6	; *64 (volume)
+		rol		eax,EXPANSION_BITS+6	; *64 (volume)
 		add		[edi+ebp*8],ecx
 		add		[edi+ebp*8+4],eax
 		inc		ebp
@@ -759,7 +772,7 @@ sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
 		movsx   eax,word ptr [ebx+ecx*2]
-		rol		eax,EXPANSION_BITS
+		rol		eax,EXPANSION_BITS+6	; *64 (volume)
 		add		[edi+ebp*8],eax
 		add		[edi+ebp*8+4],eax
 		inc		ebp
@@ -806,8 +819,8 @@ sample_loop:
 		sub		al,128
 		movsx	ecx,ah	; ecx = right channel
 		movsx	eax,al	; eax = left channel
-		rol		ecx,8+EXPANSION_BITS
-		rol		eax,8+EXPANSION_BITS
+		rol		ecx,8+EXPANSION_BITS+6	; *64 (volume)
+		rol		eax,8+EXPANSION_BITS+6	; *64 (volume)
 		add		[edi+ebp*8],eax
 		add		[edi+ebp*8+4],ecx
 		inc		ebp
@@ -848,7 +861,7 @@ sample_loop:
 		mov   	al,byte ptr [ebx+ecx]
 		sub		al,128
 		movsx	eax,al
-		rol		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
+		rol		eax,8+EXPANSION_BITS+6	; Expand to match 16+1 bits in stereo16, *64 (volume)
 		add		[edi+ebp*8],eax
 		add		[edi+ebp*8+4],eax
 		inc		ebp
@@ -1052,7 +1065,7 @@ endif
 				; Compress
 				mov		eax,[esi+ebx*4]
 				lea		eax,[eax*4+eax]			; Compression factor *5
-				sar		eax,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				sar		eax,4+8+EXPANSION_BITS+6	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /64 (volume normalization)s
 				; Saturate
 				cmp		eax,127
 				jg		sat_m8_pos
@@ -1079,7 +1092,7 @@ endif
 				; Compress
 				mov		eax,[esi+ebx*4]
 				lea		eax,[eax*4+eax]			; Compression factor *5
-				sar		eax,4+EXPANSION_BITS	; Compression factor /16, EXPANSION_BITS
+				sar		eax,4+EXPANSION_BITS+6	; Compression factor /16, EXPANSION_BITS, /64 (volume normalization)
 				; Saturate
 				cmp		eax,32767
 				jg		sat_m16_pos
@@ -1107,7 +1120,7 @@ endif
 				; Compress left channel
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]			; Compression factor *5
-				sar		eax,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				sar		eax,4+8+EXPANSION_BITS+6	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /64 (volume normalization)
 				
 				; Saturate left channel
 				cmp		eax,127
@@ -1119,7 +1132,7 @@ endif
 				; Compress right channel
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]			; Compression factor *5
-				sar		edx,4+8+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				sar		edx,4+8+EXPANSION_BITS+6	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /64 (volume normalization)
 				
 				; Saturate right channel
 				cmp		edx,127
@@ -1155,7 +1168,7 @@ endif
 				; Compress left channel
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]			; Compression factor *5
-				sar		eax,4+EXPANSION_BITS	; Compression factor /16, EXPANSION_BITS
+				sar		eax,4+EXPANSION_BITS+6	; Compression factor /16, EXPANSION_BITS, /64 (volume normalization)
 
 				; Saturate left channel (cycles 386,486)
 				cmp		eax,32767		; 2, 1
@@ -1171,7 +1184,7 @@ endif
 				; Compress right channel
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]			; Compression factor *5
-				sar		edx,4+EXPANSION_BITS	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS
+				sar		edx,4+EXPANSION_BITS+6	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /64 (volume normalization)
 
 				; Saturate right channel (same timing as left channel saturation)
 				cmp		edx,32767
