@@ -195,7 +195,6 @@ WUFSetMixerCallback	proc
 	ret
 WUFSetMixerCallback	endp
 
-
 .data
 mix_input_channels	dd MAX_MIXER_CHANNELS
 mix_msg         db "  þ Opening mixer with %dn"

@@ -208,25 +208,25 @@ CloseMixer      endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets a callback that will be called periodically from the playback IRQ
 ;
-; INPUT  : EAX = Callback period in seconds (float)
+; INPUT  : ST0 = Callback period in seconds
 ; 		   EBX -> Callback function, or NULL to disable
-;				  Callback input is EBX -> Channel pool (TChannel elements),
-;				  and ECX = Num. channels
+;				  Callback input is EDX -> Channel pool (TChannel elements),
+;				  and EAX = Num. channels
+; NOTE: It's important that arguments of the callback follow Watcom's register
+; calling convention (from left to right arguments): EAX, EDX, EBX, ECX.
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetMixerCallback	proc
 		pushfd
 		cli
 		mov		MixerCallback,ebx
-		mov		smc_tmp,eax
-		fld		smc_tmp
 		fimul	MixFreq
-		mov		smc_tmp,256
-		fimul	smc_tmp
+		push	256
+		fimul	dword ptr ss:[esp]
+		pop		eax
 		fist	SamplesPerTick
 		fistp	MissingTickSamples
 		popfd
 		ret
-smc_tmp	dd ?
 SetMixerCallback	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -290,7 +290,7 @@ SearchFreeChannel       endp
 ;					NO_FREE_CHANNELS: No available channels
 ;					FREQUENCY_TOO_HIGH: Base frequency * multiplier > 16,776,960 Hz
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-PlaySound       proc
+WUFPlaySound       proc
 		mov		esi,eax
 		cmp		bh,ANY_FREE_CHANNEL
 		jne		channel_specified
@@ -340,8 +340,48 @@ PlaySound       proc
 		xor		eax,eax
 		clc		
         ret
-PlaySound       endp
+WUFPlaySound       endp
 
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Plays sound (interfaces with C++)
+;
+; INPUT  : EAX -> TWave structure
+;		   If BH == SPECIFIC_CHANNEL, BL contains the channel number on which to play.
+;		   If BH == ANY_FREE_CHANNEL, the sound is played on any free channel greater 
+;		   or equal than BL.
+;		   ECX = Frequency multiplier (fixed point 8.24)
+;		   EDX = Volume multiplier (0-64)
+;		   ESI = Sample offset
+;		   EDI = Pointer to output error code, or NULL if not needed
+;
+; OUTPUT : If no error,
+;				EBX = Channel playing the sound
+;				Input pointee = NO_ERROR
+;          If error,
+;				EBX = -1
+;				Input pointee =
+;					NO_FREE_CHANNELS: No available channels
+;					FREQUENCY_TOO_HIGH: Base frequency * multiplier > 16,776,960 Hz
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+PlaySound_cpp	proc
+		push	edi
+		call	WUFPlaySound
+		pop		edi
+		pushf
+		test	edi,edi
+		jz		ps_error_code_not_needed
+		mov		dword ptr [edi],eax
+		ps_error_code_not_needed:
+		popf
+		jc		wuf_play_sound_error
+		movzx	ebx,bl
+		ret 
+
+		wuf_play_sound_error:
+		xor		ebx,ebx
+		dec		ebx
+		ret
+PlaySound_cpp	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets the properties of a channel
@@ -1034,14 +1074,14 @@ endif
 				; End of tick
 				mov		eax,SamplesPerTick
 				add		MissingTickSamples,eax
-				; Call mixer callback, if set			
-				mov		eax,MixerCallback
-				or		eax,eax
+				; Call mixer callback, if set
+				mov		ebx,MixerCallback
+				or		ebx,ebx
 				jz		tick_samples_not_expired
-				mov		ebx,ChannelPool
-				movzx	ecx,MaxInputChannels
-				push	ebp
-				call	eax
+				mov		edx,ChannelPool
+				movzx	eax,MaxInputChannels
+				push	ebp				
+				call	ebx
 				pop		ebp
 			tick_samples_not_expired:
 			sar		ebp,8

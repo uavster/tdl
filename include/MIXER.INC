@@ -5,7 +5,7 @@
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 SPECIFIC_CHANNEL		EQU 0
-ANY_FREE_CHANNEL		EQU 1
+ANY_FREE_CHANNEL		EQU 80h
 
 ; Sound digital channel structure
 TChannel        STRUC
@@ -64,7 +64,30 @@ global  CloseMixer : NEAR
 ;					NO_FREE_CHANNELS: No available channels
 ;					FREQUENCY_TOO_HIGH: Base frequency * multiplier > 16,776,960 Hz
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-global  PlaySound : NEAR
+global  WUFPlaySound : NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Plays sound (interfaces with C++)
+;
+; INPUT  : EAX -> TWave structure
+;		   If BH == SPECIFIC_CHANNEL, BL contains the channel number on which to play.
+;		   If BH == ANY_FREE_CHANNEL, the sound is played on any free channel greater 
+;		   or equal than BL.
+;		   ECX = Frequency multiplier (fixed point 8.24)
+;		   EDX = Volume multiplier (0-64)
+;		   ESI = Sample offset
+;		   EDI = Pointer to output error code, or NULL if not needed
+;
+; OUTPUT : If no error,
+;				EBX = Channel playing the sound
+;				Input pointee = NO_ERROR
+;          If error,
+;				EBX = -1
+;				Input pointee =
+;					NO_FREE_CHANNELS: No available channels
+;					FREQUENCY_TOO_HIGH: Base frequency * multiplier > 16,776,960 Hz
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global  PlaySound_cpp : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Mixes all active channels
@@ -76,9 +99,11 @@ global  MixChannels : NEAR
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets a callback that will be called periodically from the playback IRQ
 ;
-; INPUT  : EAX = Callback period in seconds (float)
+; INPUT  : ST0 = Callback period in seconds
 ; 		   EBX -> Callback function, or NULL to disable
-;				  Callback input is EBX -> Channel pool (TChannel elements),
-;				  and ECX = Num. channels
+;				  Callback input is EDX -> Channel pool (TChannel elements),
+;				  and EAX = Num. channels
+; NOTE: It's important that arguments of the callback follow Watcom's register
+; calling convention (from left to right arguments): EAX, EDX, EBX, ECX.
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global  SetMixerCallback : NEAR

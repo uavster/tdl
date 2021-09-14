@@ -1,8 +1,8 @@
 #include "tdl.h"
 
-const TWave *LoadWaveOrDie(const char *file_name) {
-	int error_code;
-	const TWave *wave = WUFLoadWave(file_name, &error_code);
+TWave *LoadWaveOrDie(const char *file_name) {
+	DWORD error_code;
+	TWave *wave = WUFLoadWave(file_name, &error_code);
 	if (wave == NULL) {
 		printf("\n");
 		printf("Error loading "); printf(file_name); printf("\n");
@@ -13,7 +13,18 @@ const TWave *LoadWaveOrDie(const char *file_name) {
 	return wave;
 }
 
-int main() {
+void PlaySound(const TWave *sound) {
+	WUFPlaySound(sound, kAnyChannelStartingAt|0, 1 << 24, 64, 0, NULL);
+}
+
+void MixerCallback(int num_channels, TChannel *channels) {
+	const static char symbols[][3] = {"|\r", "/\r", "-\r", "\\\r"};
+	static int symbol_index = 0;
+	printf(symbols[symbol_index]);
+	symbol_index = (symbol_index + 1) % (sizeof(symbols) / 3);
+}
+
+int main() {	
 	WUFInit();
 
 	SoundProperties play_props;
@@ -28,15 +39,17 @@ int main() {
 	const TWave *wave_16bit_mono = LoadWaveOrDie("w16m8k.wav");
 	const TWave *wave_16bit_stereo = LoadWaveOrDie("w16s44k.wav");
 	
+	WUFSetMixerCallback(0.25, &MixerCallback);
+	
 	bool do_loop = true;
 	while(do_loop) {
 		if (kbhit()) {
 			switch(getch()) {
 				case 27: do_loop = false; break;
-				case '1': printf("1\n"); WUFPlaySound(wave_8bit_mono); break;
-				case '2': printf("2\n"); WUFPlaySound(wave_8bit_stereo); break;
-				case '3': printf("3\n"); WUFPlaySound(wave_16bit_mono); break;
-				case '4': printf("4\n"); WUFPlaySound(wave_16bit_stereo); break;
+				case '1': PlaySound(wave_8bit_mono); break;
+				case '2': PlaySound(wave_8bit_stereo); break;
+				case '3': PlaySound(wave_16bit_mono); break;
+				case '4': PlaySound(wave_16bit_stereo); break;
 			}
 		}
 	//	for (int i = 0; i < 100000; i++) {}

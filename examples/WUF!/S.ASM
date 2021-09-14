@@ -3,13 +3,8 @@
 .stack 1000h
 .code
         INCLUDE utils.inc
+		INCLUDE keyb.inc
         INCLUDE wuf!.inc
-        INCLUDE dma.inc
-
-        INCLUDE sounddev.inc
-        INCLUDE mixer.inc
-        INCLUDE waveload.inc
-		include assert.inc
 
 PROTECTED_MODE_LOOP		EQU 0
 WAIT_KEY_WITH_BIOS		EQU 1
@@ -35,7 +30,7 @@ ReservedChannelKeyHandler	proc
         mov     eax,[wav_ptr+eax*4]
 		mov		edx,channel_volume
 		mov		ecx,frequency_multiplier
-        call    PlaySound
+        call    WUFPlaySound
 		xor		eax,eax		; Do not chain with default ISR
 		ret
 		endp
@@ -47,7 +42,7 @@ AnyFreeChannelKeyHandler	proc
 		mov		bl,NUM_RESERVED_CHANNELS
 		mov		edx,channel_volume
 		mov		ecx,frequency_multiplier
-        call    PlaySound
+        call    WUFPlaySound
 		xor		eax,eax		; Do not chain with default ISR
 		ret
 		endp
@@ -186,7 +181,7 @@ start:
         call    WUFInit
         ErrorExit "Error initializing wuF!"
 		
-		movf	eax,0.25
+		fldf 	0.25
 		mov		ebx,offset MixerCallback
 		call	WUFSetMixerCallback
 
@@ -196,7 +191,7 @@ start:
 				test	eax,eax
 				jz		loading_done
 				push	esi
-				call    LoadWAVE
+				call    WUFLoadWAVE
 				pop		esi
 				ErrorExit "Error: Can't load WAVE file"				
 				mov     [wav_ptr+esi*4],eax

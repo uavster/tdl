@@ -3,6 +3,9 @@
 ;       Ignacio Mellado Bataller ( B52 / the DarkRising )
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
+include mixer.inc
+include waveload.inc
+
 MAX_MIXER_CHANNELS		EQU 64
 
 SoundBuffer		STRUC
@@ -88,7 +91,7 @@ global  WUFSetProperties : NEAR
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Sets a callback that will be called periodically from the playback IRQ
 ;
-; INPUT  : EAX = Callback period in seconds (float)
+; INPUT  : ST0 = Callback period in seconds
 ; 		   EBX -> Callback function, or NULL to disable
 ;				  Callback input is EBX -> Channel pool (TChannel elements),
 ;				  and ECX = Num. channels
