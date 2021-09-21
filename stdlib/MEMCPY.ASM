@@ -69,6 +69,7 @@ aligned_to_dword:
 
     lea     esi, [esi+ecx*4]
     lea     edi, [edi+ecx*4]
+	sub		edi, 4
     xor     ecx, -1
     inc     ecx
 buclecopydwords:
