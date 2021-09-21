@@ -4,11 +4,14 @@
 ; Author: Ignacio Mellado Bataller (a.k.a. B52 / the DarkRising)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
-SPECIFIC_CHANNEL		EQU 0
-ANY_FREE_CHANNEL		EQU 80h
+; Flags in TChannel.Flags
+MIXER_CHANNEL_ALLOCATED		EQU 1
+MIXER_CHANNEL_EDITED		EQU 2
+MIXER_CHANNEL_AUTO_FREE		EQU 4
 
 ; Sound digital channel structure
 TChannel        STRUC
+		Flags			dd ?	; Channel flags (see above)
         ChanWave        dd ?    ; Pointer to TWave structure or NULL if not active
 		SampleIncrement	dd ?	; Fixed point 24.8
         CurrentSample   dd ?	; Fixed point 24.8
@@ -42,52 +45,43 @@ global  OpenMixer : NEAR
 global  CloseMixer : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Fills a channel with the given wave
+; Allocates a channel at or above a given number
+;
+; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
+; OUTPUT : CF = 0 if channel allocated
+;				EBX -> Free channel's TChannel structure
+;          CF = 1 if no free channels
+;				EBX = NULL
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global	WUFAllocateChannel : NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Frees a channel
+;
+; INPUT  : EBX -> TChannel to free
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global	WUFFreeChannel : NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Plays a sound in a channel
 ;
 ; This function may be called from an IRQ, but it is not reentrant.
 ; TODO: make it reentrant with atomic allocation of channels, so that a module
 ; can be played, while triggering sounds with the keyboard, for instance.
 ;
-; INPUT  : EAX -> TWave structure
-;		   If BH == SPECIFIC_CHANNEL, BL contains the channel number on which to play.
-;		   If BH == ANY_FREE_CHANNEL, the sound is played on any free channel greater 
-;		   or equal than BL.
+; INPUT  : EAX -> TWave structure of sample to play in channel
+;		   EBX -> TChannel where to play sound
 ;		   ECX = Frequency multiplier (fixed point 8.24)
 ;		   EDX = Volume multiplier (0-64)
 ;		   ESI = Sample offset
 ;
 ; OUTPUT : CF = 0 if no error
 ;               EAX = NO_ERROR
-;				BL = Channel playing the sound
 ;          CF = 1 if error
 ;               EAX = Error code
-;					NO_FREE_CHANNELS: No available channels
 ;					FREQUENCY_TOO_HIGH: Base frequency * multiplier > 16,776,960 Hz
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global  WUFPlaySound : NEAR
-
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Plays sound (interfaces with C++)
-;
-; INPUT  : EAX -> TWave structure
-;		   If BH == SPECIFIC_CHANNEL, BL contains the channel number on which to play.
-;		   If BH == ANY_FREE_CHANNEL, the sound is played on any free channel greater 
-;		   or equal than BL.
-;		   ECX = Frequency multiplier (fixed point 8.24)
-;		   EDX = Volume multiplier (0-64)
-;		   ESI = Sample offset
-;		   EDI = Pointer to output error code, or NULL if not needed
-;
-; OUTPUT : If no error,
-;				EBX = Channel playing the sound
-;				Input pointee = NO_ERROR
-;          If error,
-;				EBX = -1
-;				Input pointee =
-;					NO_FREE_CHANNELS: No available channels
-;					FREQUENCY_TOO_HIGH: Base frequency * multiplier > 16,776,960 Hz
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-global  PlaySound_cpp : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Mixes all active channels

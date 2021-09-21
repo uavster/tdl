@@ -1,4 +1,4 @@
-test.cpp(25): Warning! W726: col(1) no reference to formal parameter 'num_channels' 
-test.cpp(25): Note! N392: col(1) 'int num_channels' in 'void MixerCallback( int, __40h7b6TChannel * )' defined in: test.cpp(20) (col 24) 
-test.cpp(25): Warning! W726: col(1) no reference to formal parameter 'channels' 
-test.cpp(25): Note! N392: col(1) '__40h7b6TChannel * channels' in 'void MixerCallback( int, __40h7b6TChannel * )' defined in: test.cpp(20) (col 48) 
+test.cpp(30): Warning! W726: col(1) no reference to formal parameter 'num_channels' 
+test.cpp(30): Note! N392: col(1) 'int num_channels' in 'void MixerCallback( int, __40h7b6TChannel * )' defined in: test.cpp(25) (col 24) 
+test.cpp(30): Warning! W726: col(1) no reference to formal parameter 'channels' 
+test.cpp(30): Note! N392: col(1) '__40h7b6TChannel * channels' in 'void MixerCallback( int, __40h7b6TChannel * )' defined in: test.cpp(25) (col 48) 

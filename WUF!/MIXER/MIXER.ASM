@@ -18,6 +18,7 @@
         INCLUDE stderror.inc
 		INCLUDE utils.inc
 		INCLUDE assert.inc
+		INCLUDE memcpy.inc
 
 ; Expansion bits for accuracy in stereo samples converted to mono
 EXPANSION_BITS		EQU 1
@@ -76,13 +77,18 @@ OpenMixer       proc
 		; Allocate array of input channel descriptors
 		movzx	ecx,cl
         imul    ecx,size TChannel
+		shl		ecx,1		; Double buffer of channels
         call    malloc
         ErrorCode MALLOC_ERROR
+        mov     ChannelPoolBack,ebx
+		shr		ecx,1
+        mov     ChannelPool,ebx
+		add		ChannelPool,ecx
+		shl		ecx,1
         mov     edi,ebx
         xor     eax,eax
         cld
         rep     stosb
-        mov     ChannelPool,ebx
 		; Allocate mixing buffer with 32 bits per sample
 		mov		eax,NumOutputSamples
 		movzx	ebx,NumOutputChannels
@@ -197,7 +203,7 @@ endif
         mov     ebx,MixingBuffer
         call    free
         ErrorCode FREE_ERROR
-        mov     ebx,ChannelPool
+        mov     ebx,ChannelPoolBack
         call    free
         ErrorCode FREE_ERROR
         mov     eax,NO_ERROR
@@ -232,92 +238,155 @@ SetMixerCallback	endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Looks for a free channel at or above a given number
 ;
-; INPUT  : BL = Channel number at or above which to search for a free channel
-;
 ; OUTPUT : CF = 0 if channel found
-;				EAX = NO_ERROR
-;               BL = Free channel number
-;				ECX -> Pointer to free channel's TChannel structure
+;				EBX -> Free channel's TChannel structure
 ;          CF = 1 if no free channels
-;               EAX = NO_FREE_CHANNELS
+;				EBX = NULL
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SearchFreeChannel       proc
         movzx   ecx,MaxInputChannels
-		movzx	ebx,bl
-		sub		ecx,ebx
-		mov		eax,size TChannel
-		xor		edx,edx
-		mul		ebx
-        add     eax,ChannelPool
+        mov     ebx,ChannelPoolBack
         parse_channels:
-                cmp     [eax.ChanWave],0
+                test    [ebx.Flags],MIXER_CHANNEL_ALLOCATED
                 jz      found_free_chan
-                add     eax,size TChannel
-				inc		bl
+                add     ebx,size TChannel
         loop    parse_channels
-        mov     eax,NO_FREE_CHANNELS
+		xor		ebx,ebx
         stc
         ret
 
         found_free_chan:
-		mov		ecx,eax
-		xor		eax,eax
         clc
         ret
 SearchFreeChannel       endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Fills a channel with the given wave
+; Allocates a channel at or above a given number
+;
+; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
+; OUTPUT : CF = 0 if channel allocated
+;				EBX -> Free channel's TChannel structure
+;          CF = 1 if no free channels
+;				EBX = NULL
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+WUFAllocateChannel		proc
+		; Disable interrupts while we look for a free channel. This prevents
+		; an IRQ from changing the channels states in between.
+		pushf
+		cli
+		push	eax
+		call	SearchFreeChannel
+		pop		eax
+		jc		no_free_channel_found
+		or		eax,MIXER_CHANNEL_ALLOCATED
+		mov		[TChannel ptr ebx.Flags],eax
+		no_free_channel_found:
+		popf
+		ret
+WUFAllocateChannel		endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Frees a channel
+;
+; INPUT  : EBX -> TChannel to free
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+WUFFreeChannel		proc
+		; Atomically mark as free; no need to disable interrupts
+		and		[TChannel ptr ebx.Flags],NOT MIXER_CHANNEL_ALLOCATED
+		ret
+WUFFreeChannel		endp
+
+CopyBackChannelPoolToFront	proc
+		mov		esi,ChannelPoolBack
+		mov		edi,ChannelPool
+		movzx	ecx,MaxInputChannels
+		pushf
+		cli
+		copy_back_to_front:
+				test	[TChannel ptr esi.Flags],MIXER_CHANNEL_EDITED
+				jz		dont_copy_unedited_channel
+						and		[TChannel ptr esi.Flags],NOT MIXER_CHANNEL_EDITED
+						push	esi edi ecx		
+						mov		ecx,size TChannel
+						call	Memcopy
+						pop		ecx edi esi
+				dont_copy_unedited_channel:
+				add		esi,size TChannel
+				add		edi,size TChannel
+		loop	copy_back_to_front
+		popf
+		ret
+CopyBackChannelPoolToFront	endp
+
+CopyFrontChannelPoolToBack	proc
+		mov		esi,ChannelPool
+		mov		edi,ChannelPoolBack
+		movzx	ecx,MaxInputChannels
+		pushf
+		cli
+		copy_front_to_back:
+				test	[TChannel ptr esi.Flags],MIXER_CHANNEL_EDITED
+				jnz		dont_copy_edited_channel
+						push	esi edi ecx		
+						mov		ecx,size TChannel
+						call	Memcopy
+						pop		ecx edi esi
+				dont_copy_edited_channel:
+				add		esi,size TChannel
+				add		edi,size TChannel
+		loop	copy_front_to_back
+		popf
+		ret
+CopyFrontChannelPoolToBack	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Plays a sound in a channel
 ;
 ; This function may be called from an IRQ, but it is not reentrant.
 ; TODO: make it reentrant with atomic allocation of channels, so that a module
 ; can be played, while triggering sounds with the keyboard, for instance.
 ;
-; INPUT  : EAX = Pointer to TWave structure of sample to play in channel
-;		   If BH == SPECIFIC_CHANNEL, BL contains the number of the channel on 
-;		   which to play.
-;		   If BH == ANY_FREE_CHANNEL, the sound is played on any free channel greater 
-;		   or equal than BL.
+; INPUT  : EAX -> TWave structure of sample to play in channel
+;		   EBX -> TChannel where to play sound
 ;		   ECX = Frequency multiplier (fixed point 8.24)
 ;		   EDX = Volume multiplier (0-64)
 ;		   ESI = Sample offset
 ;
 ; OUTPUT : CF = 0 if no error
 ;               EAX = NO_ERROR
-;				BL = Channel playing the sound
 ;          CF = 1 if error
 ;               EAX = Error code
-;					NO_FREE_CHANNELS: No available channels
 ;					FREQUENCY_TOO_HIGH: Base frequency * multiplier > 16,776,960 Hz
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 WUFPlaySound       proc
-		mov		esi,eax
-		cmp		bh,ANY_FREE_CHANNEL
-		jne		channel_specified
-				push	ecx edx
-				call    SearchFreeChannel
-				pop		edx edi
-				ErrorCode eax
-				mov		eax,ecx
-				mov		ecx,edi
-				jmp		got_channel
-		channel_specified:
-				push	edx
-				xor		edx,edx
-				mov		eax,size TChannel
-				movzx	ebx,bl
-				mul		ebx				
-				add		eax,ChannelPool
-				pop		edx
-		got_channel:
-		push	eax edx
+		pushf
+		cli
+		
+		; For safety, check that the channel was actually allocated
+		mov		edi,[TChannel ptr ebx.Flags]
+		and		edi,MIXER_CHANNEL_ALLOCATED
+		AssertDword edi, _NE, 0
+		; If this function runs outside an IRQ, the audio IRQ will not touch the channel state from here.
+		; If this function runs inside an IRQ, it could be one with higher priority than the audio IRQ (e.g. keyboard).
+		; In such case, we could be changing channel state in the middle of channel mixing.
+		; Possible solutions:
+		; 	a) CLI inside audio IRQ - Bad idea as it would block higher priority events resulting in unresponsive keyboard and timer jitter
+		;   b) Double buffer of TChannels, so that the interface can write to the back buffer while the audio IRQ reads from the front buffer.
+		;      The audio IRQ copies the back buffer to the front buffer before entering. The copy cost has to be small compared to the audio buffer size
+		;	   (num_channels * size(TChannel)) for this option to be good. On the other hand, there is no need for code to disable interrupts for a long
+		;	   time, so latency is minimal.
+		; Change channel state
+        mov     [TChannel ptr ebx.CurrentSample],0
+		mov		[TChannel ptr ebx.Volume],edx
+        mov     [TChannel ptr ebx.ChanWave],eax
 		; EDX:EAX = base_frequency * (multiplier << 24)
-		mov		eax,[TWave ptr esi.BaseRate]
+		xor		edx,edx
+		mov		eax,[TWave ptr eax.BaseRate]
 		mul		ecx
 		; EAX = (base_frequency * (multiplier << 24)) >> 16
 		cmp		edx,0ffffh
 		jbe		resulting_freq_ok
-				pop		edx eax
+				popf
 				mov		eax,FREQUENCY_TOO_HIGH
 				stc
 				ret
@@ -330,58 +399,14 @@ WUFPlaySound       proc
 		; EAX = ((base_frequency * (multiplier << 24)) >> 16) / mixing_frequency
 		div		MixFreq
 		; EDX = (((Base frequency * (multiplier << 24)) >> 16) / mixing_frequency)
-		mov		ebx,eax
-		pop		edx eax
-		mov		[TChannel ptr eax.SampleIncrement],ebx
-        mov     [TChannel ptr eax.CurrentSample],0
-		mov		[TChannel ptr eax.Volume],edx
-		; Atomic allocation of the channel
-        mov     [TChannel ptr eax.ChanWave],esi
+		mov		[TChannel ptr ebx.SampleIncrement],eax
+		or		[TChannel ptr ebx.Flags],MIXER_CHANNEL_EDITED
+		
+		popf
 		xor		eax,eax
 		clc		
         ret
 WUFPlaySound       endp
-
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Plays sound (interfaces with C++)
-;
-; INPUT  : EAX -> TWave structure
-;		   If BH == SPECIFIC_CHANNEL, BL contains the channel number on which to play.
-;		   If BH == ANY_FREE_CHANNEL, the sound is played on any free channel greater 
-;		   or equal than BL.
-;		   ECX = Frequency multiplier (fixed point 8.24)
-;		   EDX = Volume multiplier (0-64)
-;		   ESI = Sample offset
-;		   EDI = Pointer to output error code, or NULL if not needed
-;
-; OUTPUT : If no error,
-;				EBX = Channel playing the sound
-;				Input pointee = NO_ERROR
-;          If error,
-;				EBX = -1
-;				Input pointee =
-;					NO_FREE_CHANNELS: No available channels
-;					FREQUENCY_TOO_HIGH: Base frequency * multiplier > 16,776,960 Hz
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-PlaySound_cpp	proc
-		push	edi
-		call	WUFPlaySound
-		pop		edi
-		pushf
-		test	edi,edi
-		jz		ps_error_code_not_needed
-		mov		dword ptr [edi],eax
-		ps_error_code_not_needed:
-		popf
-		jc		wuf_play_sound_error
-		movzx	ebx,bl
-		ret 
-
-		wuf_play_sound_error:
-		xor		ebx,ebx
-		dec		ebx
-		ret
-PlaySound_cpp	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets the properties of a channel
@@ -1010,6 +1035,7 @@ endif
 		mov		MissingMixerBufferSamples,eax
 		mov		MixingBufferOffset,0
 		tick_loop:
+			call	CopyBackChannelPoolToFront
 			; Samples to process = min(missing tick samples, missing mixer buffer samples)
 			mov		eax,MissingMixerBufferSamples
 			mov		ebp,MissingTickSamples
@@ -1038,24 +1064,37 @@ endif
 				sar		ebp,8
 				mov		eax,ChannelPool
 				add		eax,CurrentChannelOffset
+				test	[eax.Flags],MIXER_CHANNEL_ALLOCATED
+				jz		no_wave_in_channel
 				mov     esi,[eax.ChanWave]
 				test    esi,esi
-				jz      no_wave_in_channel
+				jz      no_wave_in_channel				
 					mov     ebx,[esi.WavePtr]
 					mov     edx,[eax.CurrentSample]
-					cmp		NumOutputChannels,2
-					jz		stereo_output
-							call	MixChannelToMono
-							jc		channel_mixed
-							jmp		channel_continues
-					stereo_output:
-							call	MixChannelToStereo
-							jnc		channel_continues
+					; Is current sample at or beyond length?
+					mov		ecx,[esi.WaveLen]
+					shl		ecx,8
+					cmp     edx,ecx
+					jae		channel_mixed
+							cmp		NumOutputChannels,2
+							jz		stereo_output
+									call	MixChannelToMono
+									jc		channel_mixed
+									jmp		channel_continues
+							stereo_output:
+									call	MixChannelToStereo
+									jnc		channel_continues
 					channel_mixed:
 					mov		eax,ChannelPool
 					add		eax,CurrentChannelOffset
 					; Atomic freeing of the channel
-					mov     [eax.ChanWave],0
+					pushf
+					cli
+					test	[eax.Flags],MIXER_CHANNEL_AUTO_FREE
+					jz		no_auto_free
+							and		[eax.Flags],NOT MIXER_CHANNEL_ALLOCATED
+					no_auto_free:
+					popf
 					; The channel may have been allocated from a higher priority IRQ at this point: don't touch it.
 					jmp		no_wave_in_channel
 					channel_continues:
@@ -1069,6 +1108,8 @@ endif
 			jnz     walk_channels
 			
 			no_samples_to_play:
+			call	CopyFrontChannelPoolToBack
+
 			add 	MissingTickSamples,ebp
 			jg		tick_samples_not_expired
 				; End of tick
@@ -1271,13 +1312,14 @@ MixBitsPerSample		db ?
 NumOutputChannels		db ?
 nchannels       		db ?
 ChannelPool     		dd ?    ; Pointer to channel array
+ChannelPoolBack			dd ?	; Pointer to channel array back buffer
 MixFreq         		dd ?    ; Mixing frequency
 OutputBuffer			dd ?
 NumOutputSamples		dd ?
 NumOutputBytes			dd ?
 MixingBuffer			dd ?
 CurrentChannelOffset    dd ?
-wave_len				dd ?
+wave_len				dd ?	; TODO: This variable should be held inside TChannel or WUFPlaySound from a higher priority IRQ (keyboard) could set a new sample with length lower than wave_len, which would crash the audio IRQ
 sample_increment		dd ?
 volume_table_ptr		dd ?
 VolumeTable				dd ?

@@ -13,7 +13,7 @@
   extern "C" {
 #endif
 
-#define kAnyChannelStartingAt 0x8000
+#define kWUFChannelAutoFree		4
 
 typedef struct {
         DWORD SPSamplingRate;
@@ -125,31 +125,52 @@ void WUFSetMixerCallback(float period_s, void (*callback)(int num_channels, TCha
 
 /*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Plays sound (interfaces with C++)
+; Allocates a channel at or above a given number
 ;
-; INPUT  : EAX -> TWave structure
-;		   If BH == SPECIFIC_CHANNEL, BL contains the channel number on which to play.
-;		   If BH == ANY_FREE_CHANNEL, the sound is played on any free channel greater 
-;		   or equal than BL.
+; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
+; OUTPUT : CF = 0 if channel allocated
+;				EBX -> Free channel's TChannel structure
+;          CF = 1 if no free channels
+;				EBX = NULL
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+*/
+TChannel *WUFAllocateChannel(int flags);
+#pragma aux WUFAllocateChannel "*"	parm [eax]\
+									modify [eax ebx ecx edx esi edi ebp]\
+									value [ebx];
+
+/*
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Frees a channel
+;
+; INPUT  : EBX -> TChannel to free
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+*/
+void WUFFreeChannel(TChannel *channel);
+#pragma aux WUFFreeChannel "*"	parm [ebx]\
+								modify [eax ebx ecx edx esi edi ebp];
+
+/*
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Plays a sound in a channel
+;
+; INPUT  : EAX -> TWave structure of sample to play in channel
+;		   EBX -> TChannel where to play sound
 ;		   ECX = Frequency multiplier (fixed point 8.24)
 ;		   EDX = Volume multiplier (0-64)
 ;		   ESI = Sample offset
-;		   EDI = Pointer to output error code, or NULL if not needed
 ;
-; OUTPUT : If no error,
-;				EBX = Channel playing the sound
-;				Input pointee = NO_ERROR
-;          If error,
-;				EBX = -1
-;				Input pointee =
-;					NO_FREE_CHANNELS: No available channels
+; OUTPUT : CF = 0 if no error
+;               EAX = NO_ERROR
+;          CF = 1 if error
+;               EAX = Error code
 ;					FREQUENCY_TOO_HIGH: Base frequency * multiplier > 16,776,960 Hz
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 */
-int WUFPlaySound(const TWave *wave, DWORD channel_number, DWORD freq_multiplier, DWORD volume, DWORD sample_offset, DWORD *error_code);
-#pragma aux WUFPlaySound "PlaySound_cpp"	parm [eax] [ebx] [ecx] [edx] [esi] [edi]\
-											modify [eax ebx ecx edx esi edi ebp]\
-											value [ebx];
+int WUFPlaySound(const TWave *wave, TChannel *channel, DWORD freq_multiplier, DWORD volume, DWORD sample_offset);
+#pragma aux WUFPlaySound "*"	parm [eax] [ebx] [ecx] [edx] [esi] [edi]\
+								modify [eax ebx ecx edx esi edi ebp]\
+								value [eax];
 
 #ifdef __cplusplus
   };

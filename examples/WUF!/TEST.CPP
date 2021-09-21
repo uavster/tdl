@@ -14,7 +14,12 @@ TWave *LoadWaveOrDie(const char *file_name) {
 }
 
 void PlaySound(const TWave *sound) {
-	WUFPlaySound(sound, kAnyChannelStartingAt|0, 1 << 24, 64, 0, NULL);
+	TChannel *channel = WUFAllocateChannel(kWUFChannelAutoFree);
+	if (channel == NULL) {
+		printf("Unable to allocate channel.\n");
+		return;
+	}
+	WUFPlaySound(sound, channel, 1 << 24, 64, 0);
 }
 
 void MixerCallback(int num_channels, TChannel *channels) {
