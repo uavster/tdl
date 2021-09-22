@@ -45,7 +45,7 @@ global  OpenMixer : NEAR
 global  CloseMixer : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Allocates a channel at or above a given number
+; Allocates a channel
 ;
 ; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
 ; OUTPUT : CF = 0 if channel allocated
@@ -54,6 +54,19 @@ global  CloseMixer : NEAR
 ;				EBX = NULL
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global	WUFAllocateChannel : NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Allocates a number of channels
+;
+; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
+;		   ECX = Number of channels to allocate
+;		   EDI -> TChannel array with ECX or more capacity
+; OUTPUT : CF = 0 if channel allocated
+;		   		EAX = 0
+;          CF = 1 if no free channels
+;				EAX = Error code (NO_FREE_CHANNELS)
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global WUFAllocateChannels : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Frees a channel

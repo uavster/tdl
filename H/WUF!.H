@@ -141,6 +141,24 @@ TChannel *WUFAllocateChannel(int flags);
 
 /*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Allocates a number of channels
+;
+; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
+;		   ECX = Number of channels to allocate
+;		   EDI -> TChannel array with ECX or more capacity
+; OUTPUT : CF = 0 if channel allocated
+;		   		EAX = 0
+;          CF = 1 if no free channels
+;				EAX = Error code (NO_FREE_CHANNELS)
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+*/
+bool WUFAllocateChannels(int flags, int num_channels, TChannel *channels);
+#pragma aux WUFAllocateChannels "*"	parm [eax] [ecx] [edi]\
+									modify [eax ebx ecx edx esi edi ebp]\
+									value [eax];
+
+/*
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Frees a channel
 ;
 ; INPUT  : EBX -> TChannel to free

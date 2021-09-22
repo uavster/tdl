@@ -261,7 +261,7 @@ SearchFreeChannel       proc
 SearchFreeChannel       endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Allocates a channel at or above a given number
+; Allocates a channel
 ;
 ; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
 ; OUTPUT : CF = 0 if channel allocated
@@ -280,10 +280,51 @@ WUFAllocateChannel		proc
 		jc		no_free_channel_found
 		or		eax,MIXER_CHANNEL_ALLOCATED
 		mov		[TChannel ptr ebx.Flags],eax
+		popf
+		clc
+		ret
+		
 		no_free_channel_found:
 		popf
+		stc
 		ret
 WUFAllocateChannel		endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Allocates a number of channels
+;
+; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
+;		   ECX = Number of channels to allocate
+;		   EDI -> TChannel array with ECX or more capacity
+; OUTPUT : CF = 0 if channel allocated
+;		   		EAX = 0
+;          CF = 1 if no free channels
+;				EAX = Error code (NO_FREE_CHANNELS)
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+WUFAllocateChannels		proc
+		; Disable interrupts while we look for a free channel. This prevents
+		; an IRQ from changing the channels states in between.
+		pushf
+		cli
+		allocate_channels:
+				push	eax edi ecx
+				call	WUFAllocateChannel
+				pop		ecx edi eax
+				jc		error_allocating_channel
+				mov		[edi],ebx
+				add		edi,4
+		loop	allocate_channels
+		xor		eax,eax
+		popf
+		clc
+		ret
+		
+		error_allocating_channel:
+		mov		eax,NO_FREE_CHANNELS
+		popf
+		stc
+		ret
+WUFAllocateChannels		endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Frees a channel
@@ -303,6 +344,8 @@ CopyBackChannelPoolToFront	proc
 		pushf
 		cli
 		copy_back_to_front:
+				test	[TChannel ptr esi.Flags],MIXER_CHANNEL_ALLOCATED
+				jz		dont_copy_unedited_channel
 				test	[TChannel ptr esi.Flags],MIXER_CHANNEL_EDITED
 				jz		dont_copy_unedited_channel
 						and		[TChannel ptr esi.Flags],NOT MIXER_CHANNEL_EDITED
@@ -325,6 +368,8 @@ CopyFrontChannelPoolToBack	proc
 		pushf
 		cli
 		copy_front_to_back:
+				test	[TChannel ptr esi.Flags],MIXER_CHANNEL_ALLOCATED
+				jz		dont_copy_edited_channel
 				test	[TChannel ptr esi.Flags],MIXER_CHANNEL_EDITED
 				jnz		dont_copy_edited_channel
 						push	esi edi ecx		

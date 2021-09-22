@@ -25,24 +25,34 @@ CHANNEL_VOLUME_MAX			EQU 64
 
 ReservedChannelKeyHandler	proc
 		sub		eax,Key_1
-		mov		bh,SPECIFIC_CHANNEL
-		mov		bl,al
+		mov		ebx,[mixer_channels+eax*4]
         mov     eax,[wav_ptr+eax*4]
 		mov		edx,channel_volume
 		mov		ecx,frequency_multiplier
-        call    WUFPlaySound
+		xor		esi,esi
+; mov	edx,mixer_channels
+; mov eax,[TChannel ptr ebx.Flags]
+; int 3
+        call    WUFPlaySound		
+; mov ebp,[TChannel ptr ebx.Flags]
+; int 3
 		xor		eax,eax		; Do not chain with default ISR
 		ret
 		endp
 
 AnyFreeChannelKeyHandler	proc
-		sub		eax,Key_5
-        mov     eax,[wav_ptr+eax*4]
-		mov		bh,ANY_FREE_CHANNEL
-		mov		bl,NUM_RESERVED_CHANNELS
-		mov		edx,channel_volume
-		mov		ecx,frequency_multiplier
-        call    WUFPlaySound
+		push	eax
+		mov		eax,MIXER_CHANNEL_AUTO_FREE
+		call	WUFAllocateChannel
+		pop		eax
+		jc		no_more_free_channels
+				sub		eax,Key_5
+				mov     eax,[wav_ptr+eax*4]
+				mov		edx,channel_volume
+				mov		ecx,frequency_multiplier
+				xor		esi,esi
+				call    WUFPlaySound		
+		no_more_free_channels:
 		xor		eax,eax		; Do not chain with default ISR
 		ret
 		endp
@@ -181,6 +191,16 @@ start:
         call    WUFInit
         ErrorExit "Error initializing wuF!"
 		
+		xor		eax,eax
+		mov		edi,offset mixer_channels
+		mov		ecx,4
+		call	WUFAllocateChannels
+		jnc		channels_allocated_ok
+				call	WUFClose
+				stc
+				ErrorExit "Unable to allocate mixer channels."	
+		
+		channels_allocated_ok:
 		fldf 	0.25
 		mov		ebx,offset MixerCallback
 		call	WUFSetMixerCallback
@@ -302,6 +322,8 @@ db I,79 dup(0)
 I=I XOR -1
 ENDM
 #
+
 .data?
+mixer_channels	dd ?,?,?,?
 wav_ptr			dd ?,?,?,?
 end start
