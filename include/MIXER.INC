@@ -47,6 +47,9 @@ global  CloseMixer : NEAR
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Allocates a channel
 ;
+; It is safe to call this function from main code and IRQs. Channel data races
+; are avoided by disabling interrupts.
+;
 ; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
 ; OUTPUT : CF = 0 if channel allocated
 ;				EBX -> Free channel's TChannel structure
@@ -57,6 +60,9 @@ global	WUFAllocateChannel : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Allocates a number of channels
+;
+; It is safe to call this function from main code and IRQs. Channel data races
+; are avoided by disabling interrupts.
 ;
 ; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
 ;		   ECX = Number of channels to allocate
@@ -71,6 +77,9 @@ global WUFAllocateChannels : NEAR
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Frees a channel
 ;
+; It is safe to call this function from main code and IRQs. Channel data races
+; are not possible with a single atomic instruction.
+;
 ; INPUT  : EBX -> TChannel to free
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global	WUFFreeChannel : NEAR
@@ -78,9 +87,8 @@ global	WUFFreeChannel : NEAR
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Plays a sound in a channel
 ;
-; This function may be called from an IRQ, but it is not reentrant.
-; TODO: make it reentrant with atomic allocation of channels, so that a module
-; can be played, while triggering sounds with the keyboard, for instance.
+; It is safe to call this function from main code and IRQs. Channel data races
+; are avoided by disabling interrupts.
 ;
 ; INPUT  : EAX -> TWave structure of sample to play in channel
 ;		   EBX -> TChannel where to play sound

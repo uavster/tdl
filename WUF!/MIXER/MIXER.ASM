@@ -247,7 +247,7 @@ SearchFreeChannel       proc
         movzx   ecx,MaxInputChannels
         mov     ebx,ChannelPoolBack
         parse_channels:
-                test    [ebx.Flags],MIXER_CHANNEL_ALLOCATED
+                test    [TChannel ptr ebx.Flags],MIXER_CHANNEL_ALLOCATED
                 jz      found_free_chan
                 add     ebx,size TChannel
         loop    parse_channels
@@ -262,6 +262,9 @@ SearchFreeChannel       endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Allocates a channel
+;
+; It is safe to call this function from main code and IRQs. Channel data races
+; are avoided by disabling interrupts.
 ;
 ; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
 ; OUTPUT : CF = 0 if channel allocated
@@ -292,6 +295,9 @@ WUFAllocateChannel		endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Allocates a number of channels
+;
+; It is safe to call this function from main code and IRQs. Channel data races
+; are avoided by disabling interrupts.
 ;
 ; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
 ;		   ECX = Number of channels to allocate
@@ -329,6 +335,9 @@ WUFAllocateChannels		endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Frees a channel
 ;
+; It is safe to call this function from main code and IRQs. Channel data races
+; are not possible with a single atomic instruction.
+;
 ; INPUT  : EBX -> TChannel to free
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 WUFFreeChannel		proc
@@ -344,13 +353,24 @@ CopyBackChannelPoolToFront	proc
 		pushf
 		cli
 		copy_back_to_front:
-				test	[TChannel ptr esi.Flags],MIXER_CHANNEL_ALLOCATED
-				jz		dont_copy_unedited_channel
+				; Always copy channel allocation status, so that the IRQ knows which channels were allocated
+				mov		eax,[TChannel ptr esi.Flags]
+				and 	eax,MIXER_CHANNEL_ALLOCATED
+				mov		ebx,[TChannel ptr edi.Flags]
+				and		ebx,NOT (MIXER_CHANNEL_ALLOCATED OR MIXER_CHANNEL_EDITED)
+				or		ebx,eax
+				mov		[TChannel ptr edi.Flags],ebx
+				
 				test	[TChannel ptr esi.Flags],MIXER_CHANNEL_EDITED
 				jz		dont_copy_unedited_channel
+						; Clear the edited flag so that editions inside the audio IRQ from higher priority IRQs are sensed,
+						; and the interface does not keep pushing the one-time changes to the audio IRQ.
 						and		[TChannel ptr esi.Flags],NOT MIXER_CHANNEL_EDITED
+						; Copy channel data except for flags
 						push	esi edi ecx		
-						mov		ecx,size TChannel
+						mov		ecx,size TChannel-4	; size TChannel-size TChannel.Flags does not work (equals 0)
+						add		esi,4	; size TChannel.Flags does not work (equals 0)
+						add		edi,4	; size TChannel.Flags does not work (equals 0)
 						call	Memcopy
 						pop		ecx edi esi
 				dont_copy_unedited_channel:
@@ -368,12 +388,23 @@ CopyFrontChannelPoolToBack	proc
 		pushf
 		cli
 		copy_front_to_back:
-				test	[TChannel ptr esi.Flags],MIXER_CHANNEL_ALLOCATED
-				jz		dont_copy_edited_channel
-				test	[TChannel ptr esi.Flags],MIXER_CHANNEL_EDITED
+				; Always copy channel allocation status, so that the API knows which channels were auto freed (or allocated in the callback)
+				mov		eax,[TChannel ptr esi.Flags]
+				and 	eax,MIXER_CHANNEL_ALLOCATED
+				mov		ebx,[TChannel ptr edi.Flags]
+				and		ebx,NOT MIXER_CHANNEL_ALLOCATED
+				or		ebx,eax
+				mov		[TChannel ptr edi.Flags],ebx
+				
+				; If the channel was edited from the API in the middle of the audio IRQ, do not copy back the channel data,
+				; as it would overwrite API-passed values, which have priority.
+				test	[TChannel ptr edi.Flags],MIXER_CHANNEL_EDITED
 				jnz		dont_copy_edited_channel
+						; Otherwise, copy channel data except for flags
 						push	esi edi ecx		
-						mov		ecx,size TChannel
+						mov		ecx,size TChannel-4	; size TChannel-size TChannel.Flags does not work (equals 0)
+						add		esi,4	; size TChannel.Flags does not work (equals 0)
+						add		edi,4	; size TChannel.Flags does not work (equals 0)
 						call	Memcopy
 						pop		ecx edi esi
 				dont_copy_edited_channel:
@@ -387,9 +418,8 @@ CopyFrontChannelPoolToBack	endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Plays a sound in a channel
 ;
-; This function may be called from an IRQ, but it is not reentrant.
-; TODO: make it reentrant with atomic allocation of channels, so that a module
-; can be played, while triggering sounds with the keyboard, for instance.
+; It is safe to call this function from main code and IRQs. Channel data races
+; are avoided by disabling interrupts.
 ;
 ; INPUT  : EAX -> TWave structure of sample to play in channel
 ;		   EBX -> TChannel where to play sound
@@ -1109,9 +1139,9 @@ endif
 				sar		ebp,8
 				mov		eax,ChannelPool
 				add		eax,CurrentChannelOffset
-				test	[eax.Flags],MIXER_CHANNEL_ALLOCATED
+				test	[TChannel ptr eax.Flags],MIXER_CHANNEL_ALLOCATED
 				jz		no_wave_in_channel
-				mov     esi,[eax.ChanWave]
+				mov     esi,[TChannel ptr eax.ChanWave]
 				test    esi,esi
 				jz      no_wave_in_channel				
 					mov     ebx,[esi.WavePtr]
@@ -1135,9 +1165,9 @@ endif
 					; Atomic freeing of the channel
 					pushf
 					cli
-					test	[eax.Flags],MIXER_CHANNEL_AUTO_FREE
+					test	[TChannel ptr eax.Flags],MIXER_CHANNEL_AUTO_FREE
 					jz		no_auto_free
-							and		[eax.Flags],NOT MIXER_CHANNEL_ALLOCATED
+							and		[TChannel ptr eax.Flags],NOT MIXER_CHANNEL_ALLOCATED
 					no_auto_free:
 					popf
 					; The channel may have been allocated from a higher priority IRQ at this point: don't touch it.
@@ -1364,8 +1394,16 @@ NumOutputSamples		dd ?
 NumOutputBytes			dd ?
 MixingBuffer			dd ?
 CurrentChannelOffset    dd ?
-wave_len				dd ?	; TODO: This variable should be held inside TChannel or WUFPlaySound from a higher priority IRQ (keyboard) could set a new sample with length lower than wave_len, which would crash the audio IRQ
+
+; These are variables used to cache channel fields in the channel 
+; mixing loop. They are loaded before the mixing loop from front
+; channel data, which may also be used within the channel loop.
+; The variables and the channel fields are always in sync because 
+; front channel data only changes at the start of the mixing loop,
+; when copied from the back channel data.
+wave_len				dd ? 
 sample_increment		dd ?
+
 volume_table_ptr		dd ?
 VolumeTable				dd ?
 
