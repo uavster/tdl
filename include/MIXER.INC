@@ -50,6 +50,10 @@ global  CloseMixer : NEAR
 ; It is safe to call this function from main code and IRQs. Channel data races
 ; are avoided by disabling interrupts.
 ;
+; Allocating a new channel from outside the mixer callback will not take
+; effect until the next tick, so please do not play a sound in the new channel
+; from the callback until it is effectively allocated.
+;
 ; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
 ; OUTPUT : CF = 0 if channel allocated
 ;				EBX -> Free channel's TChannel structure
@@ -63,6 +67,10 @@ global	WUFAllocateChannel : NEAR
 ;
 ; It is safe to call this function from main code and IRQs. Channel data races
 ; are avoided by disabling interrupts.
+;
+; Allocating a new channel from outside the mixer callback will not take
+; effect until the next tick, so please do not play a sound in the new channel
+; from the callback until it is effectively allocated.
 ;
 ; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
 ;		   ECX = Number of channels to allocate
@@ -80,6 +88,9 @@ global WUFAllocateChannels : NEAR
 ; It is safe to call this function from main code and IRQs. Channel data races
 ; are not possible with a single atomic instruction.
 ;
+; Freeing a channel from outside the mixer callback will not take effect until
+; the next tick, so please keep the active sound in memory until then.
+;
 ; INPUT  : EBX -> TChannel to free
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 global	WUFFreeChannel : NEAR
@@ -89,6 +100,10 @@ global	WUFFreeChannel : NEAR
 ;
 ; It is safe to call this function from main code and IRQs. Channel data races
 ; are avoided by disabling interrupts.
+;
+; Playing a new sound on a channel from outside the mixer callback will not take
+; effect until the next tick, so please keep the active sound in memory until
+; then.
 ;
 ; INPUT  : EAX -> TWave structure of sample to play in channel
 ;		   EBX -> TChannel where to play sound

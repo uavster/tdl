@@ -266,6 +266,10 @@ SearchFreeChannel       endp
 ; It is safe to call this function from main code and IRQs. Channel data races
 ; are avoided by disabling interrupts.
 ;
+; Allocating a new channel from outside the mixer callback will not take
+; effect until the next tick, so please do not play a sound in the new channel
+; from the callback until it is effectively allocated.
+;
 ; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
 ; OUTPUT : CF = 0 if channel allocated
 ;				EBX -> Free channel's TChannel structure
@@ -298,6 +302,10 @@ WUFAllocateChannel		endp
 ;
 ; It is safe to call this function from main code and IRQs. Channel data races
 ; are avoided by disabling interrupts.
+;
+; Allocating a new channel from outside the mixer callback will not take
+; effect until the next tick, so please do not play a sound in the new channel
+; from the callback until it is effectively allocated.
 ;
 ; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
 ;		   ECX = Number of channels to allocate
@@ -338,11 +346,14 @@ WUFAllocateChannels		endp
 ; It is safe to call this function from main code and IRQs. Channel data races
 ; are not possible with a single atomic instruction.
 ;
+; Freeing a channel from outside the mixer callback will not take effect until
+; the next tick, so please keep the active sound in memory until then.
+;
 ; INPUT  : EBX -> TChannel to free
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 WUFFreeChannel		proc
 		; Atomically mark as free; no need to disable interrupts
-		and		[TChannel ptr ebx.Flags],NOT MIXER_CHANNEL_ALLOCATED
+		and		[TChannel ptr ebx.Flags],NOT (MIXER_CHANNEL_ALLOCATED OR MIXER_CHANNEL_AUTO_FREE OR MIXER_CHANNEL_EDITED)
 		ret
 WUFFreeChannel		endp
 
@@ -353,19 +364,17 @@ CopyBackChannelPoolToFront	proc
 		pushf
 		cli
 		copy_back_to_front:
-				; Always copy channel allocation status, so that the IRQ knows which channels were allocated
+				; Always copy channel flags, so that IRQ knows which channels were allocated and which channels to autofree.
+				; Clear the edited flag so that editions inside the audio IRQ from higher priority IRQs are sensed,
+				; and the interface does not keep pushing the one-time changes to the audio IRQ.
 				mov		eax,[TChannel ptr esi.Flags]
-				and 	eax,MIXER_CHANNEL_ALLOCATED
-				mov		ebx,[TChannel ptr edi.Flags]
-				and		ebx,NOT (MIXER_CHANNEL_ALLOCATED OR MIXER_CHANNEL_EDITED)
-				or		ebx,eax
-				mov		[TChannel ptr edi.Flags],ebx
+				mov		ebx,eax
+				and		eax,NOT MIXER_CHANNEL_EDITED
+				mov		[TChannel ptr esi.Flags],eax
+				mov		[TChannel ptr edi.Flags],eax
 				
-				test	[TChannel ptr esi.Flags],MIXER_CHANNEL_EDITED
+				test	ebx,MIXER_CHANNEL_EDITED
 				jz		dont_copy_unedited_channel
-						; Clear the edited flag so that editions inside the audio IRQ from higher priority IRQs are sensed,
-						; and the interface does not keep pushing the one-time changes to the audio IRQ.
-						and		[TChannel ptr esi.Flags],NOT MIXER_CHANNEL_EDITED
 						; Copy channel data except for flags
 						push	esi edi ecx		
 						mov		ecx,size TChannel-4	; size TChannel-size TChannel.Flags does not work (equals 0)
@@ -390,15 +399,12 @@ CopyFrontChannelPoolToBack	proc
 		copy_front_to_back:
 				; Always copy channel allocation status, so that the API knows which channels were auto freed (or allocated in the callback)
 				mov		eax,[TChannel ptr esi.Flags]
-				and 	eax,MIXER_CHANNEL_ALLOCATED
-				mov		ebx,[TChannel ptr edi.Flags]
-				and		ebx,NOT MIXER_CHANNEL_ALLOCATED
-				or		ebx,eax
-				mov		[TChannel ptr edi.Flags],ebx
+				and		eax,NOT MIXER_CHANNEL_EDITED	; Clear edited flag introduced by mixer callback (via WUFPlaySound) to avoid propagation to back channels
+				xchg	[TChannel ptr edi.Flags],eax
 				
 				; If the channel was edited from the API in the middle of the audio IRQ, do not copy back the channel data,
 				; as it would overwrite API-passed values, which have priority.
-				test	[TChannel ptr edi.Flags],MIXER_CHANNEL_EDITED
+				test	eax,MIXER_CHANNEL_EDITED
 				jnz		dont_copy_edited_channel
 						; Otherwise, copy channel data except for flags
 						push	esi edi ecx		
@@ -420,6 +426,10 @@ CopyFrontChannelPoolToBack	endp
 ;
 ; It is safe to call this function from main code and IRQs. Channel data races
 ; are avoided by disabling interrupts.
+;
+; Playing a new sound on a channel from outside the mixer callback will not take
+; effect until the next tick, so please keep the active sound in memory until
+; then.
 ;
 ; INPUT  : EAX -> TWave structure of sample to play in channel
 ;		   EBX -> TChannel where to play sound
@@ -1167,7 +1177,8 @@ endif
 					cli
 					test	[TChannel ptr eax.Flags],MIXER_CHANNEL_AUTO_FREE
 					jz		no_auto_free
-							and		[TChannel ptr eax.Flags],NOT MIXER_CHANNEL_ALLOCATED
+							mov		ebx,eax
+							call	WUFFreeChannel
 					no_auto_free:
 					popf
 					; The channel may have been allocated from a higher priority IRQ at this point: don't touch it.
@@ -1183,8 +1194,6 @@ endif
 			jnz     walk_channels
 			
 			no_samples_to_play:
-			call	CopyFrontChannelPoolToBack
-
 			add 	MissingTickSamples,ebp
 			jg		tick_samples_not_expired
 				; End of tick
@@ -1200,6 +1209,7 @@ endif
 				call	ebx
 				pop		ebp
 			tick_samples_not_expired:
+			call	CopyFrontChannelPoolToBack
 			sar		ebp,8
 		add		MissingMixerBufferSamples,ebp
 		jnz		tick_loop
