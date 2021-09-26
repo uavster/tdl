@@ -17,6 +17,7 @@ LIST_DEBUG      EQU 0
 ;               EBX -> List
 ;          CF = 1 if error
 ;               EAX = Error code (MALLOC_ERROR)
+;				EBX = NULL
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 global  NewList : NEAR
 
@@ -69,6 +70,7 @@ global  DeleteElement : NEAR
 ;               EBX -> Element
 ;          CF = 1 if list finished
 ;               EAX = Error code (ELEMENT_NOT_FOUND)
+;				EBX = NULL
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 global  GetNextElement : NEAR
 

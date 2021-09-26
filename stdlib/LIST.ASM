@@ -35,6 +35,7 @@ ListAtom    struc
 ;               EBX -> List
 ;          CF = 1 if error
 ;               EAX = Error code (MALLOC_ERROR)
+;				EBX = NULL
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 NewList proc
         mov     ecx,size List
@@ -267,18 +268,21 @@ DeleteElement   endp
 ;               EBX -> Element
 ;          CF = 1 if list finished
 ;               EAX = Error code (ELEMENT_NOT_FOUND)
+;				EBX = NULL
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 GetNextElement  proc
         mov     edx,[eax.LCurrent]
         test    edx,edx
         jnz     ptr_not_first
                 mov     eax,ELEMENT_NOT_FOUND
+				xor		ebx,ebx
                 stc
                 ret
         ptr_not_first:
         cmp     edx,-1
         jnz     ptr_not_last
                 mov     eax,ELEMENT_NOT_FOUND
+				xor		ebx,ebx
                 stc
                 ret
         ptr_not_last:
