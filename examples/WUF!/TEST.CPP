@@ -44,7 +44,7 @@ int main() {
 	const TWave *wave_16bit_mono = LoadWaveOrDie("w16m8k.wav");
 	const TWave *wave_16bit_stereo = LoadWaveOrDie("w16s44k.wav");
 	
-	WUFSetMixerCallback(0.25, &MixerCallback);
+	WUFAddMixerCallback(0.25, &MixerCallback);
 	
 	bool do_loop = true;
 	while(do_loop) {

@@ -203,8 +203,9 @@ start:
 		channels_allocated_ok:
 		fldf 	0.25
 		mov		ebx,offset MixerCallback
-		call	WUFSetMixerCallback
-
+		call	WUFAddMixerCallback
+		ErrorExit "Unable to add a mixer callback."
+		
 		xor		esi,esi
 		load_files:		
 				mov     eax,[esi*4+wav_files]

@@ -96,6 +96,20 @@ global WUFAllocateChannels : NEAR
 global	WUFFreeChannel : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Frees channels
+;
+; It is safe to call this function from main code and IRQs. Channel data races
+; are not possible with a single atomic instruction.
+;
+; Freeing a channel from outside the mixer callback will not take effect until
+; the next tick, so please keep the active sound in memory until then.
+;
+; INPUT  : EBX -> TChannel pointer array
+;		   ECX = Number of channel pointers in array
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global	WUFFreeChannels : NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Plays a sound in a channel
 ;
 ; It is safe to call this function from main code and IRQs. Channel data races
@@ -127,7 +141,9 @@ global  WUFPlaySound : NEAR
 global  MixChannels : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Sets a callback that will be called periodically from the playback IRQ
+; Adds a callback that will be called periodically from the playback IRQ
+;
+; This function can only be called from non-IRQ, audio IRQ or lower priority IRQs.
 ;
 ; INPUT  : ST0 = Callback period in seconds
 ; 		   EBX -> Callback function, or NULL to disable
@@ -135,5 +151,20 @@ global  MixChannels : NEAR
 ;				  and EAX = Num. channels
 ; NOTE: It's important that arguments of the callback follow Watcom's register
 ; calling convention (from left to right arguments): EAX, EDX, EBX, ECX.
+;
+; OUTPUT : CF = 0 if success
+;		 		EAX -> TMixerCallback structure
+;		   CF = 1 if error
+;				EAX = NULL
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-global  SetMixerCallback : NEAR
+global  WUFAddMixerCallback : NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Deletes a callback 
+;
+; This function can only be called from non-IRQ, audio IRQ or lower priority IRQs.
+;
+; INPUT  : EAX = TMixerCallback structure of callback to delete
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global	WUFDeleteMixerCallback	: NEAR
+

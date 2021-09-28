@@ -20,6 +20,9 @@
 		INCLUDE assert.inc
 		INCLUDE memcpy.inc
 
+; Max. number of callbacks
+MAX_NUM_CALLBACKS	EQU 4
+
 ; Expansion bits for accuracy in stereo samples converted to mono
 EXPANSION_BITS		EQU 1
 
@@ -33,6 +36,12 @@ ifdef DEBUG_MIXER_PERFORMANCE
 		INCLUDE timer.inc
 		INCLUDE utils.inc
 endif
+
+TMixerCallback		struc
+		CallbackAddress		dd ?
+		SamplesPerTick		dd ?	; fixed point 24.8, unsigned
+		MissingTickSamples	dd ?	; fixed point 24.8, unsigned
+ends
 
 ClearMixingBuffer	proc
 		mov		edi,MixingBuffer
@@ -63,6 +72,7 @@ ClearMixingBuffer	endp
 ;               EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 OpenMixer       proc
+		; TODO: Maker sure the audio IRQ does not call MixChannels before OpenMixer
 		push	ebx
 		movzx	ebx,bh
 		AssertD ebx,_gtu,0
@@ -128,6 +138,15 @@ OpenMixer       proc
 		inc		ecx
 		cmp		ecx,65
 		jnz		loop_volumes
+
+		; Init callbacks
+		mov		ecx,size Callbacks
+		xor		eax,eax
+		mov		edi,offset Callbacks
+		push	ds
+		pop		es
+		cld
+		rep		stosb
 		
 ifdef DEBUG_MIXER_PERFORMANCE
 		; Set up performance debugging
@@ -197,6 +216,16 @@ ifdef DEBUG_MIXER_PERFORMANCE
 		call	remove_timer
 		call	PrintMixerPerf
 endif
+		; TODO: Make sure audio IRQ is no longer called from here on.
+		; Delete all added callbacks
+		mov		cl,MAX_NUM_CALLBACKS
+		mov		eax,offset Callbacks
+		delete_all_callbacks:
+				call 	WUFDeleteMixerCallback
+				add		eax,size TMixerCallback
+		dec		cl
+		jnz		delete_all_callbacks
+		
 		mov		ebx,VolumeTable
 		call	free
 		ErrorCode FREE_ERROR
@@ -212,7 +241,9 @@ endif
 CloseMixer      endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Sets a callback that will be called periodically from the playback IRQ
+; Adds a callback that will be called periodically from the playback IRQ
+;
+; This function can only be called from non-IRQ, audio IRQ or lower priority IRQs.
 ;
 ; INPUT  : ST0 = Callback period in seconds
 ; 		   EBX -> Callback function, or NULL to disable
@@ -220,20 +251,56 @@ CloseMixer      endp
 ;				  and EAX = Num. channels
 ; NOTE: It's important that arguments of the callback follow Watcom's register
 ; calling convention (from left to right arguments): EAX, EDX, EBX, ECX.
+;
+; OUTPUT : CF = 0 if success
+;		 		EAX -> TMixerCallback structure
+;		   CF = 1 if error
+;				EAX = NULL
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-SetMixerCallback	proc
-		pushfd
+WUFAddMixerCallback	proc
+		pushf
 		cli
-		mov		MixerCallback,ebx
+		; Find free callback
+		mov		eax,offset Callbacks
+		mov		cl,MAX_NUM_CALLBACKS
+		find_free_callback:
+				cmp		[TMixerCallback ptr eax.CallbackAddress],0
+				jz		found_free_callback
+				add		eax,size TMixerCallback
+		dec		cl
+		jnz		find_free_callback
+		push	eax
+		fstp	dword ptr ss:[esp]
+		pop		eax
+		popf
+		xor		eax,eax
+		stc
+		ret
+		
+		found_free_callback:
 		fimul	MixFreq
 		push	256
 		fimul	dword ptr ss:[esp]
-		pop		eax
-		fist	SamplesPerTick
-		fistp	MissingTickSamples
-		popfd
+		pop		ecx
+		fist	[TMixerCallback ptr eax.SamplesPerTick]
+		fistp	[TMixerCallback ptr eax.MissingTickSamples]
+		mov		[TMixerCallback ptr eax.CallbackAddress],ebx
+		popf
+		clc
 		ret
-SetMixerCallback	endp
+WUFAddMixerCallback	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Deletes a callback 
+;
+; This function can only be called from non-IRQ, audio IRQ or lower priority IRQs.
+;
+; INPUT  : EAX = TMixerCallback structure of callback to delete
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+WUFDeleteMixerCallback	proc
+		mov		[TMixerCallback ptr eax.CallbackAddress],0
+		ret
+WUFDeleteMixerCallback	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Looks for a free channel at or above a given number
@@ -309,7 +376,7 @@ WUFAllocateChannel		endp
 ;
 ; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
 ;		   ECX = Number of channels to allocate
-;		   EDI -> TChannel array with ECX or more capacity
+;		   EDI -> TChannel pointer array with ECX or more capacity
 ; OUTPUT : CF = 0 if channel allocated
 ;		   		EAX = 0
 ;          CF = 1 if no free channels
@@ -356,6 +423,31 @@ WUFFreeChannel		proc
 		and		[TChannel ptr ebx.Flags],NOT (MIXER_CHANNEL_ALLOCATED OR MIXER_CHANNEL_AUTO_FREE OR MIXER_CHANNEL_EDITED)
 		ret
 WUFFreeChannel		endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Frees channels
+;
+; It is safe to call this function from main code and IRQs. Channel data races
+; are not possible with a single atomic instruction.
+;
+; Freeing a channel from outside the mixer callback will not take effect until
+; the next tick, so please keep the active sound in memory until then.
+;
+; INPUT  : EBX -> TChannel pointer array
+;		   ECX = Number of channel pointers in array
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+WUFFreeChannels		proc
+		pushf
+		cli
+		free_channels:
+				push 	ebx ecx
+				call	WUFFreeChannel
+				pop 	ecx ebx				
+				add		ebx,4
+		loop 	free_channels
+		popf
+		ret
+WUFFreeChannels		endp
 
 CopyBackChannelPoolToFront	proc
 		mov		esi,ChannelPoolBack
@@ -1121,14 +1213,24 @@ endif
 		mov		MixingBufferOffset,0
 		tick_loop:
 			call	CopyBackChannelPoolToFront
-			; Samples to process = min(missing tick samples, missing mixer buffer samples)
-			mov		eax,MissingMixerBufferSamples
-			mov		ebp,MissingTickSamples
-			shl		eax,8
-			cmp		ebp,eax
-			jbe		not_over_buffer_end
-					mov		ebp,eax
-			not_over_buffer_end:
+
+			; Samples to process = min(missing tick samples for each callback, missing mixer buffer samples)
+			mov		ebp,MissingMixerBufferSamples
+			shl		ebp,8
+			mov		esi,offset Callbacks
+			mov		cl,MAX_NUM_CALLBACKS
+			find_min_missing_samples:
+					cmp		[TMixerCallback ptr esi.CallbackAddress],0
+					jz		greater_than_or_equal_to_min
+					mov		eax,[TMixerCallback ptr esi.MissingTickSamples]
+					cmp		eax,ebp
+					jae		greater_than_or_equal_to_min
+							mov		ebp,eax
+					greater_than_or_equal_to_min:
+					add		esi,size TMixerCallback
+			dec		cl
+			jnz		find_min_missing_samples
+			
 			test	ebp,ebp
 			jz		no_samples_to_play
 			mov		eax,ebp
@@ -1194,23 +1296,30 @@ endif
 			jnz     walk_channels
 			
 			no_samples_to_play:
-			add 	MissingTickSamples,ebp
-			jg		tick_samples_not_expired
-				; End of tick
-				mov		eax,SamplesPerTick
-				add		MissingTickSamples,eax
-				; Call mixer callback, if set
-				mov		ebx,MixerCallback
-				or		ebx,ebx
-				jz		tick_samples_not_expired
-				mov		edx,ChannelPool
-				movzx	eax,MaxInputChannels
-				push	ebp				
-				call	ebx
-				pop		ebp
-			tick_samples_not_expired:
+			mov		esi,offset Callbacks
+			mov		cl,MAX_NUM_CALLBACKS
+			iterate_on_callbacks:
+					mov		ebx,[TMixerCallback ptr esi.CallbackAddress]
+					test	ebx,ebx
+					jz		tick_samples_not_expired
+					add 	[TMixerCallback ptr esi.MissingTickSamples],ebp
+					jg		tick_samples_not_expired
+							; End of tick
+							mov		eax,[TMixerCallback ptr esi.SamplesPerTick]
+							add		[TMixerCallback ptr esi.MissingTickSamples],eax
+							; Call mixer callback, if set
+							mov		edx,ChannelPool
+							movzx	eax,MaxInputChannels
+							push	esi ecx ebp
+							call	ebx
+							pop		ebp ecx esi
+					tick_samples_not_expired:
+					add		esi,size TMixerCallback
+			dec		cl
+			jnz		iterate_on_callbacks
+
 			call	CopyFrontChannelPoolToBack
-			sar		ebp,8
+		sar		ebp,8
 		add		MissingMixerBufferSamples,ebp
 		jnz		tick_loop
 		; Mixer buffer processed
@@ -1420,6 +1529,8 @@ VolumeTable				dd ?
 MissingMixerBufferSamples	dd ?
 MixingBufferOffset		dd ?
 
+Callbacks				TMixerCallback MAX_NUM_CALLBACKS dup(<?,?,?>)
+
 ifdef DEBUG_MIXER_PERFORMANCE
 DebugPerfCounter	dd ?
 MixerRunTicks		dd ?
@@ -1429,10 +1540,6 @@ AvgMixerPercentCPU	dq ?
 endif
 
 .data
-SamplesPerTick		dd -1	; fixed point 24.8, unsigned
-MissingTickSamples	dd -1	; fixed point 24.8, unsigned
-MixerCallback		dd 0
-
 ifdef DEBUG_MIXER_PERFORMANCE
 PerfDataMsg		db "Average mixer execution time: %dfn"
 				dd offset AvgMixerExecTime

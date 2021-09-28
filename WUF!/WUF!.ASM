@@ -182,19 +182,6 @@ WUFSetProperties        proc
         ret
 WUFSetProperties        endp
 
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Sets a callback that will be called periodically from the playback IRQ
-;
-; INPUT  : EAX = Callback period in seconds (float)
-; 		   EBX -> Callback function, or NULL to disable
-;				  Callback input is EAX -> Channel pool (TChannel elements),
-;				  and ECX = Num. channels
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-WUFSetMixerCallback	proc
-	call SetMixerCallback
-	ret
-WUFSetMixerCallback	endp
-
 .data
 mix_input_channels	dd MAX_MIXER_CHANNELS
 mix_msg         db "  ş Opening mixer with %dn"
