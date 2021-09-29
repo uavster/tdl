@@ -22,7 +22,7 @@ void PlaySound(const TWave *sound) {
 	WUFPlaySound(sound, channel, 1 << 24, 64, 0);
 }
 
-void MixerCallback(int num_channels, TChannel *channels) {
+void MixerCallback(HMixerCallback callback_handler) {
 	const static char symbols[][3] = {"|\r", "/\r", "-\r", "\\\r"};
 	static int symbol_index = 0;
 	printf(symbols[symbol_index]);

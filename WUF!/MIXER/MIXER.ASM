@@ -1296,25 +1296,24 @@ endif
 			jnz     walk_channels
 			
 			no_samples_to_play:
-			mov		esi,offset Callbacks
+			mov		eax,offset Callbacks
 			mov		cl,MAX_NUM_CALLBACKS
 			iterate_on_callbacks:
-					mov		ebx,[TMixerCallback ptr esi.CallbackAddress]
+					mov		ebx,[TMixerCallback ptr eax.CallbackAddress]
 					test	ebx,ebx
 					jz		tick_samples_not_expired
-					add 	[TMixerCallback ptr esi.MissingTickSamples],ebp
+					add 	[TMixerCallback ptr eax.MissingTickSamples],ebp
 					jg		tick_samples_not_expired
 							; End of tick
-							mov		eax,[TMixerCallback ptr esi.SamplesPerTick]
-							add		[TMixerCallback ptr esi.MissingTickSamples],eax
-							; Call mixer callback, if set
-							mov		edx,ChannelPool
-							movzx	eax,MaxInputChannels
-							push	esi ecx ebp
+							mov		edx,[TMixerCallback ptr eax.SamplesPerTick]
+							add		[TMixerCallback ptr eax.MissingTickSamples],edx
+							; Call mixer callback, if set.
+							; First argument (eax) is the pointer to the TMixerCallback structure.
+							push	eax ecx ebp
 							call	ebx
-							pop		ebp ecx esi
+							pop		ebp ecx eax
 					tick_samples_not_expired:
-					add		esi,size TMixerCallback
+					add		eax,size TMixerCallback
 			dec		cl
 			jnz		iterate_on_callbacks
 

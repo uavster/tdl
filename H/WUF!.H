@@ -109,20 +109,45 @@ typedef struct {
         DWORD CurrentSample;		// Fixed point 24.8
 } TChannel;
 
+typedef void * HMixerCallback;
+
 /*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Sets a callback that will be called periodically from the playback IRQ
+; Adds a callback that will be called periodically from the playback IRQ
 ;
-; INPUT  : EAX = Callback period in seconds (float)
+; This function can only be called from non-IRQ, audio IRQ or lower priority IRQs.
+;
+; INPUT  : ST0 = Callback period in seconds
 ; 		   EBX -> Callback function, or NULL to disable
-;				  Callback input is EBX -> Channel pool (TChannel elements),
-;				  and ECX = Num. channels
+;				  Callback input is EDX -> Channel pool (TChannel elements),
+;				  and EAX = Num. channels
+; NOTE: It's important that arguments of the callback follow Watcom's register
+; calling convention (from left to right arguments): EAX, EDX, EBX, ECX.
+;
+; OUTPUT : CF = 0 if success
+;		 		EAX -> TMixerCallback structure
+;		   CF = 1 if error
+;				EAX = NULL
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 */
-void WUFSetMixerCallback(float period_s, void (*callback)(int num_channels, TChannel *channels));
-#pragma aux WUFSetMixerCallback "*"	parm [8087] [ebx]\
-									modify [eax ebx ecx edx esi edi ebp 8087];
+HMixerCallback WUFAddMixerCallback(float period_s, void (*callback)(HMixerCallback callback_handler));
+#pragma aux WUFAddMixerCallback "*"	parm [8087] [ebx]\
+									modify [eax ebx ecx edx esi edi ebp 8087]\
+									value [eax];
 
+/*
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Deletes a callback 
+;
+; This function can only be called from non-IRQ, audio IRQ or lower priority IRQs.
+;
+; INPUT  : EAX = TMixerCallback structure of callback to delete
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+*/
+void WUFDeleteMixerCallback(HMixerCallback hMixerCallback);
+#pragma aux WUFDeleteMixerCallback	"*"	parm [eax]\
+									modify [eax ebx ecx edx esi edi ebp 8087];
+									
 /*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Allocates a channel at or above a given number
@@ -159,14 +184,14 @@ TChannel *WUFAllocateChannel(int flags);
 ;
 ; INPUT  : EAX = Flags: MIXER_CHANNEL_AUTO_FREE
 ;		   ECX = Number of channels to allocate
-;		   EDI -> TChannel array with ECX or more capacity
+;		   EDI -> TChannel pointer array with ECX or more capacity
 ; OUTPUT : CF = 0 if channel allocated
 ;		   		EAX = 0
 ;          CF = 1 if no free channels
 ;				EAX = Error code (NO_FREE_CHANNELS)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 */
-bool WUFAllocateChannels(int flags, int num_channels, TChannel *channels);
+bool WUFAllocateChannels(int flags, int num_channels, TChannel **channels);
 #pragma aux WUFAllocateChannels "*"	parm [eax] [ecx] [edi]\
 									modify [eax ebx ecx edx esi edi ebp]\
 									value [eax];
@@ -186,6 +211,24 @@ bool WUFAllocateChannels(int flags, int num_channels, TChannel *channels);
 */
 void WUFFreeChannel(TChannel *channel);
 #pragma aux WUFFreeChannel "*"	parm [ebx]\
+								modify [eax ebx ecx edx esi edi ebp];
+
+/*
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Frees channels
+;
+; It is safe to call this function from main code and IRQs. Channel data races
+; are not possible with a single atomic instruction.
+;
+; Freeing a channel from outside the mixer callback will not take effect until
+; the next tick, so please keep the active sound in memory until then.
+;
+; INPUT  : EBX -> TChannel pointer array
+;		   ECX = Number of channel pointers in array
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+*/
+void WUFFreeChannels(int num_channels, TChannel **channels);
+#pragma aux WUFFreeChannels "*"	parm [ecx] [ebx]\
 								modify [eax ebx ecx edx esi edi ebp];
 
 /*
