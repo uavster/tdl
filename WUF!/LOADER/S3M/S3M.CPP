@@ -375,24 +375,3 @@ BYTE S3MChannel::Pan() const {
 		return song_->header.channels[index_].type < 8 ? 0 : 15;
 	}
 }
-
-// S3MPatternRowIterator::S3MPatternRowIterator(const S3MPattern *pattern, int row) : pattern_(pattern), current_row_(row) {
-// }
-
-// S3MPatternRowIterator S3MPatternRowIterator::operator++() {
-	// return S3MPatternRowIterator(current_row_++);
-// }
-
-// void S3MPatternRowIterator::operator+=(int offset) {
-	// current_row += offset;
-// }
-
-// void S3MPatternRowIterator::operator-=(int offset) {
-	// current_row -= offset;
-// }
-
-	// S3MPatternRowIterator &S3MPatternRowIterator::operator=(int row) {
-	// current_row = row;
-	// return *this;
-// }
-

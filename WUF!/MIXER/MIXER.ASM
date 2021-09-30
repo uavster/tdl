@@ -41,6 +41,7 @@ TMixerCallback		struc
 		CallbackAddress		dd ?
 		SamplesPerTick		dd ?	; fixed point 24.8, unsigned
 		MissingTickSamples	dd ?	; fixed point 24.8, unsigned
+		UserPointer			dd ?
 ends
 
 ClearMixingBuffer	proc
@@ -246,9 +247,10 @@ CloseMixer      endp
 ; This function can only be called from non-IRQ, audio IRQ or lower priority IRQs.
 ;
 ; INPUT  : ST0 = Callback period in seconds
-; 		   EBX -> Callback function, or NULL to disable
+; 		   EBX -> Callback function
 ;				  Callback input is EDX -> Channel pool (TChannel elements),
 ;				  and EAX = Num. channels
+;		   EDX = User-defined pointer
 ; NOTE: It's important that arguments of the callback follow Watcom's register
 ; calling convention (from left to right arguments): EAX, EDX, EBX, ECX.
 ;
@@ -285,6 +287,7 @@ WUFAddMixerCallback	proc
 		fist	[TMixerCallback ptr eax.SamplesPerTick]
 		fistp	[TMixerCallback ptr eax.MissingTickSamples]
 		mov		[TMixerCallback ptr eax.CallbackAddress],ebx
+		mov		[TMixerCallback ptr eax.UserPointer],edx
 		popf
 		clc
 		ret
@@ -416,11 +419,16 @@ WUFAllocateChannels		endp
 ; Freeing a channel from outside the mixer callback will not take effect until
 ; the next tick, so please keep the active sound in memory until then.
 ;
-; INPUT  : EBX -> TChannel to free
+; INPUT  : EBX -> TChannel to free (does nothing if NULL)
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 WUFFreeChannel		proc
-		; Atomically mark as free; no need to disable interrupts
-		and		[TChannel ptr ebx.Flags],NOT (MIXER_CHANNEL_ALLOCATED OR MIXER_CHANNEL_AUTO_FREE OR MIXER_CHANNEL_EDITED)
+		pushf
+		cli
+		test	ebx,ebx
+		jz		pointer_is_null
+				and		[TChannel ptr ebx.Flags],NOT (MIXER_CHANNEL_ALLOCATED OR MIXER_CHANNEL_AUTO_FREE OR MIXER_CHANNEL_EDITED)
+		pointer_is_null:
+		popf
 		ret
 WUFFreeChannel		endp
 
@@ -435,14 +443,17 @@ WUFFreeChannel		endp
 ;
 ; INPUT  : EBX -> TChannel pointer array
 ;		   ECX = Number of channel pointers in array
+; OUTPUT : Freed channels pointer in input array are NULLed.
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 WUFFreeChannels		proc
 		pushf
 		cli
 		free_channels:
 				push 	ebx ecx
+				mov		ebx,[ebx]
 				call	WUFFreeChannel
-				pop 	ecx ebx				
+				pop 	ecx ebx
+				mov		dword ptr [ebx],0
 				add		ebx,4
 		loop 	free_channels
 		popf
@@ -1309,6 +1320,7 @@ endif
 							add		[TMixerCallback ptr eax.MissingTickSamples],edx
 							; Call mixer callback, if set.
 							; First argument (eax) is the pointer to the TMixerCallback structure.
+							mov		edx,[TMixerCallback ptr eax.UserPointer]
 							push	eax ecx ebp
 							call	ebx
 							pop		ebp ecx eax

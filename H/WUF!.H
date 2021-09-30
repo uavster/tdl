@@ -110,6 +110,7 @@ typedef struct {
 } TChannel;
 
 typedef void * HMixerCallback;
+#define kHMixerCallbackInvalid	NULL
 
 /*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -130,8 +131,8 @@ typedef void * HMixerCallback;
 ;				EAX = NULL
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 */
-HMixerCallback WUFAddMixerCallback(float period_s, void (*callback)(HMixerCallback callback_handler));
-#pragma aux WUFAddMixerCallback "*"	parm [8087] [ebx]\
+HMixerCallback WUFAddMixerCallback(float period_s, void (*callback)(HMixerCallback callback_handler, void *user_pointer), void *user_pointer);
+#pragma aux WUFAddMixerCallback "*"	parm [8087] [ebx] [edx]\
 									modify [eax ebx ecx edx esi edi ebp 8087]\
 									value [eax];
 
@@ -191,7 +192,7 @@ TChannel *WUFAllocateChannel(int flags);
 ;				EAX = Error code (NO_FREE_CHANNELS)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 */
-bool WUFAllocateChannels(int flags, int num_channels, TChannel **channels);
+int WUFAllocateChannels(int flags, int num_channels, TChannel **channels);
 #pragma aux WUFAllocateChannels "*"	parm [eax] [ecx] [edi]\
 									modify [eax ebx ecx edx esi edi ebp]\
 									value [eax];

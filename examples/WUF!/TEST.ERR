@@ -1,2 +1,4 @@
 test.cpp(30): Warning! W726: col(1) no reference to formal parameter 'callback_handler' 
-test.cpp(30): Note! N392: col(1) 'void * callback_handler' in 'void MixerCallback( void * )' defined in: test.cpp(25) (col 35) 
+test.cpp(30): Note! N392: col(1) 'void * callback_handler' in 'void MixerCallback( void *, void * )' defined in: test.cpp(25) (col 35) 
+test.cpp(30): Warning! W726: col(1) no reference to formal parameter 'user_pointer' 
+test.cpp(30): Note! N392: col(1) 'void * user_pointer' in 'void MixerCallback( void *, void * )' defined in: test.cpp(25) (col 59) 

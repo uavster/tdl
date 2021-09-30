@@ -106,6 +106,7 @@ global	WUFFreeChannel : NEAR
 ;
 ; INPUT  : EBX -> TChannel pointer array
 ;		   ECX = Number of channel pointers in array
+; OUTPUT : Freed channels pointer in input array are NULLed.
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 global	WUFFreeChannels : NEAR
 
@@ -146,9 +147,10 @@ global  MixChannels : NEAR
 ; This function can only be called from non-IRQ, audio IRQ or lower priority IRQs.
 ;
 ; INPUT  : ST0 = Callback period in seconds
-; 		   EBX -> Callback function, or NULL to disable
+; 		   EBX -> Callback function
 ;				  Callback input is EDX -> Channel pool (TChannel elements),
 ;				  and EAX = Num. channels
+;		   EDX = User-defined pointer
 ; NOTE: It's important that arguments of the callback follow Watcom's register
 ; calling convention (from left to right arguments): EAX, EDX, EBX, ECX.
 ;

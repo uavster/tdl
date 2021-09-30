@@ -8,21 +8,6 @@ typedef ES3MInstrumentPacking S3MInstrumentPacking;
 typedef ES3MTrackerID S3MTrackerID;
 typedef ES3MSamplesFormat S3MSamplesFormat;
 
-/*class S3MRowIterator {
-public:
-	friend class S3MPattern;
-
-	S3MPatternRowIterator operator++();
-	void operator+=(int offset);
-	void operator-=(int offset);
-	S3MPatternRowIterator &operator=(int row);
-
-private:
-	S3MPatternRowIterator(const S3MPattern *pattern, int row);
-	int current_row_;
-	S3MPattern *pattern_;
-};*/
-
 class S3MCell {
 public:
 	friend class S3MCellIterator;
@@ -153,6 +138,7 @@ public:
 	
 	const char *Name() const;
 	
+	int NumUsedChannels() const;
 	int NumOrders() const;
 	int NumInstruments() const;
 	int NumPatterns() const;

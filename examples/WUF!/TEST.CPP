@@ -22,7 +22,7 @@ void PlaySound(const TWave *sound) {
 	WUFPlaySound(sound, channel, 1 << 24, 64, 0);
 }
 
-void MixerCallback(HMixerCallback callback_handler) {
+void MixerCallback(HMixerCallback callback_handler, void *user_pointer) {
 	const static char symbols[][3] = {"|\r", "/\r", "-\r", "\\\r"};
 	static int symbol_index = 0;
 	printf(symbols[symbol_index]);
@@ -44,7 +44,7 @@ int main() {
 	const TWave *wave_16bit_mono = LoadWaveOrDie("w16m8k.wav");
 	const TWave *wave_16bit_stereo = LoadWaveOrDie("w16s44k.wav");
 	
-	WUFAddMixerCallback(0.25, &MixerCallback);
+	WUFAddMixerCallback(0.25, &MixerCallback, NULL);
 	
 	bool do_loop = true;
 	while(do_loop) {

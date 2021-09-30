@@ -203,6 +203,7 @@ start:
 		channels_allocated_ok:
 		fldf 	0.25
 		mov		ebx,offset MixerCallback
+		xor		edx,edx
 		call	WUFAddMixerCallback
 		ErrorExit "Unable to add a mixer callback."
 		

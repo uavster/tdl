@@ -198,12 +198,6 @@ TS3MSong *LoadS3M(const char *file_path) {
 			if (!LoadS3MPattern(16 * pattern_offsets[j], song->patterns[j], f)) {
 				goto error;
 			}
-// BYTE *ptr = (BYTE *)song->patterns[j].cells;
-// for (int i = 0; i < song->patterns[j].header.size - sizeof(song->patterns[j].header); ++i, ++ptr) {
-	// printf("%dhn ", (unsigned int)*ptr);
-// }
-// printf("\n");
-// getch();
 		}
 	}
 	SAFE_DELETE_BUFFER(pattern_offsets);

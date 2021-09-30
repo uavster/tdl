@@ -155,6 +155,7 @@ typedef struct {
 
 typedef struct {
 	TS3MSongHeader header;
+	int max_used_channels;
 	BYTE *orders;
 	TS3MInstrument *instruments;
 	TS3MPattern *patterns;

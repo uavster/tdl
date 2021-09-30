@@ -9,7 +9,7 @@ INCDIR = $(TDLPATH)\include
 DEFDIR = $(TDLPATH)\defaults
 
 .path.c = $(TDLPATH)\STDLIB;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\LOADER
-.path.cpp = $(TDLPATH)\STDLIB;$(TDLPATH)\WUF!\LOADER\S3M
+.path.cpp = $(TDLPATH)\STDLIB;$(TDLPATH)\WUF!\LOADER\S3M;$(TDLPATH)\WUF!\PLAYER
 .path.asm = $(TDLPATH)\STDLIB;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\BLITTER;$(TDLPATH)\SPUF!\LOADER;$(TDLPATH)\SPUF!;$(TDLPATH)\SPUF!\SLI;$(TDLPATH)\SPUF!\GFX;$(TDLPATH)\WUF!;$(TDLPATH)\WUF!\DEVICES;$(TDLPATH)\3D\RENDER;$(TDLPATH)\3D\LOADER;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\PLAYER;$(TDLPATH)\3D;$(TDLPATH)\WUF!\MIXER;$(TDLPATH)\WUF!\LOADER;$(TDLPATH)\WUF!\LOADER\WAV
 .path.obj = $(TDLPATH)\OBJS
 .path.mac = $(INCDIR)
@@ -175,6 +175,8 @@ wav.obj:        wav.asm         wav.inc         memmgr.asm      alloc.inc       
 s3m_.obj:		s3m_.cpp		s3m.h
 except.obj:		except.cpp		except.hpp		string.h		utils.asm
 s3m.obj:		s3m.cpp			s3m.hpp			s3m_.cpp		s3m.h			except.cpp		except.hpp
+s3mplay.obj:	s3mplay.cpp		s3mplay.hpp		wuf!.h			playable.hpp
+player.obj:		player.cpp		player.hpp		s3mplay.hpp
 
 #----------- Player ---------------
 #player.obj:     player.asm      player.inc      sb.inc
@@ -198,7 +200,7 @@ tdl.lib:        stdc.obj        new.obj		except.obj	stdio.obj       count.obj   
                 blt32-24.obj    blt32-32.obj    clip.obj\
                 loader.obj      sli.obj         pcx.obj         fli.obj\
                 sbuffer.obj     gentri.obj      line.obj\
-                wuf!.obj        sounddev.obj    sb1xx.obj       sb200.obj	sb201.obj sb3xx.obj	sb4xx.obj	mixer.obj       sbhard.obj      waveload.obj    wav.obj	s3m_.obj	s3m.obj\
+                wuf!.obj        sounddev.obj    sb1xx.obj       sb200.obj	sb201.obj sb3xx.obj	sb4xx.obj	mixer.obj       sbhard.obj      waveload.obj    wav.obj	s3m_.obj	s3m.obj	s3mplay.obj		player.obj\
                 dma.obj         list.obj        alpha.obj\
                 3ds.obj\
                 uniload.obj     stdc.obj        render.obj\
@@ -207,7 +209,7 @@ tdl.lib:        stdc.obj        new.obj		except.obj	stdio.obj       count.obj   
                 polyint.obj\
 #                player.obj      modload.obj     load_mod.obj\
 #                load_s3m.obj    load_xm.obj     sb.obj\
-                initg.obj       mglc.obj
+                initg.obj       mglc.obj				
 
  @&echo Adding to lib [$?]
  @&wlib $(WLIBOPTS) $< +- "$?"
