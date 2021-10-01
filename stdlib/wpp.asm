@@ -85,4 +85,8 @@ public __wcpp_4_destruct_all__
 __wcpp_4_destruct_all__:
         retn
 
+public __wcpp_4_lcl_register__
+__wcpp_4_lcl_register__:
+		retn
+
 end
