@@ -386,6 +386,15 @@ WUFAllocateChannel		endp
 ;				EAX = Error code (NO_FREE_CHANNELS)
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 WUFAllocateChannels		proc
+		or 		ecx,ecx
+		jz		zero_channels_to_allocate
+		; Set all to NULL in case something fails.
+		push	ds
+		pop		es
+		cld
+		push	eax ecx edi
+		rep		stosd
+		pop		edi ecx eax
 		; Disable interrupts while we look for a free channel. This prevents
 		; an IRQ from changing the channels states in between.
 		pushf
@@ -398,8 +407,9 @@ WUFAllocateChannels		proc
 				mov		[edi],ebx
 				add		edi,4
 		loop	allocate_channels
-		xor		eax,eax
 		popf
+		zero_channels_to_allocate:
+		mov		eax,NO_ERROR
 		clc
 		ret
 		
