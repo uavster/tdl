@@ -31,7 +31,7 @@ ListAtom    struc
 ; Creates a list
 ;
 ; OUTPUT : CF = 0 if ok
-;               EAX = NULL
+;               EAX = NO_ERROR
 ;               EBX -> List
 ;          CF = 1 if error
 ;               EAX = Error code (MALLOC_ERROR)
@@ -41,10 +41,10 @@ NewList proc
         mov     ecx,size List
         call    malloc
         ErrorCode MALLOC_ERROR
-        mov     eax,ebx
         mov     [ebx.LFirst],0
         mov     [ebx.LLast],0
         mov     [ebx.LCurrent],0
+        mov		eax,NO_ERROR
         clc
         ret
 NewList endp
