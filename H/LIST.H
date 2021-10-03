@@ -9,7 +9,7 @@
 
 typedef void * HList;
 
-HList *NewList();
+HList NewList();
 #pragma aux NewList "*" modify [eax ebx ecx edx esi edi ebp]\
 						value [ebx];
 
