@@ -364,6 +364,7 @@ ENDM
 ; 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
 ExitAfterCall    MACRO FinalCall
+if STANDARD_INIT
         call    EndVirtualFrameRate
         ErrorExit "Error: Unable to uninitialize virtual frame rate"
         call    disable_keyb
@@ -374,11 +375,13 @@ ExitAfterCall    MACRO FinalCall
         ErrorExit "Error: Unable to uninitialize graphic system"
 		call	IRQUninit
 		ErrorExit "Error: Unable to uninitialize IRQ library"
+endif
         call	FinalCall
         jmp     EndOfProgram
 ENDM
 
 ExitSilentlyAfterCall    MACRO FinalCall
+if STANDARD_INIT
         call    EndVirtualFrameRate
         ErrorExit "Error: Unable to uninitialize virtual frame rate"
         call    disable_keyb
@@ -389,6 +392,7 @@ ExitSilentlyAfterCall    MACRO FinalCall
         ErrorExit "Error: Unable to uninitialize graphic system"
 		call	IRQUninit
 		ErrorExit "Error: Unable to uninitialize IRQ library"
+endif
         call	FinalCall
         jmp     EndOfProgram
 ENDM
