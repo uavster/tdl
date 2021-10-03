@@ -12,8 +12,9 @@ the audio output.
 */
 class Player {
 public:
+	Player();
 	~Player();
-	static const Playable *Load(const char *file);
+	static Playable *Load(const char *file);
 	static void Unload(Playable *playable);
 
 private:

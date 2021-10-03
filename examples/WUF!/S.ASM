@@ -30,12 +30,7 @@ ReservedChannelKeyHandler	proc
 		mov		edx,channel_volume
 		mov		ecx,frequency_multiplier
 		xor		esi,esi
-; mov	edx,mixer_channels
-; mov eax,[TChannel ptr ebx.Flags]
-; int 3
         call    WUFPlaySound		
-; mov ebp,[TChannel ptr ebx.Flags]
-; int 3
 		xor		eax,eax		; Do not chain with default ISR
 		ret
 		endp

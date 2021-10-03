@@ -1,7 +1,11 @@
 #include "player.hpp"
 #include "s3mplay.hpp"
+#include "stdio.h"
 
 PointerList<Playable> Player::playables;
+
+Player::Player() {
+}
 
 Player::~Player() {
 	playables.Restart();
@@ -14,7 +18,7 @@ Player::~Player() {
 	}
 }
 
-const Playable *Player::Load(const char *file) {
+Playable *Player::Load(const char *file) {
 	S3MPlayable *s3m = new S3MPlayable(file);
 	if (s3m->LastError() == Playable::kSuccess) {
 		playables.Insert(s3m);
