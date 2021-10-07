@@ -89,7 +89,9 @@ OpenMixer       proc
 		movzx	ecx,cl
         imul    ecx,size TChannel
 		shl		ecx,1		; Double buffer of channels
+		push	ecx
         call    malloc
+		pop		ecx
         ErrorCode MALLOC_ERROR
         mov     ChannelPoolBack,ebx
 		shr		ecx,1
@@ -100,6 +102,15 @@ OpenMixer       proc
         xor     eax,eax
         cld
         rep     stosb
+		; Set frequency multipliers to 1.0 in case WUFPlaySounds passes "leave as is"
+		movzx	ecx,MaxInputChannels
+		shl		ecx,1
+		mov		edi,ChannelPoolBack
+		set_freq_mult_to_one:
+				mov		[TChannel ptr edi.FreqMultiplier],1 SHL 24
+				add		edi,size TChannel
+		dec		ecx
+		jnz 	set_freq_mult_to_one
 		; Allocate mixing buffer with 32 bits per sample
 		mov		eax,NumOutputSamples
 		movzx	ebx,NumOutputChannels
@@ -544,10 +555,12 @@ CopyFrontChannelPoolToBack	endp
 ; effect until the next tick, so please keep the active sound in memory until
 ; then.
 ;
-; INPUT  : EAX -> TWave structure of sample to play in channel
+; INPUT  : EAX -> TWave structure of sample to play in channel, or NULL to leave as is
 ;		   EBX -> TChannel where to play sound
 ;		   ECX = Frequency multiplier (fixed point 8.24)
-;		   EDX = Volume multiplier (0-64)
+;		   		 -1 plays the sound with the current channel frequency multiplier
+;		   EDX = Volume multiplier, from 0 (silent) to 64 (as is). 
+;				 -1 plays the sound with the current channel volume.
 ;		   ESI = Sample offset
 ;
 ; OUTPUT : CF = 0 if no error
@@ -573,31 +586,57 @@ WUFPlaySound       proc
 		;      The audio IRQ copies the back buffer to the front buffer before entering. The copy cost has to be small compared to the audio buffer size
 		;	   (num_channels * size(TChannel)) for this option to be good. On the other hand, there is no need for code to disable interrupts for a long
 		;	   time, so latency is minimal.
+		
 		; Change channel state
+		cmp		eax,-1
+		jz		leave_sample_as_is
+				mov     [TChannel ptr ebx.ChanWave],eax
+				jmp		sample_wave_set
+		leave_sample_as_is:
+				mov		eax,[TChannel ptr ebx.ChanWave]
+		sample_wave_set:
+		
         mov     [TChannel ptr ebx.CurrentSample],0
-		mov		[TChannel ptr ebx.Volume],edx
-        mov     [TChannel ptr ebx.ChanWave],eax
-		; EDX:EAX = base_frequency * (multiplier << 24)
-		xor		edx,edx
-		mov		eax,[TWave ptr eax.BaseRate]
-		mul		ecx
-		; EAX = (base_frequency * (multiplier << 24)) >> 16
-		cmp		edx,0ffffh
-		jbe		resulting_freq_ok
-				popf
-				mov		eax,FREQUENCY_TOO_HIGH
-				stc
-				ret
-		resulting_freq_ok:
-		shr		eax,16
-		mov		ecx,edx
-		shl		ecx,16
-		or		eax,ecx
-		shr		edx,16
-		; EAX = ((base_frequency * (multiplier << 24)) >> 16) / mixing_frequency
-		div		MixFreq
-		; EDX = (((Base frequency * (multiplier << 24)) >> 16) / mixing_frequency)
-		mov		[TChannel ptr ebx.SampleIncrement],eax
+
+		cmp		edx,-1
+		jz		leave_volume_as_is
+				mov		[TChannel ptr ebx.Volume],edx
+		leave_volume_as_is:
+		
+		; Recalculate sample increment
+		cmp		ecx,-1
+		jz		leave_frequency_as_is
+				mov		[TChannel ptr ebx.FreqMultiplier],ecx
+				jmp		freq_multiplier_set
+		leave_frequency_as_is:
+				mov		ecx,[TChannel ptr ebx.FreqMultiplier]
+		freq_multiplier_set:
+
+		test	eax,eax
+		jz		no_sample_skip_increment_calculation
+				; EDX:EAX = base_frequency * (multiplier << 24)
+				xor		edx,edx
+				mov		eax,[TWave ptr eax.BaseRate]
+				mul		ecx
+				; EAX = (base_frequency * (multiplier << 24)) >> 16
+				cmp		edx,0ffffh
+				jbe		resulting_freq_ok
+						popf
+						mov		eax,FREQUENCY_TOO_HIGH
+						stc
+						ret
+				resulting_freq_ok:
+				shr		eax,16
+				mov		ecx,edx
+				shl		ecx,16
+				or		eax,ecx
+				shr		edx,16
+				; EAX = ((base_frequency * (multiplier << 24)) >> 16) / mixing_frequency
+				div		MixFreq
+				; EDX = (((Base frequency * (multiplier << 24)) >> 16) / mixing_frequency)
+				mov		[TChannel ptr ebx.SampleIncrement],eax
+		no_sample_skip_increment_calculation:
+		
 		or		[TChannel ptr ebx.Flags],MIXER_CHANNEL_EDITED
 		
 		popf

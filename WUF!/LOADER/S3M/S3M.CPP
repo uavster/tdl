@@ -287,7 +287,11 @@ BYTE S3MCell::ChannelNumber() const {
 	return ((TS3MPatternCellHeader *)cell_)->channel_number;
 }
 
-bool S3MCell::HasNoteAndInstrument() const {
+bool S3MCell::HasNote() const {
+	return ((TS3MPatternCellHeader *)cell_)->has_note_and_instrument && cell_[1] != 0xff;
+}
+
+bool S3MCell::HasInstrument() const {
 	return ((TS3MPatternCellHeader *)cell_)->has_note_and_instrument;
 }
 
@@ -310,7 +314,7 @@ BYTE S3MCell::Octave() const {
 }
 
 void S3MCell::GetNoteName(char *name) const {
-	if (HasNoteAndInstrument()) {
+	if (HasNote()) {
 		name[0] = NoteLetter();
 		name[1] = IsSemitone() ? '#' : '-';
 		name[2] = Octave() + '0';
@@ -331,7 +335,7 @@ bool S3MCell::HasVolume() const {
 }
 
 BYTE S3MCell::Volume() const {
-	if (HasNoteAndInstrument()) {
+	if (HasInstrument()) {
 		return cell_[3];
 	} else {
 		return cell_[1];
@@ -344,7 +348,7 @@ bool S3MCell::HasEffect() const {
 
 char S3MCell::Effect() const {
 	int index = 1;
-	if (HasNoteAndInstrument()) {
+	if (HasInstrument()) {
 		index += 2;
 	}
 	if (HasVolume()) {
@@ -355,7 +359,7 @@ char S3MCell::Effect() const {
 
 BYTE S3MCell::EffectValue() const {
 	int index = 2;
-	if (HasNoteAndInstrument()) {
+	if (HasInstrument()) {
 		index += 2;
 	}
 	if (HasVolume()) {

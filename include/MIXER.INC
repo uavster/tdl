@@ -13,6 +13,7 @@ MIXER_CHANNEL_AUTO_FREE		EQU 4
 TChannel        STRUC
 		Flags			dd ?	; Channel flags (see above)
         ChanWave        dd ?    ; Pointer to TWave structure or NULL if not active
+		FreqMultiplier	dd ?	; Fixed point 8.24
 		SampleIncrement	dd ?	; Fixed point 24.8
         CurrentSample   dd ?	; Fixed point 24.8
 		Volume			dd ?	; Volume from 0 (silent) to 64 (original volume)
@@ -120,10 +121,12 @@ global	WUFFreeChannels : NEAR
 ; effect until the next tick, so please keep the active sound in memory until
 ; then.
 ;
-; INPUT  : EAX -> TWave structure of sample to play in channel
+; INPUT  : EAX -> TWave structure of sample to play in channel, or NULL to leave as is
 ;		   EBX -> TChannel where to play sound
 ;		   ECX = Frequency multiplier (fixed point 8.24)
-;		   EDX = Volume multiplier (0-64)
+;		   		 -1 plays the sound with the current channel frequency multiplier
+;		   EDX = Volume multiplier, from 0 (silent) to 64 (as is). 
+;				 -1 plays the sound with the current channel volume.
 ;		   ESI = Sample offset
 ;
 ; OUTPUT : CF = 0 if no error

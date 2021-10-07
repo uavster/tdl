@@ -151,13 +151,17 @@ int main() {
 					}
 					++channel_number;
 					// Print cell data.
-					if (it.Cell().HasNoteAndInstrument()) {
+					if (it.Cell().HasNote()) {
 						char note_name[4];
 						it.Cell().GetNoteName(note_name);
 						printf(note_name);
+					} else {
+						printf("... ");
+					}
+					if (it.Cell().HasInstrument()) {
 						printf(" %dn ", it.Cell().Instrument());
 					} else {
-						printf("... .. ");
+						printf(".. ");
 					}
 					if (it.Cell().HasVolume()) {
 						printf("%dn ", it.Cell().Volume());

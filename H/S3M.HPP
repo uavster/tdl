@@ -14,7 +14,8 @@ public:
 	
 	BYTE ChannelNumber() const;
 	
-	bool HasNoteAndInstrument() const;
+	bool HasNote() const;
+	bool HasInstrument() const;
 	BYTE Note() const;
 	char NoteLetter() const;
 	bool IsSemitone() const;

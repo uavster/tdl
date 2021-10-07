@@ -4,6 +4,7 @@
 #include "playable.hpp"
 #include "s3m.hpp"
 #include "wuf!.h"
+#include "waveload.h"
 
 class S3MPlayable : public Playable {
 public:
@@ -21,7 +22,8 @@ protected:
 	int NumMixerChannels() const;
 	void Destroy();
 	static void Tick(HMixerCallback mixer_callback, void *user_pointer);
-
+	static DWORD FreqMultiplierForNote(BYTE note, BYTE octave);
+	
 private:
 	S3MSong *song_;
 	int min_channel_index_;
@@ -33,6 +35,7 @@ private:
 	int pattern_index_;
 	int ticks_per_second_;
 	int ticks_per_row_;
+	TWave *instruments_;
 };
 
 #endif
