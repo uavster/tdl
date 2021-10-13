@@ -114,7 +114,7 @@ void S3MPlayable::Pause() {
 
 void S3MPlayable::Stop() {
 	Pause();
-	num_ticks_ = 0;
+	num_ticks_ = ticks_per_row_ - 1;
 	row_index_ = 0;
 	pattern_index_ = 0;
 }
@@ -134,32 +134,75 @@ DWORD S3MPlayable::FreqMultiplierForNote(BYTE note, BYTE octave) {
 void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {	
 	S3MPlayable *self = static_cast<S3MPlayable *>(user_pointer);
 	
-	const S3MRow *row = self->song_->Pattern(self->pattern_index_)->Row(self->row_index_);
-	for (S3MCellIterator it = row->begin(); it != row->end(); it++) {
-		S3MCell cell = it.Cell();
-		DWORD volume;
-		TWave *instrument;
-		if (cell.HasInstrument()) {
-			volume = cell.HasVolume() ? cell.Volume() : 64;
-			instrument = &self->instruments_[cell.Instrument()];
-		} else {
-			volume = cell.HasVolume() ? cell.Volume() : -1;		// -1 = keep channel volume
-			instrument = NULL;
-		}
-		DWORD freq_multiplier = cell.HasNote() ? FreqMultiplierForNote(cell.Note(), cell.Octave()) : -1;	// -1 = keep channel freq
-		DWORD channel_number = static_cast<DWORD>(cell.ChannelNumber()) - static_cast<DWORD>(self->min_channel_index_);
-		// printf("AYAYA %dn", channel_number);
-		// printf(" %dn", freq_multiplier);
-		// printf(" %dn", volume);
-		// printf(" %dn", instrument);
-		// printf(" %dn", channel_number);
-		// printf(" %dn", self->mixer_channels_[channel_number]);
-		// printf("\n");
-		WUFPlaySound(instrument, self->mixer_channels_[channel_number], freq_multiplier, volume, 0); 
-	}
-	
 	++self->num_ticks_;
 	if (self->num_ticks_ >= self->ticks_per_row_) {
+		const S3MRow *row = self->song_->Pattern(self->pattern_index_)->Row(self->row_index_);
+		for (S3MCellIterator it = row->begin(); it != row->end(); it++) {
+			S3MCell cell = it.Cell();
+			DWORD volume;
+			TWave *instrument;
+			if (cell.HasInstrument()) {
+				volume = cell.HasVolume() ? cell.Volume() : 64;
+				instrument = &self->instruments_[cell.Instrument() - 1];
+			} else {
+				volume = cell.HasVolume() ? cell.Volume() : -1;		// -1 = keep channel volume
+				instrument = NULL;
+			}
+			DWORD freq_multiplier = cell.HasNote() ? FreqMultiplierForNote(cell.Note(), cell.Octave()) : -1;	// -1 = keep channel freq
+			DWORD channel_number = static_cast<DWORD>(cell.ChannelNumber()) - static_cast<DWORD>(self->min_channel_index_);
+			WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[channel_number]), freq_multiplier, volume, 0); 
+		}
+		
+		// If DOS error mode flag, we cannot call any int 21h service, e.g. printf
+		if (!(IRQDOSFlags() & 0xff)) {
+			// Even if InDOS flag is set, services 1 thru 0ch can be called safely; printf() uses service 2.
+			printf("p:%dn", self->pattern_index_);
+			printf(" r:%dn|", self->row_index_);
+			const S3MRow *row = self->song_->Pattern(self->pattern_index_)->Row(self->row_index_);
+			int channel_number = 0;
+			for (S3MCellIterator it = row->begin(); it != row->end(); it++) {
+				// Unused previous channels.
+				for (; channel_number < it.Cell().ChannelNumber(); ++channel_number) {
+					printf("... .. .. ...");
+					if (channel_number < 31) {
+						printf("|");
+					}
+				}
+				++channel_number;
+				// Print cell data.
+				if (it.Cell().HasNote()) {
+					char note_name[4];
+					it.Cell().GetNoteName(note_name);
+					printf(note_name);
+				} else {
+					printf("... ");
+				}
+				if (it.Cell().HasInstrument()) {
+					printf(" %dn ", it.Cell().Instrument());
+				} else {
+					printf(".. ");
+				}
+				if (it.Cell().HasVolume()) {
+					printf("%dn ", it.Cell().Volume());
+				} else {
+					printf(".. ");
+				}
+				if (it.Cell().HasEffect()) {
+					char effect_name[2];
+					effect_name[0] = it.Cell().Effect();
+					effect_name[1] = '\0';
+					printf(effect_name);
+					printf("%dhn", it.Cell().EffectValue());
+				} else {
+					printf("...");
+				}
+				if (channel_number < 31) {
+					printf("|");
+				}
+			}
+			printf("\n");
+		}
+		
 		self->num_ticks_ = 0;
 		++self->row_index_;
 		if (self->row_index_ >= self->song_->Pattern(self->pattern_index_)->NumRows()) {
@@ -169,55 +212,5 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				self->pattern_index_ = 0;
 			}
 		}
-	}
-
-	// If DOS error mode flag, we cannot call any int 21h service, e.g. printf
-	if (!(IRQDOSFlags() & 0xff)) {
-		// Even if InDOS flag is set, services 1 thru 0ch can be called safely; printf() uses service 2.
-		printf("p:%dn", self->pattern_index_);
-		printf(" r:%dn|", self->row_index_);
-		const S3MRow *row = self->song_->Pattern(self->pattern_index_)->Row(self->row_index_);
-		int channel_number = 0;
-		for (S3MCellIterator it = row->begin(); it != row->end(); it++) {
-			// Unused previous channels.
-			for (; channel_number < it.Cell().ChannelNumber(); ++channel_number) {
-				printf("... .. .. ...");
-				if (channel_number < 31) {
-					printf("|");
-				}
-			}
-			++channel_number;
-			// Print cell data.
-			if (it.Cell().HasNote()) {
-				char note_name[4];
-				it.Cell().GetNoteName(note_name);
-				printf(note_name);
-			} else {
-				printf("... ");
-			}
-			if (it.Cell().HasInstrument()) {
-				printf(" %dn ", it.Cell().Instrument());
-			} else {
-				printf(".. ");
-			}
-			if (it.Cell().HasVolume()) {
-				printf("%dn ", it.Cell().Volume());
-			} else {
-				printf(".. ");
-			}
-			if (it.Cell().HasEffect()) {
-				char effect_name[2];
-				effect_name[0] = it.Cell().Effect();
-				effect_name[1] = '\0';
-				printf(effect_name);
-				printf("%dhn", it.Cell().EffectValue());
-			} else {
-				printf("...");
-			}
-			if (channel_number < 31) {
-				printf("|");
-			}
-		}
-		printf("\n");
 	}
 }
