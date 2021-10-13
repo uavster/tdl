@@ -271,6 +271,20 @@ int WUFPlaySound(const TWave *wave, TChannel *channel, DWORD freq_multiplier, DW
 								modify [eax ebx ecx edx esi edi ebp]\
 								value [eax];
 
+/*
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+; Returns a handler to a channel that may be used from inside a callback.
+;
+; INPUT  : EBX -> Allocated TChannel
+; OUTPUT : EBX -> TChannel that can be used with WUFPlaySound from inside a
+;			      callback
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+*/
+TChannel *WUFChannelInCallback(const TChannel *channel);
+#pragma aux WUFChannelInCallback "*"	parm [ebx]\
+										modify [ebx]\
+										value [ebx];
+								
 #ifdef __cplusplus
   };
 #endif

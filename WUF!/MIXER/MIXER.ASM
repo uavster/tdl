@@ -588,16 +588,15 @@ WUFPlaySound       proc
 		;	   time, so latency is minimal.
 		
 		; Change channel state
-		cmp		eax,-1
+		test	eax,eax
 		jz		leave_sample_as_is
 				mov     [TChannel ptr ebx.ChanWave],eax
+				mov     [TChannel ptr ebx.CurrentSample],0
 				jmp		sample_wave_set
 		leave_sample_as_is:
 				mov		eax,[TChannel ptr ebx.ChanWave]
 		sample_wave_set:
 		
-        mov     [TChannel ptr ebx.CurrentSample],0
-
 		cmp		edx,-1
 		jz		leave_volume_as_is
 				mov		[TChannel ptr ebx.Volume],edx
@@ -646,24 +645,17 @@ WUFPlaySound       proc
 WUFPlaySound       endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Sets the properties of a channel
+; Returns a handler to a channel that may be used from inside a callback.
 ;
-; INPUT  : BL = Channel number
-; 		   EAX = Pointer to TWave structure of sample to play in channel, or null
-;		   to leave it as is.
-;		   ECX = Frequency multiplier (fixed point 16.16)
-;		   DL = Volume (0..64)
-;		   DH = Panning (?..?)
-;
-; OUTPUT : CF = 0 if channel found
-;               EAX = NO_ERROR
-;				BL = Channel playing the sound
-;          CF = 1 if no free channels
-;               EAX = NO_FREE_CHANNELS
+; INPUT  : EBX -> Allocated TChannel
+; OUTPUT : EBX -> TChannel that can be used with WUFPlaySound from inside a
+;			      callback
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-SetChannelProperties	proc
+WUFChannelInCallback	proc
+		sub		ebx,ChannelPoolBack
+		add		ebx,ChannelPool
 		ret
-SetChannelProperties	endp
+WUFChannelInCallback	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; All macros below share the same interface.
@@ -1377,14 +1369,14 @@ endif
 					add		eax,size TMixerCallback
 			dec		cl
 			jnz		iterate_on_callbacks
-
+			
 			call	CopyFrontChannelPoolToBack
 		sar		ebp,8
 		add		MissingMixerBufferSamples,ebp
 		jnz		tick_loop
 		; Mixer buffer processed
 		
-		dont_mix_anything:
+		dont_mix_anything:			
 		; Compress mixing buffer into output buffer
 		mov		esi,MixingBuffer
 		mov		ecx,NumOutputSamples
