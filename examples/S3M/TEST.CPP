@@ -5,6 +5,8 @@
 #define kMaxRowsPerPage		23
 
 int main() {
+	WUFInit();
+	
 	S3MSong song("a.s3m");
 	if (!song.IsLoaded()) {
 		printf("Unable to load song.\n");
@@ -74,6 +76,8 @@ int main() {
 	}
 	printf("\n");
 	
+	TWave *instruments = new TWave[song.NumInstruments()];
+	TChannel *mixer_channel = WUFAllocateChannel(0);
 	for (i = 0; i < song.NumInstruments(); ++i) {
 		if (song.Instrument(i) == NULL) {
 			printf("Error retrieving instrument %dn\n", i);
@@ -111,12 +115,29 @@ int main() {
 		printf(" C2freq:%dn", instrument.C2Frequency());
 		printf(" Num.samples:%dn", instrument.NumSamples());
 		printf("\n");
+		
+		if (instrument.Type() == Sampled) {
+			instruments[i].WaveType = instrument.IsStereo() ? 1 : 0;
+			instruments[i].WaveType |= instrument.Is16Bit() ? 2 : 0;
+			instruments[i].WavePtr = instrument.Samples();
+			instruments[i].WaveLen = instrument.NumSamples();
+			instruments[i].BaseRate = instrument.C2Frequency();
+			WUFPlaySound(&instruments[i], mixer_channel, 1 << 24, 64, 0);
+			printf("Playing... Press ENTER to continue, or ESC to exit.");
+			k = 0;
+			while (k != 27 && k != 13) {
+				k = getch();
+			}
+			printf("\r                                                   \r");
+			if (k == 27) {
+				break;
+			}
+		}
 	}
 	printf("\n");
 	
-	k = 13;
 	i = 0;
-	while(true) {
+	while(k != 27) {
 		if (k == 13) {
 			printf("Press ENTER to see pattern %dn, or ESC to leave.\n", i);
 		}
@@ -193,6 +214,10 @@ int main() {
 			}
 		}
 	}
+
+	WUFClose();
+
+	delete [] instruments;
 	
 	return 0;
 }
