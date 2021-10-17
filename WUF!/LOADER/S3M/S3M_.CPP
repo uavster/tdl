@@ -35,7 +35,7 @@ static bool LoadS3MInstrument(int instrument_offset, TS3MInstrument &instrument,
 	if (instrument.data == NULL) {
 		return false;
 	}
-	DWORD data_offset = ((DWORD)instrument.header.spec.sampled.offset.high << 16) | ((DWORD)instrument.header.spec.sampled.offset.low);
+	DWORD data_offset = 16 * (((DWORD)instrument.header.spec.sampled.offset.high << 16) | ((DWORD)instrument.header.spec.sampled.offset.low));
 	if (ttl_seek(f, data_offset, SEEK_SET) != data_offset) {
 		return false;
 	}
