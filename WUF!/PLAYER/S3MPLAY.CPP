@@ -40,8 +40,9 @@ S3MPlayable::S3MPlayable(const char *file_name)
 	// Create TWave for each instrument.
 	if (song_->NumInstruments() > 0) {
 		instruments_ = new TWave[song_->NumInstruments()];
-		for (int j = 0; j < song_->NumInstruments(); ++j) {
+		for (int j = 0; j < song_->NumInstruments(); ++j) {		
 			const S3MInstrument *instrument = song_->Instrument(j);
+			// Check instrument type and packing
 			instruments_[j].WaveType = instrument->IsStereo() ? 1 : 0;
 			instruments_[j].WaveType |= instrument->Is16Bit() ? 2 : 0;
 			instruments_[j].WavePtr = instrument->Samples();
@@ -127,8 +128,9 @@ float S3MPlayable::Volume() {
 }
 
 DWORD S3MPlayable::FreqMultiplierForNote(BYTE note, BYTE octave) {
+	// Notes: C, C#, D, D#, E, F, F#, G, G#, A, A#, B
 	static const DWORD period_by_note[] = { 1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016, 960, 907 };
-	return ((14317056u << 8) / ((8363u * 16u * period_by_note[note]) >> octave)) << 16;
+	return ((14317056u << 8) / ((8363u * 16u * period_by_note[note]) >> (octave - 1))) << 16;
 }
 
 void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {	
