@@ -1304,7 +1304,7 @@ endif
 				mov		eax,ChannelPool
 				add		eax,CurrentChannelOffset
 				test	[TChannel ptr eax.Flags],MIXER_CHANNEL_ALLOCATED
-				jz		no_wave_in_channel
+				jz		no_wave_in_channel				
 				mov     esi,[TChannel ptr eax.ChanWave]
 				test    esi,esi
 				jz      no_wave_in_channel				
@@ -1326,6 +1326,7 @@ endif
 					channel_mixed:
 					mov		eax,ChannelPool
 					add		eax,CurrentChannelOffset
+					mov		[eax.CurrentSample],edx	; Advance play position
 					; Atomic freeing of the channel
 					pushf
 					cli
@@ -1340,7 +1341,7 @@ endif
 					channel_continues:
 					mov		eax,ChannelPool
 					add		eax,CurrentChannelOffset
-					mov		[eax.CurrentSample],edx
+					mov		[eax.CurrentSample],edx	; Advance play position
 				no_wave_in_channel:
 				add		CurrentChannelOffset,size TChannel
 				pop		ebp
