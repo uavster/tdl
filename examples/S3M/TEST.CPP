@@ -122,6 +122,13 @@ int main() {
 			instruments[i].WavePtr = instrument.Samples();
 			instruments[i].WaveLen = instrument.NumSamples();
 			instruments[i].BaseRate = instrument.C2Frequency();
+			if (instrument.HasLoop()) {
+				instruments[i].LoopStart = instrument.LoopStart();
+				instruments[i].LoopEnd = instrument.LoopEnd();
+			} else {
+				instruments[i].LoopStart = -1;
+				instruments[i].LoopEnd = -1;
+			}
 			WUFPlaySound(&instruments[i], mixer_channel, 1 << 24, 64, 0);
 			printf("Playing... Press ENTER to continue, or ESC to exit.");
 			k = 0;

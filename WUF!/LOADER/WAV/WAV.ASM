@@ -137,6 +137,8 @@ LoadWAV proc
 		shr		ecx,3
 		div		ecx
         mov     [ebx.WaveLen],eax
+		mov		[ebx.LoopStart],-1
+		mov		[ebx.LoopEnd],-1
 
         mov     eax,ebx
         ret

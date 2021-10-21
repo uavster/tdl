@@ -48,6 +48,13 @@ S3MPlayable::S3MPlayable(const char *file_name)
 			instruments_[j].WavePtr = instrument->Samples();
 			instruments_[j].WaveLen = instrument->NumSamples();
 			instruments_[j].BaseRate = instrument->C2Frequency();
+			if (instrument->HasLoop()) {
+				instruments_[j].LoopStart = instrument->LoopStart();
+				instruments_[j].LoopEnd = instrument->LoopEnd();
+			} else {
+				instruments_[j].LoopStart = -1;
+				instruments_[j].LoopEnd = -1;
+			}
 		}
 	}
 	Stop();

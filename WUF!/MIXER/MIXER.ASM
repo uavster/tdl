@@ -366,6 +366,7 @@ WUFAllocateChannel		proc
 		call	SearchFreeChannel
 		pop		eax
 		jc		no_free_channel_found
+		and		eax,MIXER_CHANNEL_AUTO_FREE	; only MIXER_CHANNEL_AUTO_FREE is supported
 		or		eax,MIXER_CHANNEL_ALLOCATED
 		mov		[TChannel ptr ebx.Flags],eax
 		popf
@@ -529,7 +530,7 @@ CopyFrontChannelPoolToBack	proc
 				; If the channel was edited from the API in the middle of the audio IRQ, do not copy back the channel data,
 				; as it would overwrite API-passed values, which have priority.
 				test	eax,MIXER_CHANNEL_EDITED
-				jnz		dont_copy_edited_channel
+				jnz		dont_copy_edited_channel	; TODO: Copy values that are "left as is" for continuity
 						; Otherwise, copy channel data except for flags
 						push	esi edi ecx		
 						mov		ecx,size TChannel-4	; size TChannel-size TChannel.Flags does not work (equals 0)
@@ -592,6 +593,7 @@ WUFPlaySound       proc
 		jz		leave_sample_as_is
 				mov     [TChannel ptr ebx.ChanWave],eax
 				mov     [TChannel ptr ebx.CurrentSample],0
+				and		[TChannel ptr ebx.Flags],NOT MIXER_CHANNEL_IS_LOOPING
 				jmp		sample_wave_set
 		leave_sample_as_is:
 				mov		eax,[TChannel ptr ebx.ChanWave]
@@ -725,8 +727,38 @@ endm
 ;		   sample_increment = Number of samples to increment the sample index at every loop (fixed point 24.8)
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
+AdjustStateForLoop macro bytes_per_sample
+		mov		ecx,wave_loop_start
+		sub		wave_len,ecx
+		lea		ebx,[ebx+bytes_per_sample*ecx]
+		mov		wave_loop_start,-2
+endm
+
+IfSampleLoopsGoTo macro sample_loop, bytes_per_sample
+local	end_loop
+		; ECX = wave_len (24.8), EDX = current sample (24.8), wave_loop_start (32.0)
+		cmp		wave_loop_start,-1
+		jz		end_loop
+		xor		edx,edx
+		cmp		wave_loop_start,-2
+		jz		sample_loop
+		AdjustStateForLoop 	bytes_per_sample
+		jmp		sample_loop
+		end_loop:
+endm
+
+IfSampleIsLoopingAdjustForLoop macro bytes_per_sample
+local	channel_is_not_looping
+		; If the sample is looping, increment the wave data pointer [esi.LoopStart] samples
+		test	[TChannel ptr eax.Flags],MIXER_CHANNEL_IS_LOOPING
+		jz		channel_is_not_looping
+				AdjustStateForLoop 	bytes_per_sample
+		channel_is_not_looping:
+endm
+
 MixStereoS16InMonoBuffer macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 4
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
@@ -744,10 +776,12 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,4
 endm
 
 MixStereoS16WithVolumeInMonoBuffer macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 4
 sample_loop:
 		; Left channel
 		mov		ecx,edx
@@ -771,10 +805,12 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,4
 endm
 
 MixMonoS16InMonoBuffer macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
@@ -788,10 +824,12 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,2
 endm
 
 MixMonoS16WithVolumeInMonoBuffer macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
@@ -806,10 +844,12 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,2
 endm
 
 MixStereoU8InMonoBuffer macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
@@ -828,10 +868,12 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,2
 endm
 
 MixStereoU8WithVolumeInMonoBuffer macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		eax,edx
 		shr		eax,8
@@ -855,10 +897,12 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,2
 endm
 
 MixMonoU8InMonoBuffer macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 1
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
@@ -874,10 +918,12 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,1
 endm
 
 MixMonoU8WithVolumeInMonoBuffer macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 1
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
@@ -894,6 +940,7 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,1
 endm
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
@@ -918,8 +965,18 @@ MixChannelToMono	proc
 		shl		ecx,8+2
 		add		ecx,VolumeTable
 		mov		volume_table_ptr,ecx
+		; wave_len = min([esi.WaveLen], [esi.LoopEnd])
 		mov		ecx,[esi.WaveLen]
+		cmp		ecx,[esi.LoopEnd]
+		jbe		no_loop_mono
+				mov		ecx,[esi.LoopEnd]
+		no_loop_mono:
 		mov		wave_len,ecx
+		; wave_loop_start = [esi.LoopStart]
+		mov		ecx,[esi.LoopStart]
+		mov		wave_loop_start,ecx
+		
+		; Choose inner loop depending on sample type
 		test    [esi.WaveType],1
 		jz      its_8_bits
 				; 16-bit signed samples
@@ -988,6 +1045,7 @@ MixChannelToMono	endp
 
 MixStereoS16WithVolume macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 4
 sample_loop:		
 		; Precondition: EDX = Current sample index (fixed point 24.8)
 		; Load left channel sample in EAX
@@ -1017,10 +1075,12 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,4
 endm
 
 MixStereoS16 macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 4
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
@@ -1039,10 +1099,12 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,4
 endm
 
 MixMonoS16WithVolume macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
@@ -1058,10 +1120,12 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,2
 endm
 
 MixMonoS16 macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
@@ -1076,10 +1140,12 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,2
 endm
 
 MixStereoU8WithVolume macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		eax,edx
 		shr		eax,8
@@ -1101,10 +1167,12 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,2
 endm
 
 MixStereoU8 macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
@@ -1124,10 +1192,12 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,2
 endm
 
 MixMonoU8WithVolume macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 1
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8						
@@ -1145,10 +1215,12 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,1
 endm
 
 MixMonoU8 macro
 local sample_loop
+IfSampleIsLoopingAdjustForLoop 1
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8						
@@ -1165,6 +1237,7 @@ sample_loop:
 		shl		ecx,8
 		cmp     edx,ecx
 		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,1
 endm
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
@@ -1189,8 +1262,17 @@ MixChannelToStereo	proc
 		shl		ecx,8+2
 		add		ecx,VolumeTable
 		mov		volume_table_ptr,ecx
+		; wave_len = min([esi.WaveLen], [esi.LoopEnd])
 		mov		ecx,[esi.WaveLen]
+		cmp		ecx,[esi.LoopEnd]
+		jbe		no_loop_stereo
+				mov		ecx,[esi.LoopEnd]
+		no_loop_stereo:
 		mov		wave_len,ecx
+		; wave_loop_start = [esi.LoopStart]
+		mov		ecx,[esi.LoopStart]		
+		mov		wave_loop_start,ecx
+		
 		; Choose inner loop depending on sample type
 		test    [esi.WaveType],1
 		jz      its_8_bits_s
@@ -1338,9 +1420,15 @@ endif
 					popf
 					; The channel may have been allocated from a higher priority IRQ at this point: don't touch it.
 					jmp		no_wave_in_channel
+
 					channel_continues:
 					mov		eax,ChannelPool
 					add		eax,CurrentChannelOffset
+					cmp		wave_loop_start,-2
+					jne		sample_not_looping
+							; wave_loop_start == -2, so sample started looping 
+							or		[TChannel ptr eax.Flags],MIXER_CHANNEL_IS_LOOPING
+					sample_not_looping:
 					mov		[eax.CurrentSample],edx	; Advance play position
 				no_wave_in_channel:
 				add		CurrentChannelOffset,size TChannel
@@ -1575,6 +1663,7 @@ CurrentChannelOffset    dd ?
 ; when copied from the back channel data.
 wave_len				dd ? 
 sample_increment		dd ?
+wave_loop_start			dd ?
 
 volume_table_ptr		dd ?
 VolumeTable				dd ?

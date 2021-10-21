@@ -37,6 +37,8 @@ TWave           STRUC
         WavePtr         dd ?    ; -> Sound data
         WaveLen         dd ?    ; Sound length in samples
         BaseRate        dd ?    ; Base sample rate
+		LoopStart		dd ?	; Sample index where loop starts (included); -1 and -2 are reserved values.
+		LoopEnd			dd ?	; Sample index where loop ends (not included); no loop if LoopStart==LoopEnd==-1; -1 and -2 are reserved values.
 ENDS
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
