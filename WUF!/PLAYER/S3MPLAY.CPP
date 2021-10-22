@@ -85,8 +85,8 @@ int S3MPlayable::NumMixerChannels() const {
 	return max_channel_index_ - min_channel_index_ + 1;
 }
 
-DWORD S3MPlayable::MixerCallbackPeriod() const {
-	return (5 * 65536) / ticks_per_second_;
+static DWORD S3MPlayable::MixerCallbackPeriod(DWORD ticks_per_second) {
+	return ((2500 * 65536) / 1000) / ticks_per_second;
 }
 
 bool S3MPlayable::Play() {
@@ -102,7 +102,7 @@ bool S3MPlayable::Play() {
 	}
 	printf("Ticks per second: %dn", ticks_per_second_);
 	printf("\n");
-	mixer_callback_ = WUFAddMixerCallback(MixerCallbackPeriod(), &Tick, this);
+	mixer_callback_ = WUFAddMixerCallback(MixerCallbackPeriod(ticks_per_second_), &Tick, this);
 	if (mixer_callback_ == kHMixerCallbackInvalid) {
 		WUFFreeChannels(NumMixerChannels(), mixer_channels_);
 		LastError(kCantAddMixerCallback);
@@ -163,7 +163,19 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 			}
 			DWORD freq_multiplier = cell.HasNote() ? FreqMultiplierForNote(cell.Note(), cell.Octave()) : -1;	// -1 = keep channel freq
 			DWORD channel_number = static_cast<DWORD>(cell.ChannelNumber()) - static_cast<DWORD>(self->min_channel_index_);
-			WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[channel_number]), freq_multiplier, volume, 0); 
+			WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[channel_number]), freq_multiplier, volume, 0);
+			
+			if (cell.HasEffect()) {
+				switch(cell.Effect()) {
+					case 'A':
+						self->ticks_per_row_ = cell.EffectValue();
+						break;
+					case 'T':
+						self->ticks_per_second_ = cell.EffectValue();
+						WUFSetMixerCallbackPeriod(self->mixer_callback_, MixerCallbackPeriod(self->ticks_per_second_));
+						break;
+				}
+			}
 		}
 		
 		// If DOS error mode flag, we cannot call any int 21h service, e.g. printf
