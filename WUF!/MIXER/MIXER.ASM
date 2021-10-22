@@ -255,9 +255,10 @@ CloseMixer      endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Adds a callback that will be called periodically from the playback IRQ
 ;
-; This function can only be called from non-IRQ, audio IRQ or lower priority IRQs.
+; This function can be called from any IRQ.
 ;
-; INPUT  : ST0 = Callback period in seconds
+; INPUT  : EAX = Callback period in audio seconds (fixed point 16.16)
+;				 Value must be lower than (2^32 - 1) / output_sampling_frequency
 ; 		   EBX -> Callback function
 ;				  Callback input is EDX -> Channel pool (TChannel elements),
 ;				  and EAX = Num. channels
@@ -269,45 +270,76 @@ CloseMixer      endp
 ;		 		EAX -> TMixerCallback structure
 ;		   CF = 1 if error
 ;				EAX = NULL
+;
+; NOTE   : The audio period is not real time; the callback interrupts the 
+;		   generation of the output audio buffer every number of samples 
+; 		   corresponding to the callback period in seconds. If any channges
+; 		   affecting the audio output are made in the callback, they will be 
+;		   heard as periodic with one sampling period resolution, but the 
+;		   callback may be called at any moment in real time.
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 WUFAddMixerCallback	proc
 		pushf
 		cli
 		; Find free callback
-		mov		eax,offset Callbacks
+		mov		esi,offset Callbacks
 		mov		cl,MAX_NUM_CALLBACKS
 		find_free_callback:
-				cmp		[TMixerCallback ptr eax.CallbackAddress],0
+				cmp		[TMixerCallback ptr esi.CallbackAddress],0
 				jz		found_free_callback
-				add		eax,size TMixerCallback
+				add		esi,size TMixerCallback
 		dec		cl
 		jnz		find_free_callback
-		push	eax
-		fstp	dword ptr ss:[esp]
-		pop		eax
 		popf
 		xor		eax,eax
 		stc
 		ret
 		
 		found_free_callback:
-		fimul	MixFreq
-		push	256
-		fimul	dword ptr ss:[esp]
-		pop		ecx
-		fist	[TMixerCallback ptr eax.SamplesPerTick]
-		fistp	[TMixerCallback ptr eax.MissingTickSamples]
-		mov		[TMixerCallback ptr eax.CallbackAddress],ebx
-		mov		[TMixerCallback ptr eax.UserPointer],edx
+		push	ebx edx
+		mov		ebx,esi
+		call	WUFSetMixerCallbackPeriod
+		pop		edx ebx
+		mov		[TMixerCallback ptr esi.CallbackAddress],ebx
+		mov		[TMixerCallback ptr esi.UserPointer],edx
+		mov		eax,esi
 		popf
 		clc
 		ret
 WUFAddMixerCallback	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Sets the period of a callback
+;
+; This function can be called from any IRQ.
+;
+; INPUT  : EBX = TMixerCallback structure of callback
+;		   EAX = Callback period in audio seconds (fixed point 16.16)
+;				 Value must be lower than (2^32 - 1) / (output_sampling_frequency * 256)
+;
+; NOTE   : The audio period is not real time; the callback interrupts the 
+;		   generation of the output audio buffer every number of samples 
+; 		   corresponding to the callback period in seconds. If any channges
+; 		   affecting the audio output are made in the callback, they will be 
+;		   heard as periodic with one sampling period resolution, but the 
+;		   callback may be called at any moment in real time.
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+WUFSetMixerCallbackPeriod	proc
+		pushf
+		cli
+		xor		edx,edx
+		mul		MixFreq
+		shr		eax,8
+		mov		[TMixerCallback ptr ebx.SamplesPerTick],eax
+		mov		[TMixerCallback ptr ebx.MissingTickSamples],eax
+		popf
+		ret
+WUFSetMixerCallbackPeriod	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Deletes a callback 
 ;
-; This function can only be called from non-IRQ, audio IRQ or lower priority IRQs.
+; This function can be called from any IRQ.
 ;
 ; INPUT  : EAX = TMixerCallback structure of callback to delete
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -1353,6 +1385,8 @@ endif
 			shl		ebp,8
 			mov		esi,offset Callbacks
 			mov		cl,MAX_NUM_CALLBACKS
+			pushf
+			cli		; Clear interrupts, so that callback modification functions in the API can be called from anywhere
 			find_min_missing_samples:
 					cmp		[TMixerCallback ptr esi.CallbackAddress],0
 					jz		greater_than_or_equal_to_min
@@ -1364,6 +1398,7 @@ endif
 					add		esi,size TMixerCallback
 			dec		cl
 			jnz		find_min_missing_samples
+			popf
 			
 			test	ebp,ebp
 			jz		no_samples_to_play
@@ -1439,6 +1474,8 @@ endif
 			no_samples_to_play:
 			mov		eax,offset Callbacks
 			mov		cl,MAX_NUM_CALLBACKS
+			pushf
+			cli		; Clear interrupts, so that callback modification functions in the API can be called from anywhere
 			iterate_on_callbacks:
 					mov		ebx,[TMixerCallback ptr eax.CallbackAddress]
 					test	ebx,ebx
@@ -1451,13 +1488,19 @@ endif
 							; Call mixer callback, if set.
 							; First argument (eax) is the pointer to the TMixerCallback structure.
 							mov		edx,[TMixerCallback ptr eax.UserPointer]
+							popf	; Re-allow interrupts if they were enabled in this IRQ, as the callback may take long
+							
 							push	eax ecx ebp
 							call	ebx
 							pop		ebp ecx eax
+							
+							pushf
+							cli		; Clear interrupts again, so that callback modification functions in the API can be called from anywhere
 					tick_samples_not_expired:
 					add		eax,size TMixerCallback
 			dec		cl
 			jnz		iterate_on_callbacks
+			popf	; Re-allow interrupts if they were enabled in this IRQ, as the callback may be heavy
 			
 			call	CopyFrontChannelPoolToBack
 		sar		ebp,8

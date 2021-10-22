@@ -196,7 +196,7 @@ start:
 				ErrorExit "Unable to allocate mixer channels."	
 		
 		channels_allocated_ok:
-		fldf 	0.25
+		mov		eax,65536 / 4	; 0.25 in fixed point 16.16
 		mov		ebx,offset MixerCallback
 		xor		edx,edx
 		call	WUFAddMixerCallback

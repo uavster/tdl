@@ -23,6 +23,7 @@ protected:
 	void Destroy();
 	static void Tick(HMixerCallback mixer_callback, void *user_pointer);
 	static DWORD FreqMultiplierForNote(BYTE note, BYTE octave);
+	DWORD MixerCallbackPeriod() const;
 	
 private:
 	S3MSong *song_;

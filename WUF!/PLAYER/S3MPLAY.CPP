@@ -85,6 +85,10 @@ int S3MPlayable::NumMixerChannels() const {
 	return max_channel_index_ - min_channel_index_ + 1;
 }
 
+DWORD S3MPlayable::MixerCallbackPeriod() const {
+	return (5 * 65536) / ticks_per_second_;
+}
+
 bool S3MPlayable::Play() {
 	if (LastError() != kSuccess) {
 		return false;
@@ -98,7 +102,7 @@ bool S3MPlayable::Play() {
 	}
 	printf("Ticks per second: %dn", ticks_per_second_);
 	printf("\n");
-	mixer_callback_ = WUFAddMixerCallback(5.0f / ticks_per_second_, &Tick, this);
+	mixer_callback_ = WUFAddMixerCallback(MixerCallbackPeriod(), &Tick, this);
 	if (mixer_callback_ == kHMixerCallbackInvalid) {
 		WUFFreeChannels(NumMixerChannels(), mixer_channels_);
 		LastError(kCantAddMixerCallback);

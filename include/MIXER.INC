@@ -157,9 +157,10 @@ global  MixChannels : NEAR
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Adds a callback that will be called periodically from the playback IRQ
 ;
-; This function can only be called from non-IRQ, audio IRQ or lower priority IRQs.
+; This function can be called from any IRQ.
 ;
-; INPUT  : ST0 = Callback period in seconds
+; INPUT  : EAX = Callback period in audio seconds (fixed point 16.16)
+;				 Value must be lower than (2^32 - 1) / output_sampling_frequency
 ; 		   EBX -> Callback function
 ;				  Callback input is EDX -> Channel pool (TChannel elements),
 ;				  and EAX = Num. channels
@@ -171,13 +172,38 @@ global  MixChannels : NEAR
 ;		 		EAX -> TMixerCallback structure
 ;		   CF = 1 if error
 ;				EAX = NULL
+;
+; NOTE   : The audio period is not real time; the callback interrupts the 
+;		   generation of the output audio buffer every number of samples 
+; 		   corresponding to the callback period in seconds. If any channges
+; 		   affecting the audio output are made in the callback, they will be 
+;		   heard as periodic with one sampling period resolution, but the 
+;		   callback may be called at any moment in real time.
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global  WUFAddMixerCallback : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Sets the period of a callback
+;
+; This function can be called from any IRQ.
+;
+; INPUT  : EBX = TMixerCallback structure of callback
+;		   EAX = Callback period in audio seconds (fixed point 16.16)
+;				 Value must be lower than (2^32 - 1) / (output_sampling_frequency * 256)
+;
+; NOTE   : The audio period is not real time; the callback interrupts the 
+;		   generation of the output audio buffer every number of samples 
+; 		   corresponding to the callback period in seconds. If any channges
+; 		   affecting the audio output are made in the callback, they will be 
+;		   heard as periodic with one sampling period resolution, but the 
+;		   callback may be called at any moment in real time.
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global	WUFSetMixerCallbackPeriod : NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Deletes a callback 
 ;
-; This function can only be called from non-IRQ, audio IRQ or lower priority IRQs.
+; This function can be called from any IRQ.
 ;
 ; INPUT  : EAX = TMixerCallback structure of callback to delete
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
