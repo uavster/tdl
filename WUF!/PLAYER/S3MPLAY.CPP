@@ -141,12 +141,11 @@ float S3MPlayable::Volume() {
 DWORD S3MPlayable::FreqMultiplierForNote(BYTE note, BYTE octave) {
 	// Notes: C, C#, D, D#, E, F, F#, G, G#, A, A#, B
 	static const DWORD period_by_note[] = { 1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016, 960, 907 };
-	return ((894816u << 12) / ((8363u * period_by_note[note]) >> (octave - 1))) << 12;
+	return ((894841u << 12) / ((8363u * period_by_note[note]) >> (octave - 1))) << 12;
 }
 
-void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {	
+void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 	S3MPlayable *self = static_cast<S3MPlayable *>(user_pointer);
-	
 	++self->num_ticks_;
 	if (self->num_ticks_ >= self->ticks_per_row_) {
 		const S3MRow *row = self->song_->Pattern(self->pattern_index_)->Row(self->row_index_);
@@ -227,7 +226,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 			}
 			printf("\n");
 		}
-		
+
 		self->num_ticks_ = 0;
 		++self->row_index_;
 		if (self->row_index_ >= self->song_->Pattern(self->pattern_index_)->NumRows()) {

@@ -5,15 +5,15 @@
 const DWORD period_by_note[] = { 1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016, 960, 907 };
 
 DWORD FreqMultiplierForNote_fixedpoint(BYTE note, BYTE octave) {
-	return ((14317056u << 8) / ((8363u * 16u * period_by_note[note]) >> (octave - 1))) << 16;
+	return ((14317456u << 8) / ((8363u * 16u * period_by_note[note]) >> (octave - 1))) << 16;
 }
 
 DWORD FreqMultiplierForNote_fixedpoint_new(BYTE note, BYTE octave) {
-	return ((894816u << 12) / ((8363u * period_by_note[note]) >> (octave - 1))) << 12;
+	return ((894841u << 12) / ((8363u * period_by_note[note]) >> (octave - 1))) << 12;
 }
 
 DWORD FreqMultiplierForNote_double(BYTE note, BYTE octave) {
-	double freq_mult_double = 14317056.0 / (double)((8363u * 16u * period_by_note[note]) >> (octave - 1));
+	double freq_mult_double = 14317456.0 / (double)((8363u * 16u * period_by_note[note]) >> (octave - 1));
 	return (DWORD)(freq_mult_double * (1 << 24));
 }
 
