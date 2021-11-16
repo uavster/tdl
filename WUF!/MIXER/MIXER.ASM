@@ -1411,13 +1411,13 @@ endif
 			dec		cl
 			shl		edi,cl
 			add		edi,MixingBuffer
-			neg		ebp
 			mov		CurrentChannelOffset,0
 			mov     al,MaxInputChannels
 			mov		nchannels,al
 			walk_channels:
 				push	ebp
-				sar		ebp,8
+				shr		ebp,8
+				neg		ebp
 				mov		eax,ChannelPool
 				add		eax,CurrentChannelOffset
 				test	[TChannel ptr eax.Flags],MIXER_CHANNEL_ALLOCATED
@@ -1479,8 +1479,8 @@ endif
 			iterate_on_callbacks:
 					mov		ebx,[TMixerCallback ptr eax.CallbackAddress]
 					test	ebx,ebx
-					jz		tick_samples_not_expired
-					add 	[TMixerCallback ptr eax.MissingTickSamples],ebp
+					jz		tick_samples_not_expired					
+					sub 	[TMixerCallback ptr eax.MissingTickSamples],ebp
 					jg		tick_samples_not_expired
 							; End of tick
 							mov		edx,[TMixerCallback ptr eax.SamplesPerTick]
@@ -1503,8 +1503,8 @@ endif
 			popf	; Re-allow interrupts if they were enabled in this IRQ, as the callback may be heavy
 			
 			call	CopyFrontChannelPoolToBack
-		sar		ebp,8
-		add		MissingMixerBufferSamples,ebp
+		shr		ebp,8
+		sub		MissingMixerBufferSamples,ebp		
 		jnz		tick_loop
 		; Mixer buffer processed
 		
