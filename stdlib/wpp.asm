@@ -89,4 +89,8 @@ public __wcpp_4_lcl_register__
 __wcpp_4_lcl_register__:
 		retn
 
+public __wcpp_4_ctor_array_storage_gm__
+__wcpp_4_ctor_array_storage_gm__:
+		retn
+
 end
