@@ -22,8 +22,9 @@ protected:
 	int NumMixerChannels() const;
 	void Destroy();
 	static void Tick(HMixerCallback mixer_callback, void *user_pointer);
-	static DWORD FreqMultiplierForNote(BYTE note, BYTE octave);
+	static DWORD FreqMultiplierForNote(BYTE note, BYTE octave, int period_increment);
 	static DWORD MixerCallbackPeriod(DWORD ticks_per_second);
+	int MixerChannelIndexForCellChannelIndex(int cell_channel_index) const;
 	
 private:
 	S3MSong *song_;
@@ -37,6 +38,22 @@ private:
 	int ticks_per_second_;
 	int ticks_per_row_;
 	TWave *instruments_;
+	
+	class SongChannel {
+	public:
+		SongChannel();
+		void Reset();
+
+		BYTE volume;
+		BYTE note;
+		BYTE octave;
+		int period_increment;
+		DWORD freq_multiplier;
+		char effect;
+		BYTE effect_value;
+	};
+	// One-to-one correspondence with mixer_channels_
+	SongChannel *song_channels_;
 };
 
 #endif
