@@ -166,12 +166,16 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 			SongChannel &channel = self->song_channels_[i];
 			switch(channel.effect) {
 				case 'F':
-					channel.period_increment -= 4 * channel.effect_value;
-					channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+					if (channel.effect_value < 0xE0) {
+						channel.period_increment -= 4 * channel.effect_value;
+						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+					}
 					break;
 				case 'E':
-					channel.period_increment += 4 * channel.effect_value;
-					channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+					if (channel.effect_value < 0xE0) {
+						channel.period_increment += 4 * channel.effect_value;
+						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+					}
 					break;
 			}
 			WUFPlaySound(NULL, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, channel.volume, 0);
@@ -203,7 +207,6 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				// Update frequency multiplier if the current note and octave are valid for the channel.
 				channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
 			}
-			WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, channel.volume, 0);
 			
 			if (cell.HasEffect()) {
 				channel.effect = cell.Effect();
@@ -216,11 +219,25 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						self->ticks_per_second_ = cell.EffectValue();
 						WUFSetMixerCallbackPeriod(self->mixer_callback_, MixerCallbackPeriod(self->ticks_per_second_));
 						break;
+					case 'F':
+						if (channel.effect_value >= 0xE0) {
+							channel.period_increment -= (channel.effect_value >= 0xF0 ? 8 : 2) * (channel.effect_value & 0xf);
+							channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+						}
+						break;
+					case 'E':
+						if (channel.effect_value >= 0xE0) {
+							channel.period_increment += (channel.effect_value >= 0xF0 ? 8 : 2) * (channel.effect_value & 0xf);
+							channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+						}
+						break;
 				}
 			} else {
 				channel.effect = 0xff;
 				channel.effect_value = 0;
 			}
+			
+			WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, channel.volume, 0);
 		}
 
 		// If DOS error mode flag, we cannot call any int 21h service, e.g. printf
