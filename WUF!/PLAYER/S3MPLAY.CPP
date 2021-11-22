@@ -153,7 +153,13 @@ float S3MPlayable::Volume() {
 DWORD S3MPlayable::FreqMultiplierForNote(BYTE note, BYTE octave, int period_increment) {
 	// Notes: C, C#, D, D#, E, F, F#, G, G#, A, A#, B
 	static const int period_by_note[] = { 1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016, 960, 907 };
-	const DWORD period = period_by_note[note] + period_increment;
+	int period = period_by_note[note] + period_increment;
+	if (period <= 0) {
+		// This limit is not imposed by Impulse Tracker. In IT, instruments going above 
+		// the max frequency with Fxx go mute, and are no longer recoverable with Fxx.
+		// However, we choose to go with stability rather than fidelity to the original behavior.
+		period = 1;		
+	}
 	return ((894841u << 12) / ((8363u * period) >> (octave - 1))) << 12;
 }
 
@@ -167,13 +173,13 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 			switch(channel.effect) {
 				case 'F':
 					if (channel.effect_value < 0xE0) {
-						channel.period_increment -= 4 * channel.effect_value;
+						channel.period_increment -= 8 * channel.effect_value;
 						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
 					}
 					break;
 				case 'E':
 					if (channel.effect_value < 0xE0) {
-						channel.period_increment += 4 * channel.effect_value;
+						channel.period_increment += 8 * channel.effect_value;
 						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
 					}
 					break;
@@ -209,8 +215,11 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 			}
 			
 			if (cell.HasEffect()) {
+				if (cell.Effect() != channel.effect || cell.EffectValue() > 0) {
+					// If the effect did not change and the value is 0, leave value as is. Otherwise, update.
+					channel.effect_value = cell.EffectValue();
+				}
 				channel.effect = cell.Effect();
-				channel.effect_value = cell.EffectValue();
 				switch(cell.Effect()) {
 					case 'A':
 						self->ticks_per_row_ = cell.EffectValue();
