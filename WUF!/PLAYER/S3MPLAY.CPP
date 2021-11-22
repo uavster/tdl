@@ -160,7 +160,12 @@ DWORD S3MPlayable::FreqMultiplierForNote(BYTE note, BYTE octave, int period_incr
 		// However, we choose to go with stability rather than fidelity to the original behavior.
 		period = 1;		
 	}
-	return ((894841u << 12) / ((8363u * period) >> (octave - 1))) << 12;
+	if (period > (0xffffffffu / 8363u)) {
+		return 0;
+	}
+	const DWORD numerator = 894841u << 12;
+	DWORD divisor = (8363u * period) >> (octave - 1);
+	return (numerator / divisor) << 12;
 }
 
 void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
