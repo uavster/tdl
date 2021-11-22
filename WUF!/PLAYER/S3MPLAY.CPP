@@ -188,6 +188,26 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
 					}
 					break;
+				case 'D':
+					BYTE slide_up = channel.effect_value >> 4;
+					BYTE slide_down = channel.effect_value & 0xf;
+					if (!slide_up && slide_down) {
+						// Slide down.
+						if (slide_down < channel.volume) {
+							channel.volume -= slide_down;
+						} else {
+							channel.volume = 0;
+						}
+					}
+					if (slide_up && !slide_down) {
+						// Slide up.
+						if (slide_up < 64 - channel.volume) {
+							channel.volume += slide_up;
+						} else {
+							channel.volume = 64;
+						}
+					}
+					break;
 			}
 			WUFPlaySound(NULL, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, channel.volume, 0);
 		}
@@ -243,6 +263,34 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						if (channel.effect_value >= 0xE0) {
 							channel.period_increment += (channel.effect_value >= 0xF0 ? 8 : 2) * (channel.effect_value & 0xf);
 							channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+						}
+						break;
+					case 'D':
+						if ((channel.effect_value & 0xf0) == 0xf0) {
+							// Fine slide down.
+							BYTE slide_down = channel.effect_value & 0xf;
+							if (slide_down < channel.volume) {
+								channel.volume -= slide_down;
+							} else {
+								channel.volume = 0;
+							}
+						}
+						if ((channel.effect_value & 0xf) == 0xf) {
+							// Slide up.
+							BYTE slide_up = channel.effect_value >> 4;
+							if (slide_up == 0) {
+								if (0xf < channel.volume) {
+									channel.volume -= 0xf;
+								} else {
+									channel.volume = 0;
+								}
+							} else {
+								if (slide_up < 64 - channel.volume) {
+									channel.volume += slide_up;
+								} else {
+									channel.volume = 64;
+								}
+							}
 						}
 						break;
 				}
