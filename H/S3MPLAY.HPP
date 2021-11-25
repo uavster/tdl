@@ -44,6 +44,7 @@ private:
 		SongChannel();
 		void Reset();
 
+		BYTE instrument;
 		BYTE volume;
 		BYTE note;
 		BYTE octave;
@@ -51,9 +52,14 @@ private:
 		DWORD freq_multiplier;
 		char effect;
 		BYTE effect_value;
+		BYTE last_note;
+		BYTE last_octave;
 	};
 	// One-to-one correspondence with mixer_channels_
 	SongChannel *song_channels_;
+	
+protected:
+	void TonePortamento(SongChannel &channel);
 };
 
 #endif
