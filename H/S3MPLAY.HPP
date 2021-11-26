@@ -54,6 +54,7 @@ private:
 		BYTE effect_value;
 		BYTE last_note;
 		BYTE last_octave;
+		bool is_playing;
 	};
 	// One-to-one correspondence with mixer_channels_
 	SongChannel *song_channels_;

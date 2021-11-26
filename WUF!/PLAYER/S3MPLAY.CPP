@@ -168,6 +168,7 @@ DWORD S3MPlayable::FreqMultiplierForNote(BYTE note, BYTE octave, int period_incr
 
 void S3MPlayable::TonePortamento(SongChannel &channel) {
 	DWORD new_freq_mult = FreqMultiplierForNote(channel.note, channel.octave, 0);
+//printf("note:%dn, octave:%dn, last_note:%dn, last_octave:%dn, period_inc: %dn, nfm:%dn, fm:%dn, fxv:%dn\n", channel.note, channel.octave, channel.last_note, channel.last_octave, channel.period_increment, new_freq_mult, channel.freq_multiplier, channel.effect_value);
 	if (new_freq_mult > channel.freq_multiplier) {
 		channel.period_increment -= 4 * channel.effect_value;
 		channel.freq_multiplier = FreqMultiplierForNote(channel.last_note, channel.last_octave, channel.period_increment);
@@ -229,7 +230,9 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					self->TonePortamento(channel);
 					break;
 			}
-			WUFPlaySound(NULL, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, channel.volume, 0);
+			if (channel.is_playing) {
+				WUFPlaySound(NULL, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, channel.volume, 0);
+			}
 		}
 	} else {
 		// New pattern row.
@@ -264,6 +267,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				instrument = NULL;
 			}
 			if (cell.HasNote()) {
+				channel.is_playing = true;
 				channel.last_note = channel.note;
 				channel.last_octave = channel.octave;
 				channel.note = cell.Note();
@@ -273,7 +277,10 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					channel.last_octave = channel.octave;
 					channel.freq_multiplier = self->FreqMultiplierForNote(channel.note, channel.octave, 0);
 				}
-			}			
+			}
+			if (cell.HasStop()) {
+				channel.is_playing = false;
+			}
 			if (channel.note != 0xff && channel.octave != 0xff) {
 				// Update frequency multiplier if the current note and octave are valid for the channel.
 				if (!cell.HasEffect() || cell.Effect() != 'G') {	// Tone Portamento adjusts the multiplier progressively to the current note.
@@ -281,7 +288,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				}
 			}
 			if (cell.HasEffect()) {
-				if (cell.Effect() != channel.effect || cell.EffectValue() > 0) {
+				if ((channel.effect != 0xff && cell.Effect() != channel.effect) || cell.EffectValue() > 0) {
 					// If the effect did not change and the value is 0, leave value as is. Otherwise, update.
 					channel.effect_value = cell.EffectValue();
 				}
@@ -340,10 +347,15 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				}
 			} else {
 				channel.effect = 0xff;
-				channel.effect_value = 0;				
+//				channel.effect_value = 0;				
 			}
-
-			WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, channel.volume, 0);	
+			
+			if (channel.is_playing) {
+				WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, channel.volume, 0);	
+			}
+			if (cell.HasStop()) {
+				WUFPauseSound(WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]));
+			}
 		}
 		
 		// Clear effects on all channels with empty cells.
@@ -351,7 +363,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 			if (!processed_channels[j]) {
 				SongChannel &channel = self->song_channels_[j];
 				channel.effect = 0xff;
-				channel.effect_value = 0;
+//				channel.effect_value = 0;
 			}
 		}
 		
@@ -376,7 +388,11 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					it.Cell().GetNoteName(note_name);
 					printf(note_name);
 				} else {
-					printf("... ");
+					if (it.Cell().HasStop()) {
+						printf("^^^ ");
+					} else {
+						printf("... ");
+					}
 				}
 				if (it.Cell().HasInstrument()) {
 					printf(" %dn ", it.Cell().Instrument());
@@ -431,4 +447,5 @@ void S3MPlayable::SongChannel::Reset() {
 	instrument = 0xff;
 	last_note = 0xff;
 	last_octave = 0xff;
+	is_playing = true;
 }
