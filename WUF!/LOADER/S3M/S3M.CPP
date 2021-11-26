@@ -288,11 +288,15 @@ BYTE S3MCell::ChannelNumber() const {
 }
 
 bool S3MCell::HasNote() const {
-	return ((TS3MPatternCellHeader *)cell_)->has_note_and_instrument && cell_[1] != 0xff;
+	return ((TS3MPatternCellHeader *)cell_)->has_note_and_instrument && cell_[1] != 0xff && !HasStop();
+}
+
+bool S3MCell::HasStop() const {
+	return ((TS3MPatternCellHeader *)cell_)->has_note_and_instrument && cell_[1] == 0xfe;
 }
 
 bool S3MCell::HasInstrument() const {
-	return ((TS3MPatternCellHeader *)cell_)->has_note_and_instrument;
+	return ((TS3MPatternCellHeader *)cell_)->has_note_and_instrument && !HasStop();
 }
 
 BYTE S3MCell::Note() const {
