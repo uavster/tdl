@@ -32,7 +32,7 @@ _cstart_:
         call    main_
 
 _cfinish_:
-        Exit
+        ExitSilently
 
 _exit_  proc
         mov     ReturnCode,al
