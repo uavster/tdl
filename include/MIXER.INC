@@ -9,6 +9,7 @@ MIXER_CHANNEL_ALLOCATED		EQU 1
 MIXER_CHANNEL_EDITED		EQU 2
 MIXER_CHANNEL_AUTO_FREE		EQU 4
 MIXER_CHANNEL_IS_LOOPING	EQU 8
+MIXER_CHANNEL_IS_PAUSED		EQU 16
 
 ; Sound digital channel structure
 TChannel        STRUC
@@ -137,6 +138,15 @@ global	WUFFreeChannels : NEAR
 ;					FREQUENCY_TOO_HIGH: Base frequency * multiplier > 16,776,960 Hz
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global  WUFPlaySound : NEAR
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Pauses the current sound in a channel
+;
+; It is safe to call this function from main code and IRQs.
+;
+; INPUT  : EBX -> TChannel where sound is playing
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global	WUFPauseSound : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Returns a handler to a channel that may be used from inside a callback.

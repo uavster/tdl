@@ -671,12 +671,25 @@ WUFPlaySound       proc
 		no_sample_skip_increment_calculation:
 		
 		or		[TChannel ptr ebx.Flags],MIXER_CHANNEL_EDITED
+		and		[TChannel ptr ebx.Flags],NOT MIXER_CHANNEL_IS_PAUSED
 		
 		popf
 		xor		eax,eax
 		clc		
         ret
 WUFPlaySound       endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Pauses the current sound in a channel
+;
+; It is safe to call this function from main code and IRQs.
+;
+; INPUT  : EBX -> TChannel where sound is playing
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+WUFPauseSound	proc
+	or		[TChannel ptr ebx.flags],MIXER_CHANNEL_IS_PAUSED
+	ret
+WUFPauseSound	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Returns a handler to a channel that may be used from inside a callback.
@@ -1421,7 +1434,9 @@ endif
 				mov		eax,ChannelPool
 				add		eax,CurrentChannelOffset
 				test	[TChannel ptr eax.Flags],MIXER_CHANNEL_ALLOCATED
-				jz		no_wave_in_channel				
+				jz		no_wave_in_channel
+				test	[TChannel ptr eax.Flags],MIXER_CHANNEL_IS_PAUSED
+				jnz		no_wave_in_channel
 				mov     esi,[TChannel ptr eax.ChanWave]
 				test    esi,esi
 				jz      no_wave_in_channel				

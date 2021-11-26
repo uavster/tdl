@@ -15,6 +15,7 @@ public:
 	BYTE ChannelNumber() const;
 	
 	bool HasNote() const;
+	bool HasStop() const;
 	bool HasInstrument() const;
 	BYTE Note() const;
 	char NoteLetter() const;

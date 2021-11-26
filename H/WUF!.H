@@ -304,6 +304,18 @@ int WUFPlaySound(const TWave *wave, TChannel *channel, DWORD freq_multiplier, DW
 
 /*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Pauses the current sound in a channel
+;
+; It is safe to call this function from main code and IRQs.
+;
+; INPUT  : EBX -> TChannel where sound is playing
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+*/
+void WUFPauseSound(TChannel *channel);
+#pragma aux WUFPauseSound "*"	parm [ebx];
+								
+/*
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Returns a handler to a channel that may be used from inside a callback.
 ;
 ; INPUT  : EBX -> Allocated TChannel
