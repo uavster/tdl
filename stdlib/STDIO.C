@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stddef.h>
 
-#define MAX_STRING_LENGTH 1024
+#define MAX_STRING_LENGTH 256
 
 void PrintFormatted(char *);
 #pragma aux PrintFormatted "*" parm [esi]\
