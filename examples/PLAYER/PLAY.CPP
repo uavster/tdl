@@ -29,8 +29,7 @@ void PlaySound(const TWave *sound) {
 int main() {
 	WUFInit();
 
-	// Playable *song = Player::Load("a.s3m");
-	S3MPlayable *song = new S3MPlayable("a.s3m");
+	Playable *song = new S3MPlayable("test.s3m");
 	if (song->LastError() != Playable::kSuccess) {
 		printf("Error loading song.\n");
 		return song->LastError();
@@ -40,8 +39,7 @@ int main() {
 		printf("\n");
 		return song->LastError();
 	}
-	// getch();
-	while(!kbhit()) {}
+	getch();
 	printf("Exiting...\n");
 	
 	WUFClose();
