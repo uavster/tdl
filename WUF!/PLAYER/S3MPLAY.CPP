@@ -4,7 +4,7 @@
 #include "irq.h"
 
 S3MPlayable::S3MPlayable(const char *file_name)
-	: Playable(), song_(NULL), min_channel_index_(1), max_channel_index_(0), mixer_channels_(NULL), mixer_callback_(kHMixerCallbackInvalid), num_ticks_(0), row_index_(0), pattern_index_(0), instruments_(NULL), song_channels_(NULL) {
+	: Playable(), song_(NULL), min_channel_index_(1), max_channel_index_(0), mixer_channels_(NULL), mixer_callback_(kHMixerCallbackInvalid), num_ticks_(0), row_index_(0), order_(0), instruments_(NULL), song_channels_(NULL) {
 	song_ = new S3MSong(file_name);
 	if (!song_->IsLoaded()) {
 		Destroy();
@@ -136,7 +136,7 @@ void S3MPlayable::Stop() {
 	Pause();
 	num_ticks_ = ticks_per_row_ - 1;
 	row_index_ = 0;
-	pattern_index_ = 0;
+	order_ = 0;
 	for (int i = 0; i < NumMixerChannels(); ++i) {
 		song_channels_[i].Reset();
 	}	
@@ -238,7 +238,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 		// New pattern row.
 		int last_read_channel_index = 0;
 		// Interpret song cells.
-		const S3MRow *row = self->song_->Pattern(self->pattern_index_)->Row(self->row_index_);
+		const S3MRow *row = self->song_->Pattern(self->song_->Order(self->order_))->Row(self->row_index_);
 		bool processed_channels[64];
 		for (int i = 0; i < self->NumMixerChannels(); ++i) {
 			processed_channels[i] = false;
@@ -370,8 +370,8 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 		// If DOS error mode flag, we cannot call any int 21h service, e.g. printf
 		if (!(IRQDOSFlags() & 0xff)) {
 			// Even if InDOS flag is set, services 1 thru 0ch can be called safely; printf() uses service 2.
-			printf("p:%dn r:%dn|", self->pattern_index_, self->row_index_);
-			const S3MRow *row = self->song_->Pattern(self->pattern_index_)->Row(self->row_index_);
+			printf("p:%d02n r:%d02n|", self->song_->Order(self->order_), self->row_index_);
+			const S3MRow *row = self->song_->Pattern(self->song_->Order(self->order_))->Row(self->row_index_);
 			int channel_number = 0;
 			for (S3MCellIterator it = row->begin(); it != row->end(); it++) {
 				// Unused previous channels.
@@ -395,12 +395,12 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					}
 				}
 				if (it.Cell().HasInstrument()) {
-					printf(" %dn ", it.Cell().Instrument());
+					printf(" %d02n ", it.Cell().Instrument());
 				} else {
 					printf(".. ");
 				}
 				if (it.Cell().HasVolume()) {
-					printf("%dn ", it.Cell().Volume());
+					printf("%d02n ", it.Cell().Volume());
 				} else {
 					printf(".. ");
 				}
@@ -409,10 +409,16 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					effect_name[0] = it.Cell().Effect();
 					effect_name[1] = '\0';
 					printf(effect_name);
-					printf("%dhn", it.Cell().EffectValue());
+					printf("%d02hn", it.Cell().EffectValue());
 				} else {
 					printf("...");
 				}
+				if (channel_number < 31) {
+					printf("|");
+				}
+			}
+			for (; channel_number < self->NumMixerChannels(); ++channel_number) {
+				printf("... .. .. ...");
 				if (channel_number < 31) {
 					printf("|");
 				}
@@ -422,11 +428,11 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 
 		self->num_ticks_ = 0;
 		++self->row_index_;
-		if (self->row_index_ >= self->song_->Pattern(self->pattern_index_)->NumRows()) {
+		if (self->row_index_ >= self->song_->Pattern(self->song_->Order(self->order_))->NumRows()) {
 			self->row_index_ = 0;
-			++self->pattern_index_;
-			if (self->pattern_index_ >= self->song_->NumPatterns()) {
-				self->pattern_index_ = 0;
+			++self->order_;
+			if (self->order_ >= self->song_->NumOrders()) {
+				self->order_ = 0;
 			}
 		}
 	}

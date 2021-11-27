@@ -140,7 +140,6 @@ public:
 	
 	const char *Name() const;
 	
-	int NumUsedChannels() const;
 	int NumOrders() const;
 	int NumInstruments() const;
 	int NumPatterns() const;

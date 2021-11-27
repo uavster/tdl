@@ -34,7 +34,7 @@ private:
 	HMixerCallback mixer_callback_;
 	int num_ticks_;
 	int row_index_;
-	int pattern_index_;
+	BYTE order_;
 	int ticks_per_second_;
 	int ticks_per_row_;
 	TWave *instruments_;
