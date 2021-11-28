@@ -27,21 +27,27 @@ void PlaySound(const TWave *sound) {
 
 
 int main() {
+	int error = 0;
 	WUFInit();
 
-	Playable *song = new S3MPlayable("test.s3m");
+	Playable *song = new S3MPlayable("c.s3m");
 	if (song->LastError() != Playable::kSuccess) {
 		printf("Error loading song.\n");
-		return song->LastError();
+		error = song->LastError();
+		goto error_exit;
 	}
 	if (!song->Play()) {
-		printf("Error playing song: %dn", song->LastError());
-		printf("\n");
-		return song->LastError();
+		printf("Error playing song: %dn\n", song->LastError());
+		error = song->LastError();
+		goto error_exit;
 	}
 	getch();
 	printf("Exiting...\n");
 	
+error_exit:
+	if (error) {
+		printf("Error code: 0x%dhn\n", error);
+	}
 	WUFClose();
-	return 0;
+	return error;
 }
