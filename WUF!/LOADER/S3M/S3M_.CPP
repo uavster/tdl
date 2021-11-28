@@ -9,6 +9,7 @@
 #define read_field(field, size, file) \
 	(ttl_read(field, size, file) == size)
 
+#define INSTRUMENT_TYPE_NONE			0
 #define INSTRUMENT_TYPE_SAMPLE			1
 #define INSTRUMENT_TYPE_ADLIB_MELODY	2
 #define INSTRUMENT_TYPE_ADLIB_DRUM		3
@@ -25,6 +26,9 @@ static bool LoadS3MInstrument(int instrument_offset, TS3MInstrument &instrument,
 	if (!read_field(&instrument.header, sizeof(TS3MInstrumentHeader), f)) {
 		return false;
 	}	
+	if (instrument.header.type == INSTRUMENT_TYPE_NONE) {
+		return true;
+	}
 	if (instrument.header.type != INSTRUMENT_TYPE_SAMPLE) {
 		return false;
 	}

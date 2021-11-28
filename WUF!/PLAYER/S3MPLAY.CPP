@@ -43,6 +43,11 @@ S3MPlayable::S3MPlayable(const char *file_name)
 		instruments_ = new TWave[song_->NumInstruments()];
 		for (int j = 0; j < song_->NumInstruments(); ++j) {		
 			const S3MInstrument *instrument = song_->Instrument(j);
+			if (instrument->Type() == TypeUnknown) {
+				instruments_[j].WavePtr = NULL;
+				instruments_[j].WaveLen = 0;
+				continue;
+			}
 			// Check instrument type and packing
 			instruments_[j].WaveType = instrument->IsStereo() ? 1 : 0;
 			instruments_[j].WaveType |= instrument->Is16Bit() ? 2 : 0;
@@ -250,112 +255,114 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 			SongChannel &channel = self->song_channels_[mixer_channel_index];
 			DWORD volume;
 			TWave *instrument;
-			if (cell.HasInstrument()) {
-				channel.volume = cell.HasVolume() ? cell.Volume() : 64;
-				if (!cell.HasEffect() || cell.Effect() != 'G' || channel.instrument != cell.Instrument() - 1 || channel.note == 0xff) {
-					instrument = &self->instruments_[cell.Instrument() - 1];
-					channel.period_increment = 0;
+			bool is_invalid_instrument = cell.HasInstrument() &&
+				(cell.Instrument() == 0 || 
+				cell.Instrument() > self->song_->NumInstruments() || 
+				self->instruments_[cell.Instrument() - 1].WavePtr == NULL);
+			if (cell.HasStop() || is_invalid_instrument) {
+				channel.is_playing = false;
+				WUFPauseSound(WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]));
+			} else {
+				if (cell.HasInstrument()) {
+					channel.volume = cell.HasVolume() ? cell.Volume() : 64;
+					if (!cell.HasEffect() || cell.Effect() != 'G' || channel.instrument != cell.Instrument() - 1 || channel.note == 0xff) {
+						instrument = &self->instruments_[cell.Instrument() - 1];
+						channel.period_increment = 0;
+					} else {
+						instrument = NULL;
+					}
+					channel.instrument = cell.Instrument() - 1;
 				} else {
+					if (cell.HasVolume()) {
+						channel.volume = cell.Volume();
+					}
+					// channel.instrument = 0xff;
 					instrument = NULL;
 				}
-				channel.instrument = cell.Instrument() - 1;
-			} else {
-				if (cell.HasVolume()) {
-					channel.volume = cell.Volume();
-				}
-				// channel.instrument = 0xff;
-				instrument = NULL;
-			}
-			if (cell.HasNote()) {
-				channel.is_playing = true;
-				channel.last_note = channel.note;
-				channel.last_octave = channel.octave;
-				channel.note = cell.Note();
-				channel.octave = cell.Octave();
-				if (channel.last_note == 0xff) {
+				if (cell.HasNote()) {
+					channel.is_playing = true;
 					channel.last_note = channel.note;
 					channel.last_octave = channel.octave;
-					channel.freq_multiplier = self->FreqMultiplierForNote(channel.note, channel.octave, 0);
+					channel.note = cell.Note();
+					channel.octave = cell.Octave();
+					if (channel.last_note == 0xff) {
+						channel.last_note = channel.note;
+						channel.last_octave = channel.octave;
+						channel.freq_multiplier = self->FreqMultiplierForNote(channel.note, channel.octave, 0);
+					}
 				}
-			}
-			if (cell.HasStop()) {
-				channel.is_playing = false;
-			}
-			if (channel.note != 0xff && channel.octave != 0xff) {
-				// Update frequency multiplier if the current note and octave are valid for the channel.
-				if (!cell.HasEffect() || cell.Effect() != 'G') {	// Tone Portamento adjusts the multiplier progressively to the current note.
-					channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+				if (channel.note != 0xff && channel.octave != 0xff) {
+					// Update frequency multiplier if the current note and octave are valid for the channel.
+					if (!cell.HasEffect() || cell.Effect() != 'G') {	// Tone Portamento adjusts the multiplier progressively to the current note.
+						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+					}
 				}
-			}
-			if (cell.HasEffect()) {
-				if ((channel.effect != 0xff && cell.Effect() != channel.effect) || cell.EffectValue() > 0) {
-					// If the effect did not change and the value is 0, leave value as is. Otherwise, update.
-					channel.effect_value = cell.EffectValue();
-				}
-				channel.effect = cell.Effect();
-				switch(cell.Effect()) {
-					case 'A':
-						self->ticks_per_row_ = cell.EffectValue();
-						break;
-					case 'T':
-						self->ticks_per_second_ = cell.EffectValue();
-						WUFSetMixerCallbackPeriod(self->mixer_callback_, MixerCallbackPeriod(self->ticks_per_second_));
-						break;
-					case 'F':
-						if (channel.effect_value >= 0xE0) {
-							channel.period_increment -= (channel.effect_value >= 0xF0 ? 4 : 1) * (channel.effect_value & 0xf);
-							channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
-						}
-						break;
-					case 'E':
-						if (channel.effect_value >= 0xE0) {
-							channel.period_increment += (channel.effect_value >= 0xF0 ? 4 : 1) * (channel.effect_value & 0xf);
-							channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
-						}
-						break;
-					case 'D':
-						if ((channel.effect_value & 0xf0) == 0xf0) {
-							// Fine slide down.
-							BYTE slide_down = channel.effect_value & 0xf;
-							if (slide_down < channel.volume) {
-								channel.volume -= slide_down;
-							} else {
-								channel.volume = 0;
+				if (cell.HasEffect()) {
+					if ((channel.effect != 0xff && cell.Effect() != channel.effect) || cell.EffectValue() > 0) {
+						// If the effect did not change and the value is 0, leave value as is. Otherwise, update.
+						channel.effect_value = cell.EffectValue();
+					}
+					channel.effect = cell.Effect();
+					switch(cell.Effect()) {
+						case 'A':
+							self->ticks_per_row_ = cell.EffectValue();
+							break;
+						case 'T':
+							self->ticks_per_second_ = cell.EffectValue();
+							WUFSetMixerCallbackPeriod(self->mixer_callback_, MixerCallbackPeriod(self->ticks_per_second_));
+							break;
+						case 'F':
+							if (channel.effect_value >= 0xE0) {
+								channel.period_increment -= (channel.effect_value >= 0xF0 ? 4 : 1) * (channel.effect_value & 0xf);
+								channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
 							}
-						}
-						if ((channel.effect_value & 0xf) == 0xf) {
-							// Slide up.
-							BYTE slide_up = channel.effect_value >> 4;
-							if (slide_up == 0) {
-								if (0xf < channel.volume) {
-									channel.volume -= 0xf;
+							break;
+						case 'E':
+							if (channel.effect_value >= 0xE0) {
+								channel.period_increment += (channel.effect_value >= 0xF0 ? 4 : 1) * (channel.effect_value & 0xf);
+								channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+							}
+							break;
+						case 'D':
+							if ((channel.effect_value & 0xf0) == 0xf0) {
+								// Fine slide down.
+								BYTE slide_down = channel.effect_value & 0xf;
+								if (slide_down < channel.volume) {
+									channel.volume -= slide_down;
 								} else {
 									channel.volume = 0;
 								}
-							} else {
-								if (slide_up < 64 - channel.volume) {
-									channel.volume += slide_up;
+							}
+							if ((channel.effect_value & 0xf) == 0xf) {
+								// Slide up.
+								BYTE slide_up = channel.effect_value >> 4;
+								if (slide_up == 0) {
+									if (0xf < channel.volume) {
+										channel.volume -= 0xf;
+									} else {
+										channel.volume = 0;
+									}
 								} else {
-									channel.volume = 64;
+									if (slide_up < 64 - channel.volume) {
+										channel.volume += slide_up;
+									} else {
+										channel.volume = 64;
+									}
 								}
 							}
-						}
-						break;
-					case 'G':
-						self->TonePortamento(channel);
-						break;
+							break;
+						case 'G':
+							self->TonePortamento(channel);
+							break;
+					}
+				} else {
+					channel.effect = 0xff;
+	//				channel.effect_value = 0;				
 				}
-			} else {
-				channel.effect = 0xff;
-//				channel.effect_value = 0;				
-			}
-			
-			if (channel.is_playing) {
-				WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, channel.volume, 0);	
-			}
-			if (cell.HasStop()) {
-				WUFPauseSound(WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]));
-			}
+				if (channel.is_playing) {
+					WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, channel.volume, 0);	
+				}
+			}			
 		}
 		
 		// Clear effects on all channels with empty cells.
@@ -387,6 +394,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					char note_name[4];
 					it.Cell().GetNoteName(note_name);
 					printf(note_name);
+					printf(" ");
 				} else {
 					if (it.Cell().HasStop()) {
 						printf("^^^ ");
@@ -395,7 +403,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					}
 				}
 				if (it.Cell().HasInstrument()) {
-					printf(" %d02n ", it.Cell().Instrument());
+					printf("%d02n ", it.Cell().Instrument());
 				} else {
 					printf(".. ");
 				}
@@ -431,7 +439,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 		if (self->row_index_ >= self->song_->Pattern(self->song_->Order(self->order_))->NumRows()) {
 			self->row_index_ = 0;
 			++self->order_;
-			if (self->order_ >= self->song_->NumOrders()) {
+			if (self->order_ >= self->song_->NumOrders() || self->song_->Order(self->order_) == 0xff) {
 				self->order_ = 0;
 			}
 		}
