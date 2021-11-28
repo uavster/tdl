@@ -30,7 +30,7 @@ int main() {
 	int error = 0;
 	WUFInit();
 
-	Playable *song = new S3MPlayable("c.s3m");
+	Playable *song = new S3MPlayable("test.s3m");
 	if (song->LastError() != Playable::kSuccess) {
 		printf("Error loading song.\n");
 		error = song->LastError();
