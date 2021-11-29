@@ -298,7 +298,7 @@ void WUFFreeChannels(int num_channels, TChannel **channels);
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 */
 int WUFPlaySound(const TWave *wave, TChannel *channel, DWORD freq_multiplier, DWORD volume, DWORD sample_offset);
-#pragma aux WUFPlaySound "*"	parm [eax] [ebx] [ecx] [edx] [esi] [edi]\
+#pragma aux WUFPlaySound "*"	parm [eax] [ebx] [ecx] [edx] [esi]\
 								modify [eax ebx ecx edx esi edi ebp]\
 								value [eax];
 
