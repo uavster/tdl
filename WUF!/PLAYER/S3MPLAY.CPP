@@ -14,7 +14,7 @@ S3MPlayable::S3MPlayable(const char *file_name)
 	ticks_per_row_ = song_->InitialSpeed();
 	ticks_per_second_ = song_->InitialTempo();
 	// Get the min and max channels used.
-	min_channel_index_ = 1000000;
+	min_channel_index_ = 0;
 	max_channel_index_ = -1;
 	for (int pattern_index = 0; pattern_index < song_->NumPatterns(); ++pattern_index) {
 		for (int row_index = 0; row_index < song_->Pattern(pattern_index)->NumRows(); ++row_index) {
@@ -254,7 +254,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 			processed_channels[mixer_channel_index] = true;
 			SongChannel &channel = self->song_channels_[mixer_channel_index];
 			DWORD volume;
-			TWave *instrument;
+			TWave *instrument = NULL;
 			bool is_invalid_instrument = cell.HasInstrument() &&
 				(cell.Instrument() == 0 || 
 				cell.Instrument() > self->song_->NumInstruments() || 
@@ -268,8 +268,6 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					if (!cell.HasEffect() || cell.Effect() != 'G' || channel.instrument != cell.Instrument() - 1 || channel.note == 0xff) {
 						instrument = &self->instruments_[cell.Instrument() - 1];
 						channel.period_increment = 0;
-					} else {
-						instrument = NULL;
 					}
 					channel.instrument = cell.Instrument() - 1;
 				} else {
@@ -277,7 +275,6 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						channel.volume = cell.Volume();
 					}
 					// channel.instrument = 0xff;
-					instrument = NULL;
 				}
 				if (cell.HasNote()) {
 					channel.is_playing = true;
@@ -370,7 +367,6 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 			if (!processed_channels[j]) {
 				SongChannel &channel = self->song_channels_[j];
 				channel.effect = 0xff;
-//				channel.effect_value = 0;
 			}
 		}
 		
@@ -461,5 +457,5 @@ void S3MPlayable::SongChannel::Reset() {
 	instrument = 0xff;
 	last_note = 0xff;
 	last_octave = 0xff;
-	is_playing = true;
+	is_playing = false;
 }
