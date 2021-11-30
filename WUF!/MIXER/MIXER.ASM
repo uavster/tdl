@@ -1417,6 +1417,7 @@ endif
 			jz		no_samples_to_play
 			mov		eax,ebp
 			shr		eax,8
+			jz		no_samples_to_play
 			add		MixingBufferOffset,eax
 			mov		edi,MixingBufferOffset
 			shl		edi,2	; 4 bytes per mixer sample
