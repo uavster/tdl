@@ -11,17 +11,45 @@
 
         .stack  10000h
 
+MAX_DOS_COMMAND_LINE_LENGTH		EQU 127		; Including final carry return.
+
+		.data?
+		cmd_line	db MAX_DOS_COMMAND_LINE_LENGTH dup(?)
+		argc		dd ?
+		argv		db 4 * ((MAX_DOS_COMMAND_LINE_LENGTH - 1) / 2) dup(?)	; strlen(command_line) + sizeof(char *) * max_dos_commands (one-char commands with one space in between, and final carry return)
+
         .code
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
 
         include alloc.inc
         include utils.inc
+		include memcpy.inc
 
         extrn   main_: near
         public  _cstart_
         public  _exit_          ; B52
 
+GetCommandLine	proc
+		; Create argv as array of pointers to null-terminated copies of the parameters.
+		GetCommandLineOffset
+		mov		esi,eax
+		mov		edi,offset cmd_line
+		xor		edx,edx
+		extract_args:
+		mov		[offset argv+edx*4],edi
+		push	edx
+		call	GetCommandParam
+		pop		edx
+		lea		edi,[edi+ecx+1]
+		inc		edx
+		test	ecx,ecx
+		jnz		extract_args
+		dec		edx
+		mov		argc,edx
+		ret
+endp
+	
     ; NOTA: sembla que l'WLINK vol el _cstart_, encara que no ha de ser
     ;       per for놹 el nom del punt d'entrada.
 
@@ -29,6 +57,10 @@ _cstart_:
 
         InitDPMI
 
+		; Pass argc and argv to main in EAX and EDX, respectively.
+		call	GetCommandLine
+		mov		eax,argc
+		mov		edx,offset argv
         call    main_
 
 _cfinish_:
