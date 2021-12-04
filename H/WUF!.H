@@ -282,13 +282,16 @@ void WUFFreeChannels(int num_channels, TChannel **channels);
 ; effect until the next tick, so please keep the active sound in memory until
 ; then.
 ;
-; INPUT  : EAX -> TWave structure of sample to play in channel, or NULL to leave as is
-;		   EBX -> TChannel where to play sound
-;		   ECX = Frequency multiplier (fixed point 8.24)
-;		   		 -1 plays the sound with the current channel frequency multiplier
+; INPUT  : EAX -> TWave structure of sample to play in channel, or NULL to leave as is.
+;				  Setting a new sample sets the offset to zero.
+;		   EBX -> TChannel where to play sound.
+;		   ECX = Frequency multiplier (fixed point 8.24).
+;		   		 -1 plays the sound with the current channel frequency multiplier.
 ;		   EDX = Volume multiplier, from 0 (silent) to 64 (as is). 
 ;				 -1 plays the sound with the current channel volume.
-;		   ESI = Sample offset
+;		   ESI = New wave offset (fixed point 24.8), or -1 to leave as is. 
+;				 The sound won't loop if the offset is beyond the loop end. 
+;				 No sound is played if the offset is beyond the sound end.
 ;
 ; OUTPUT : CF = 0 if no error
 ;               EAX = NO_ERROR

@@ -588,13 +588,16 @@ CopyFrontChannelPoolToBack	endp
 ; effect until the next tick, so please keep the active sound in memory until
 ; then.
 ;
-; INPUT  : EAX -> TWave structure of sample to play in channel, or NULL to leave as is
-;		   EBX -> TChannel where to play sound
-;		   ECX = Frequency multiplier (fixed point 8.24)
-;		   		 -1 plays the sound with the current channel frequency multiplier
+; INPUT  : EAX -> TWave structure of sample to play in channel, or NULL to leave as is.
+;				  Setting a new sample sets the offset to zero.
+;		   EBX -> TChannel where to play sound.
+;		   ECX = Frequency multiplier (fixed point 8.24).
+;		   		 -1 plays the sound with the current channel frequency multiplier.
 ;		   EDX = Volume multiplier, from 0 (silent) to 64 (as is). 
 ;				 -1 plays the sound with the current channel volume.
-;		   ESI = Sample offset
+;		   ESI = New wave offset (fixed point 24.8), or -1 to leave as is. 
+;				 The sound won't loop if the offset is beyond the loop end. 
+;				 No sound is played if the offset is beyond the sound end.
 ;
 ; OUTPUT : CF = 0 if no error
 ;               EAX = NO_ERROR
@@ -602,7 +605,7 @@ CopyFrontChannelPoolToBack	endp
 ;               EAX = Error code
 ;					FREQUENCY_TOO_HIGH: Base frequency * multiplier > 16,776,960 Hz
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
-WUFPlaySound       proc
+WUFPlaySound       proc		
 		pushf
 		cli
 		
@@ -623,14 +626,21 @@ WUFPlaySound       proc
 		; Change channel state
 		test	eax,eax
 		jz		leave_sample_as_is
-				mov     [TChannel ptr ebx.ChanWave],eax
-				mov     [TChannel ptr ebx.CurrentSample],0
+				mov     [TChannel ptr ebx.ChanWave],eax				
 				and		[TChannel ptr ebx.Flags],NOT MIXER_CHANNEL_IS_LOOPING
+				mov     [TChannel ptr ebx.CurrentSample],0
 				jmp		sample_wave_set
 		leave_sample_as_is:
 				mov		eax,[TChannel ptr ebx.ChanWave]
 		sample_wave_set:
 		
+		; Set offset, if set.
+		cmp		esi,-1
+		je		leave_offset_as_is
+				mov     [TChannel ptr ebx.CurrentSample],esi				
+		leave_offset_as_is:
+		
+		; Set volume.
 		cmp		edx,-1
 		jz		leave_volume_as_is
 				mov		[TChannel ptr ebx.Volume],edx

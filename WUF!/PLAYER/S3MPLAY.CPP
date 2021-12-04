@@ -236,7 +236,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					break;
 			}
 			if (channel.is_playing) {
-				WUFPlaySound(NULL, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, channel.volume, 0);
+				WUFPlaySound(NULL, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, channel.volume, -1);
 			}
 		}
 	} else {
@@ -263,11 +263,13 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				channel.is_playing = false;
 				WUFPauseSound(WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]));
 			} else {
+				DWORD sample_offset = -1;
 				if (cell.HasInstrument()) {
 					channel.volume = cell.HasVolume() ? cell.Volume() : 64;
 					if (!cell.HasEffect() || cell.Effect() != 'G' || channel.instrument != cell.Instrument() - 1 || channel.note == 0xff) {
 						instrument = &self->instruments_[cell.Instrument() - 1];
 						channel.period_increment = 0;
+						sample_offset = 0;
 					}
 					channel.instrument = cell.Instrument() - 1;
 				} else {
@@ -294,6 +296,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
 					}
 				}
+				
 				if (cell.HasEffect()) {
 					if ((channel.effect != 0xff && cell.Effect() != channel.effect) || cell.EffectValue() > 0) {
 						// If the effect did not change and the value is 0, leave value as is. Otherwise, update.
@@ -351,13 +354,21 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						case 'G':
 							self->TonePortamento(channel);
 							break;
+						case 'O':
+							sample_offset = cell.EffectValue() << 8;
+							if (instrument != NULL && instrument->LoopStart != -1 && instrument->LoopEnd != -1 && sample_offset >= instrument->LoopEnd) {
+								// Set loop at start, if offset if beyond the loop end.
+								sample_offset = instrument->LoopStart;
+							}
+							sample_offset <<= 8;	// Format is fixed point 24.8.
+							break;
 					}
 				} else {
 					channel.effect = 0xff;
 	//				channel.effect_value = 0;				
 				}
 				if (channel.is_playing) {
-					WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, channel.volume, 0);	
+					WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, channel.volume, sample_offset);	
 				}
 			}			
 		}
