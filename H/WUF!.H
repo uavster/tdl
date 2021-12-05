@@ -330,7 +330,18 @@ TChannel *WUFChannelInCallback(const TChannel *channel);
 #pragma aux WUFChannelInCallback "*"	parm [ebx]\
 										modify [ebx]\
 										value [ebx];
-								
+
+/*
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+; Sets the global volume.
+;
+; INPUT  : EAX = Global volume within [0, 64]
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+*/
+void WUFSetGlobalVolume(int volume);
+#pragma aux WUFSetGlobalVolume "*"	parm [eax]\
+									modify [eax];
+
 #ifdef __cplusplus
   };
 #endif

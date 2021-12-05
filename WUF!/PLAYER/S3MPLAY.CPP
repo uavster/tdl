@@ -362,6 +362,9 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 							}
 							sample_offset <<= 8;	// Format is fixed point 24.8.
 							break;
+						case 'V':
+							WUFSetGlobalVolume(cell.EffectValue());
+							break;
 					}
 				} else {
 					channel.effect = 0xff;

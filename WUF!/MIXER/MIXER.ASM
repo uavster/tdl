@@ -151,6 +151,9 @@ OpenMixer       proc
 		cmp		ecx,65
 		jnz		loop_volumes
 
+		mov		eax,64
+		call	WUFSetGlobalVolume
+
 		; Init callbacks
 		mov		ecx,size Callbacks
 		xor		eax,eax
@@ -713,6 +716,22 @@ WUFChannelInCallback	proc
 		add		ebx,ChannelPool
 		ret
 WUFChannelInCallback	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Sets the global volume.
+;
+; INPUT  : EAX = Global volume within [0, 64]
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+WUFSetGlobalVolume	proc
+		pushf
+		cli
+		AssertD 	eax,_leu,64
+		shl			eax,8+2
+		add			eax,VolumeTable
+		mov			GlobalVolumeTablePtr,eax
+		popf
+		ret
+WUFSetGlobalVolume	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; All macros below share the same interface.
@@ -1536,18 +1555,20 @@ endif
 		
 		dont_mix_anything:			
 		; Compress mixing buffer into output buffer
-		mov		esi,MixingBuffer
-		mov		ecx,NumOutputSamples
+;		mov		esi,MixingBuffer
+		mov		ebp,NumOutputSamples
 		mov		edi,OutputBuffer
 		xor		ebx,ebx
 		cmp		NumOutputChannels,2
 		jz		stereo_compression
-		mono_compression:
+
+		; Mono compression
 		cmp		MixBitsPerSample,16
 		je		mono16_compression
 
 		mono8_compression:
 				; Compress
+				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*4]
 				lea		eax,[eax*4+eax]			; Compression factor *5
 				sar		eax,4+8+EXPANSION_BITS+6	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /64 (volume normalization)s
@@ -1557,12 +1578,18 @@ endif
 				cmp		eax,-128
 				jl		sat_m8_neg
 				sat_m8_done:
+				
+				; Apply global volume
+				mov		esi,GlobalVolumeTablePtr
+				ScaleSampleByVolume8
+				sar		eax,6
+				
 				; Signed -> unsigned
 				add		al,128
 				; Write output
 				mov		[edi+ebx],al
 				inc		ebx
-				dec		ecx
+				dec		ebp
 				jnz		mono8_compression
 				jmp		compression_done
 				
@@ -1575,6 +1602,7 @@ endif
 
 		mono16_compression:
 				; Compress
+				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*4]
 				lea		eax,[eax*4+eax]			; Compression factor *5
 				sar		eax,4+EXPANSION_BITS+6	; Compression factor /16, EXPANSION_BITS, /64 (volume normalization)
@@ -1584,10 +1612,16 @@ endif
 				cmp		eax,-32768
 				jl		sat_m16_neg
 				sat_m16_done:
+				
+				; Apply global volume
+				mov		esi,GlobalVolumeTablePtr
+				ScaleSampleByVolume16
+				sar		eax,6
+				
 				; Write output
 				mov		[edi+ebx*2],ax
 				inc		ebx
-				dec		ecx
+				dec		ebp
 				jnz		mono16_compression
 				jmp		compression_done
 				
@@ -1603,6 +1637,7 @@ endif
 		je		stereo16_compression
 		stereo8_compression:
 				; Compress left channel
+				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]			; Compression factor *5
 				sar		eax,4+8+EXPANSION_BITS+6	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /64 (volume normalization)
@@ -1613,8 +1648,14 @@ endif
 				cmp		eax,-128
 				jl		sat_l8_neg
 				sat_l8_done:
+				
+				; Apply global volume
+				mov		esi,GlobalVolumeTablePtr
+				ScaleSampleByVolume8
+				sar		eax,6
 
 				; Compress right channel
+				mov		esi,MixingBuffer
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]			; Compression factor *5
 				sar		edx,4+8+EXPANSION_BITS+6	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /64 (volume normalization)
@@ -1626,13 +1667,20 @@ endif
 				jl		sat_r8_neg
 				sat_r8_done:
 				
+				; Apply global volume
+				mov		esi,GlobalVolumeTablePtr
+				xchg	eax,edx
+				ScaleSampleByVolume8
+				sar		eax,6
+				xchg	eax,edx				
+				
 				; Signed -> unsigned
 				mov		ah,dl
 				add		ah,128
 				add		al,128
 				mov		[edi+ebx*2],ax
 				inc		ebx
-				dec		ecx
+				dec		ebp
 				jnz		stereo8_compression
 				jmp		compression_done
 
@@ -1651,6 +1699,7 @@ endif
 
 		stereo16_compression:
 				; Compress left channel
+				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]			; Compression factor *5
 				sar		eax,4+EXPANSION_BITS+6	; Compression factor /16, EXPANSION_BITS, /64 (volume normalization)
@@ -1665,11 +1714,18 @@ endif
 										; Saturation positive: 18+m4=23, 8
 										; Saturation negative: 23+m4=18, 11
 				sat_l16_done:
-
+				
+				; Apply global volume
+				mov		esi,GlobalVolumeTablePtr
+				ScaleSampleByVolume16
+				sar		eax,6
+				
+				; Scale 
 				; Compress right channel
+				mov		esi,MixingBuffer
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]			; Compression factor *5
-				sar		edx,4+EXPANSION_BITS+6	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /64 (volume normalization)
+				sar		edx,4+EXPANSION_BITS+6	; Compression factor /16, EXPANSION_BITS, /64 (volume normalization)
 
 				; Saturate right channel (same timing as left channel saturation)
 				cmp		edx,32767
@@ -1678,14 +1734,21 @@ endif
 				jl		sat_r16_neg
 				sat_r16_done:
 
+				; Apply global volume
+				mov		esi,GlobalVolumeTablePtr
+				xchg	eax,edx
+				ScaleSampleByVolume16
+				sar		eax,6
+				xchg	eax,edx
+				
 				; Write output
 				and		eax,0ffffh
 				shl		edx,16				
 				or		eax,edx
 				mov		[edi+ebx*4],eax
 				inc		ebx
-				dec		ecx
-				jnz		short stereo16_compression
+				dec		ebp
+				jnz		stereo16_compression
 		compression_done:
 
 ifdef DEBUG_MIXER_PERFORMANCE
@@ -1723,6 +1786,7 @@ NumOutputSamples		dd ?
 NumOutputBytes			dd ?
 MixingBuffer			dd ?
 CurrentChannelOffset    dd ?
+GlobalVolumeTablePtr	dd ?
 
 ; These are variables used to cache channel fields in the channel 
 ; mixing loop. They are loaded before the mixing loop from front
