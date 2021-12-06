@@ -9,10 +9,11 @@
   extern "C" {
 #endif
 
-short int random(short int maxvalue);
-#pragma aux random "*" parm [ax] \
+// Returns a random value in [0, maxvalue], where maxvalue is in [0, 65535].
+int random(int maxvalue);
+#pragma aux random "*" parm [eax] \
                             modify [eax ebx ecx edx esi edi ebp]\
-                            value [ax];
+                            value [eax];
 
 #ifdef __cplusplus
   };

@@ -1,7 +1,6 @@
 JUMPS
 .386p
 .model flat
-.stack 100h
 .code
 public      random
 public      randomize
@@ -30,9 +29,9 @@ random proc
         mov      word ptr [RandSeed+2],ax
         xor      dx,dx
         div      cx
-        mov      ax,dx                  ; return modulus
+        movzx	 eax,dx                  ; return modulus
         ret
-randseed        dd ?
+randseed        dd 0
 random endp
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 randomize proc
