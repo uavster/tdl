@@ -18,6 +18,8 @@ public:
 	void Volume(float volume);
 	float Volume();
 
+	enum WaveformType { SINE = 0, SAWTOOTH = 1, SQUARE = 2, RANDOM = 3, NUM_WAVEFORMS = 4 };
+	
 protected:
 	int NumMixerChannels() const;
 	void Destroy();
@@ -55,12 +57,17 @@ private:
 		BYTE last_note;
 		BYTE last_octave;
 		bool is_playing;
+		WaveformType tremolo_waveform;
+		BYTE tremolo_index;
 	};
 	// One-to-one correspondence with mixer_channels_
 	SongChannel *song_channels_;
 	
+	BYTE waveform_tables_[NUM_WAVEFORMS][64];
+	
 protected:
 	void TonePortamento(SongChannel &channel);
+	BYTE Tremolo(SongChannel &channel);
 };
 
 #endif

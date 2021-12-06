@@ -2,6 +2,8 @@
 #include "wuf!.h"
 #include "stdio.h"
 #include "irq.h"
+#include "tinymath.h"
+#include "random.h"
 
 S3MPlayable::S3MPlayable(const char *file_name)
 	: Playable(), song_(NULL), min_channel_index_(1), max_channel_index_(0), mixer_channels_(NULL), mixer_callback_(kHMixerCallbackInvalid), num_ticks_(0), row_index_(0), order_(0), instruments_(NULL), song_channels_(NULL) {
@@ -62,6 +64,15 @@ S3MPlayable::S3MPlayable(const char *file_name)
 				instruments_[j].LoopEnd = -1;
 			}
 		}
+	}
+	
+	// Create waveform tables.
+	const int kWaveformTableLength = sizeof(waveform_tables_[SINE]) / sizeof(BYTE);
+	for (int i = 0; i < kWaveformTableLength; ++i) { 
+		waveform_tables_[SINE][i] = (BYTE)(255.0 * (1.0 - (cos(2.0 * M_PI * (i / static_cast<float>(kWaveformTableLength))) + 1) / 2.0));
+		waveform_tables_[SAWTOOTH][i] = (BYTE)(255.0 * i / (float)kWaveformTableLength);
+		waveform_tables_[SQUARE][i] = i < kWaveformTableLength / 2 ? 0 : 255;
+		waveform_tables_[RANDOM][i] = (BYTE)random(255);
 	}
 	Stop();
 }
@@ -191,6 +202,20 @@ void S3MPlayable::TonePortamento(SongChannel &channel) {
 	}	
 }
 
+BYTE S3MPlayable::Tremolo(SongChannel &channel) {
+	BYTE volume = 0;
+	const DWORD kWaveformTableLength = sizeof(waveform_tables_[SINE]) / sizeof(BYTE);
+	DWORD tremolo_speed = channel.effect_value >> 4;
+	DWORD tremolo_depth = channel.effect_value & 0xf;
+	DWORD modulation = 2 * tremolo_depth * waveform_tables_[channel.tremolo_waveform][channel.tremolo_index];
+	DWORD scaled_volume = static_cast<DWORD>(channel.volume) << 8;
+	if (modulation < scaled_volume) {
+		volume = (scaled_volume - modulation) >> 8;						
+	}
+	channel.tremolo_index = (channel.tremolo_index + tremolo_speed) % kWaveformTableLength;
+	return volume;
+}
+
 void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 	S3MPlayable *self = static_cast<S3MPlayable *>(user_pointer);
 	++self->num_ticks_;
@@ -198,6 +223,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 		// Update channel states with effects.
 		for (int i = 0; i < self->NumMixerChannels(); ++i) {
 			SongChannel &channel = self->song_channels_[i];
+			BYTE volume = channel.volume;
 			switch(channel.effect) {
 				case 'F':
 					if (channel.effect_value < 0xE0) {
@@ -234,9 +260,12 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				case 'G':
 					self->TonePortamento(channel);
 					break;
+				case 'R':
+					volume = self->Tremolo(channel);
+					break;
 			}
 			if (channel.is_playing) {
-				WUFPlaySound(NULL, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, channel.volume, -1);
+				WUFPlaySound(NULL, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, volume, -1);
 			}
 		}
 	} else {
@@ -284,6 +313,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					channel.last_octave = channel.octave;
 					channel.note = cell.Note();
 					channel.octave = cell.Octave();
+					channel.tremolo_index = 0;
 					if (channel.last_note == 0xff) {
 						channel.last_note = channel.note;
 						channel.last_octave = channel.octave;
@@ -297,6 +327,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					}
 				}
 				
+				BYTE volume = channel.volume;
 				if (cell.HasEffect()) {
 					if ((channel.effect != 0xff && cell.Effect() != channel.effect) || cell.EffectValue() > 0) {
 						// If the effect did not change and the value is 0, leave value as is. Otherwise, update.
@@ -365,13 +396,23 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						case 'V':
 							WUFSetGlobalVolume(cell.EffectValue());
 							break;
+						case 'S':
+							switch(cell.EffectValue() >> 4) {
+								case 4:
+									channel.tremolo_waveform = cell.EffectValue() & 0xf;
+									break;
+							}
+							break;
+						case 'R':
+							volume = self->Tremolo(channel);
+							break;
 					}
 				} else {
 					channel.effect = 0xff;
 	//				channel.effect_value = 0;				
 				}
 				if (channel.is_playing) {
-					WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, channel.volume, sample_offset);	
+					WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, volume, sample_offset);	
 				}
 			}			
 		}
@@ -472,4 +513,6 @@ void S3MPlayable::SongChannel::Reset() {
 	last_note = 0xff;
 	last_octave = 0xff;
 	is_playing = false;
+	tremolo_waveform = SINE;
+	tremolo_index = 0;
 }
