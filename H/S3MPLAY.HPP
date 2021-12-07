@@ -59,15 +59,17 @@ private:
 		bool is_playing;
 		WaveformType tremolo_waveform;
 		BYTE tremolo_index;
+		int tremolo_volume;
 	};
 	// One-to-one correspondence with mixer_channels_
 	SongChannel *song_channels_;
 	
-	BYTE waveform_tables_[NUM_WAVEFORMS][64];
+	int waveform_tables_[NUM_WAVEFORMS][64];
 	
 protected:
 	void TonePortamento(SongChannel &channel);
-	BYTE Tremolo(SongChannel &channel);
+	int Tremolo(SongChannel &channel);
+	DWORD PlayVolume(const SongChannel &channel) const;
 };
 
 #endif

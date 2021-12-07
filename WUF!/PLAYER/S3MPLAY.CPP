@@ -67,11 +67,11 @@ S3MPlayable::S3MPlayable(const char *file_name)
 	}
 	
 	// Create waveform tables.
-	const int kWaveformTableLength = sizeof(waveform_tables_[SINE]) / sizeof(BYTE);
+	const int kWaveformTableLength = sizeof(waveform_tables_[SINE]) / sizeof(int);
 	for (int i = 0; i < kWaveformTableLength; ++i) { 
-		waveform_tables_[SINE][i] = (BYTE)(255.0 * (1.0 - (cos(2.0 * M_PI * (i / static_cast<float>(kWaveformTableLength))) + 1) / 2.0));
-		waveform_tables_[SAWTOOTH][i] = (BYTE)(255.0 * i / (float)kWaveformTableLength);
-		waveform_tables_[SQUARE][i] = i < kWaveformTableLength / 2 ? 0 : 255;
+		waveform_tables_[SINE][i] = (int)(255.0 * sin(2.0 * M_PI * (i / static_cast<float>(kWaveformTableLength))));
+		waveform_tables_[SAWTOOTH][i] = (int)(255.0 * (1.0 - i / (float)kWaveformTableLength));
+		waveform_tables_[SQUARE][i] = i < kWaveformTableLength / 2 ? 255 : 0;
 		waveform_tables_[RANDOM][i] = (BYTE)random(255);
 	}
 	Stop();
@@ -202,18 +202,12 @@ void S3MPlayable::TonePortamento(SongChannel &channel) {
 	}	
 }
 
-BYTE S3MPlayable::Tremolo(SongChannel &channel) {
-	BYTE volume = 0;
-	const DWORD kWaveformTableLength = sizeof(waveform_tables_[SINE]) / sizeof(BYTE);
+int S3MPlayable::Tremolo(SongChannel &channel) {
+	const DWORD kWaveformTableLength = sizeof(waveform_tables_[SINE]) / sizeof(int);
 	DWORD tremolo_speed = channel.effect_value >> 4;
 	DWORD tremolo_depth = channel.effect_value & 0xf;
-	DWORD modulation = 2 * tremolo_depth * waveform_tables_[channel.tremolo_waveform][channel.tremolo_index];
-	DWORD scaled_volume = static_cast<DWORD>(channel.volume) << 8;
-	if (modulation < scaled_volume) {
-		volume = (scaled_volume - modulation) >> 8;						
-	}
 	channel.tremolo_index = (channel.tremolo_index + tremolo_speed) % kWaveformTableLength;
-	return volume;
+	return 2 * tremolo_depth * waveform_tables_[channel.tremolo_waveform][channel.tremolo_index];
 }
 
 void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
@@ -223,7 +217,6 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 		// Update channel states with effects.
 		for (int i = 0; i < self->NumMixerChannels(); ++i) {
 			SongChannel &channel = self->song_channels_[i];
-			BYTE volume = channel.volume;
 			switch(channel.effect) {
 				case 'F':
 					if (channel.effect_value < 0xE0) {
@@ -261,11 +254,11 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					self->TonePortamento(channel);
 					break;
 				case 'R':
-					volume = self->Tremolo(channel);
+					channel.tremolo_volume = self->Tremolo(channel);
 					break;
 			}
 			if (channel.is_playing) {
-				WUFPlaySound(NULL, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, volume, -1);
+				WUFPlaySound(NULL, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, self->PlayVolume(channel), -1);
 			}
 		}
 	} else {
@@ -282,7 +275,6 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 			int mixer_channel_index = self->MixerChannelIndexForCellChannelIndex(cell.ChannelNumber());
 			processed_channels[mixer_channel_index] = true;
 			SongChannel &channel = self->song_channels_[mixer_channel_index];
-			DWORD volume;
 			TWave *instrument = NULL;
 			bool is_invalid_instrument = cell.HasInstrument() &&
 				(cell.Instrument() == 0 || 
@@ -327,13 +319,15 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					}
 				}
 				
-				BYTE volume = channel.volume;
 				if (cell.HasEffect()) {
 					if ((channel.effect != 0xff && cell.Effect() != channel.effect) || cell.EffectValue() > 0) {
 						// If the effect did not change and the value is 0, leave value as is. Otherwise, update.
 						channel.effect_value = cell.EffectValue();
 					}
 					channel.effect = cell.Effect();
+					if (channel.effect != 'R') {
+						channel.tremolo_volume = 0;					
+					}
 					switch(cell.Effect()) {
 						case 'A':
 							self->ticks_per_row_ = cell.EffectValue();
@@ -403,16 +397,14 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 									break;
 							}
 							break;
-						case 'R':
-							volume = self->Tremolo(channel);
-							break;
 					}
 				} else {
 					channel.effect = 0xff;
-	//				channel.effect_value = 0;				
+	//				channel.effect_value = 0;
+					channel.tremolo_volume = 0;
 				}
 				if (channel.is_playing) {
-					WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, volume, sample_offset);	
+					WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, self->PlayVolume(channel), sample_offset);	
 				}
 			}			
 		}
@@ -515,4 +507,16 @@ void S3MPlayable::SongChannel::Reset() {
 	is_playing = false;
 	tremolo_waveform = SINE;
 	tremolo_index = 0;
+	tremolo_volume = 0;
+}
+
+DWORD S3MPlayable::PlayVolume(const SongChannel &channel) const {
+	int volume = static_cast<int>(static_cast<DWORD>(channel.volume) << 8) + channel.tremolo_volume;
+	if (volume <= 0) {
+		return 0;
+	}
+	else if (volume >= 64 * 256) {
+		return 64;
+	}
+	return static_cast<DWORD>(volume) >> 8;
 }
