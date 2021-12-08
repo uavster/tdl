@@ -24,7 +24,7 @@ protected:
 	int NumMixerChannels() const;
 	void Destroy();
 	static void Tick(HMixerCallback mixer_callback, void *user_pointer);
-	static DWORD FreqMultiplierForNote(BYTE note, BYTE octave, int period_increment);
+	static DWORD FreqMultiplierForNote(BYTE note, BYTE octave, int period_increment, DWORD instrument_frequency);
 	static DWORD MixerCallbackPeriod(DWORD ticks_per_second);
 	int MixerChannelIndexForCellChannelIndex(int cell_channel_index) const;
 	
@@ -47,6 +47,7 @@ private:
 		void Reset();
 
 		BYTE instrument;
+		DWORD instrument_freq;
 		BYTE volume;
 		BYTE note;
 		BYTE octave;

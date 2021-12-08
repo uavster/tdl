@@ -165,7 +165,7 @@ float S3MPlayable::Volume() {
 	return 0;
 }
 
-DWORD S3MPlayable::FreqMultiplierForNote(BYTE note, BYTE octave, int period_increment) {
+DWORD S3MPlayable::FreqMultiplierForNote(BYTE note, BYTE octave, int period_increment, DWORD instrument_frequency) {
 	// Notes: C, C#, D, D#, E, F, F#, G, G#, A, A#, B
 	static const DWORD period_by_note[] = { 1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016, 960, 907 };
 	// This limit is not imposed by Impulse Tracker. In IT, instruments going above 
@@ -173,28 +173,28 @@ DWORD S3MPlayable::FreqMultiplierForNote(BYTE note, BYTE octave, int period_incr
 	// However, we choose to go with stability rather than fidelity to the original behavior.
 	// period = 1;		
 	const DWORD numerator = 894841u << 12;
-	int divisor = ((8363u * period_by_note[note]) >> (octave - 1)) + (8363 * period_increment) / 16;
-	if (divisor < 4096) {
+	int denominator = ((8363u * period_by_note[note]) >> (octave - 1)) + ((instrument_frequency * period_increment) / 16);
+	if (denominator < 4096) {
 		return numerator;
-	} else if (divisor > numerator) {
+	} else if (denominator > numerator) {
 		return 1 << 12;
 	}
-	return (numerator / divisor) << 12;
+	return (numerator / denominator) << 12;
 }
 
 void S3MPlayable::TonePortamento(SongChannel &channel) {
-	DWORD new_freq_mult = FreqMultiplierForNote(channel.note, channel.octave, 0);
+	DWORD new_freq_mult = FreqMultiplierForNote(channel.note, channel.octave, 0, channel.instrument_freq);
 //printf("note:%dn, octave:%dn, last_note:%dn, last_octave:%dn, period_inc: %dn, nfm:%dn, fm:%dn, fxv:%dn\n", channel.note, channel.octave, channel.last_note, channel.last_octave, channel.period_increment, new_freq_mult, channel.freq_multiplier, channel.effect_value);
 	if (new_freq_mult > channel.freq_multiplier) {
 		channel.period_increment -= 4 * channel.effect_value;
-		channel.freq_multiplier = FreqMultiplierForNote(channel.last_note, channel.last_octave, channel.period_increment);
+		channel.freq_multiplier = FreqMultiplierForNote(channel.last_note, channel.last_octave, channel.period_increment, channel.instrument_freq);
 		if (new_freq_mult < channel.freq_multiplier) {
 			channel.freq_multiplier = new_freq_mult;
 			channel.period_increment = 0;
 		}
 	} else if (new_freq_mult < channel.freq_multiplier) {
 		channel.period_increment += 4 * channel.effect_value;
-		channel.freq_multiplier = FreqMultiplierForNote(channel.last_note, channel.last_octave, channel.period_increment);
+		channel.freq_multiplier = FreqMultiplierForNote(channel.last_note, channel.last_octave, channel.period_increment, channel.instrument_freq);
 		if (new_freq_mult > channel.freq_multiplier) {
 			channel.freq_multiplier = new_freq_mult;
 			channel.period_increment = 0;
@@ -221,13 +221,13 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				case 'F':
 					if (channel.effect_value < 0xE0) {
 						channel.period_increment -= 4 * channel.effect_value;
-						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq);
 					}
 					break;
 				case 'E':
 					if (channel.effect_value < 0xE0) {
 						channel.period_increment += 4 * channel.effect_value;
-						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq);
 					}
 					break;
 				case 'D':
@@ -293,6 +293,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						sample_offset = 0;
 					}
 					channel.instrument = cell.Instrument() - 1;
+					channel.instrument_freq = self->instruments_[channel.instrument].BaseRate;
 				} else {
 					if (cell.HasVolume()) {
 						channel.volume = cell.Volume();
@@ -309,13 +310,13 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					if (channel.last_note == 0xff) {
 						channel.last_note = channel.note;
 						channel.last_octave = channel.octave;
-						channel.freq_multiplier = self->FreqMultiplierForNote(channel.note, channel.octave, 0);
+						channel.freq_multiplier = self->FreqMultiplierForNote(channel.note, channel.octave, 0, channel.instrument_freq);
 					}
 				}
 				if (channel.note != 0xff && channel.octave != 0xff) {
 					// Update frequency multiplier if the current note and octave are valid for the channel.
 					if (!cell.HasEffect() || cell.Effect() != 'G') {	// Tone Portamento adjusts the multiplier progressively to the current note.
-						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq);
 					}
 				}
 				
@@ -339,13 +340,13 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						case 'F':
 							if (channel.effect_value >= 0xE0) {
 								channel.period_increment -= (channel.effect_value >= 0xF0 ? 4 : 1) * (channel.effect_value & 0xf);
-								channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+								channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq);
 							}
 							break;
 						case 'E':
 							if (channel.effect_value >= 0xE0) {
 								channel.period_increment += (channel.effect_value >= 0xF0 ? 4 : 1) * (channel.effect_value & 0xf);
-								channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment);
+								channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq);
 							}
 							break;
 						case 'D':
