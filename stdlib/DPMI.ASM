@@ -86,7 +86,11 @@ InitDPMIVariables       proc
         ; es     -> psp
         ; ss     -> stack segment base 0
         ; fs, gs -> 0
+		cmp		cs:ProgramPSP,0
+		jz		run_init_dpmi		
+		ret
 
+		run_init_dpmi:
         mov     ax, ds          ; Ajusta selectors
         mov     es, ax
         mov     fs, ax
@@ -120,7 +124,7 @@ InitDPMIVariables       proc
         ret
 
 global_vars:
-        ProgramPsp      dd      ?
+        ProgramPsp      dd      0
         EXEName         dd      ?
         ENVPtr          dd      ?
         DataSelector    dw      ?       ; needed for irq handlers (B52)
