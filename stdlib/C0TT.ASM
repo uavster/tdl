@@ -41,8 +41,19 @@ GetCommandLine	proc
 		push	edx
 		call	GetCommandParam
 		pop		edx
-		lea		edi,[edi+ecx+1]
+		; Skip the parameter if it is -verbose.
+		cmp		ecx,8
+		jnz		not_verbose_flag
+		cmp		dword ptr [edi],'rev-'
+		jnz		not_verbose_flag
+		cmp		dword ptr [edi+4],'esob'
+		jnz		not_verbose_flag
+		cmp		byte ptr [edi+8],0
+		jz		verbose_flag
+		not_verbose_flag:
 		inc		edx
+		verbose_flag:
+		lea		edi,[edi+ecx+1]
 		test	ecx,ecx
 		jnz		extract_args
 		dec		edx
