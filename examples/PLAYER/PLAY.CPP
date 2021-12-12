@@ -26,11 +26,16 @@ void PlaySound(const TWave *sound) {
 }
 
 
-int main() {
+int main(int argc, char **argv) {
+	if (argc != 1) {
+		printf("Format: play s3m_file_path");
+		return 1;
+	}
+	
 	int error = 0;
 	WUFInit();
 
-	Playable *song = new S3MPlayable("test.s3m");
+	Playable *song = new S3MPlayable(argv[0]);
 	if (song->LastError() != Playable::kSuccess) {
 		printf("Error loading song.\n");
 		error = song->LastError();
