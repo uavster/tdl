@@ -24,7 +24,7 @@ protected:
 	int NumMixerChannels() const;
 	void Destroy();
 	static void Tick(HMixerCallback mixer_callback, void *user_pointer);
-	static DWORD FreqMultiplierForNote(BYTE note, BYTE octave, int period_increment, DWORD instrument_frequency);
+	static DWORD FreqMultiplierForNote(BYTE note, BYTE octave, int period_increment, DWORD instrument_frequency, int vibrato);
 	static DWORD MixerCallbackPeriod(DWORD ticks_per_second);
 	int MixerChannelIndexForCellChannelIndex(int cell_channel_index) const;
 	
@@ -58,9 +58,14 @@ private:
 		BYTE last_note;
 		BYTE last_octave;
 		bool is_playing;
+		
 		WaveformType tremolo_waveform;
 		BYTE tremolo_index;
 		int tremolo_volume;
+		
+		WaveformType vibrato_waveform;
+		BYTE vibrato_index;
+		int vibrato_depth;		
 	};
 	// One-to-one correspondence with mixer_channels_
 	SongChannel *song_channels_;
@@ -70,6 +75,7 @@ private:
 protected:
 	void TonePortamento(SongChannel &channel);
 	int Tremolo(SongChannel &channel);
+	int Vibrato(SongChannel &channel);
 	DWORD PlayVolume(const SongChannel &channel) const;
 };
 
