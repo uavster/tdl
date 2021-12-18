@@ -69,10 +69,10 @@ S3MPlayable::S3MPlayable(const char *file_name)
 	// Create waveform tables.
 	const int kWaveformTableLength = sizeof(waveform_tables_[SINE]) / sizeof(int);
 	for (int i = 0; i < kWaveformTableLength; ++i) { 
-		waveform_tables_[SINE][i] = (int)(255.0 * sin(2.0 * M_PI * (i / static_cast<float>(kWaveformTableLength))));
-		waveform_tables_[SAWTOOTH][i] = (int)(255.0 * (1.0 - i / (float)kWaveformTableLength));
-		waveform_tables_[SQUARE][i] = i < kWaveformTableLength / 2 ? 255 : 0;
-		waveform_tables_[RANDOM][i] = (BYTE)random(255);
+		waveform_tables_[SINE][i] = (int)(256.0 * sin(2.0 * M_PI * (i / static_cast<float>(kWaveformTableLength))));
+		waveform_tables_[SAWTOOTH][i] = (int)(256.0 * (1.0 - i / (float)kWaveformTableLength));
+		waveform_tables_[SQUARE][i] = i < kWaveformTableLength / 2 ? 256 : 0;
+		waveform_tables_[RANDOM][i] = (BYTE)random(256);
 	}
 	Stop();
 }
@@ -173,7 +173,7 @@ DWORD S3MPlayable::FreqMultiplierForNote(BYTE note, BYTE octave, int period_incr
 	// However, we choose to go with stability rather than fidelity to the original behavior.
 	// period = 1;		
 	const DWORD numerator = 894841u << 12;
-	int denominator = ((8363u * period_by_note[note]) >> (octave - 1)) + ((static_cast<int>(instrument_frequency) * (period_increment * 16 + vibrato / 16)) / (16 * 16));
+	int denominator = ((8363u * period_by_note[note]) >> (octave - 1)) + (((static_cast<int>(instrument_frequency) * (period_increment * 256 + vibrato))) / (256 * 16));
 	if (denominator < 4096) {
 		return numerator;
 	} else if (denominator > numerator) {
@@ -215,7 +215,7 @@ int S3MPlayable::Vibrato(SongChannel &channel) {
 	DWORD vibrato_speed = channel.effect_value >> 4;
 	DWORD vibrato_depth = channel.effect_value & 0xf;
 	channel.vibrato_index = (channel.vibrato_index + vibrato_speed) % kWaveformTableLength;
-	return 4 * vibrato_depth * waveform_tables_[channel.vibrato_waveform][channel.vibrato_index];
+	return vibrato_depth * waveform_tables_[channel.vibrato_waveform][channel.vibrato_index];
 }
 
 void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
@@ -265,7 +265,8 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					channel.tremolo_volume = self->Tremolo(channel);
 					break;
 				case 'H':
-					channel.vibrato_depth = self->Vibrato(channel);
+					channel.vibrato_depth = 8 * self->Vibrato(channel);
+					channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
 					break;
 			}
 			if (channel.is_playing) {
