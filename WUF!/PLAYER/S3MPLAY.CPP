@@ -218,6 +218,28 @@ int S3MPlayable::Vibrato(SongChannel &channel) {
 	return vibrato_depth * waveform_tables_[channel.vibrato_waveform][channel.vibrato_index];
 }
 
+bool S3MPlayable::EffectsShareMemory(char fx1, char fx2) {
+	if ((fx1 == 'H' && fx2 == 'U') || (fx1 == 'U' && fx2 == 'H')) {
+		return true;
+	}
+	if ((fx1 == 'E' && fx2 == 'F') || (fx1 == 'F' && fx2 == 'E')) {
+		return true;
+	}
+	if ((fx1 == 'E' && fx2 == 'H') || (fx1 == 'H' && fx2 == 'E')) {
+		return true;
+	}
+	if ((fx1 == 'F' && fx2 == 'H') || (fx1 == 'H' && fx2 == 'F')) {
+		return true;
+	}
+	if ((fx1 == 'E' && fx2 == 'U') || (fx1 == 'U' && fx2 == 'E')) {
+		return true;
+	}
+	if ((fx1 == 'F' && fx2 == 'U') || (fx1 == 'U' && fx2 == 'F')) {
+		return true;
+	}
+	return fx1 == fx2;
+}
+
 void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 	S3MPlayable *self = static_cast<S3MPlayable *>(user_pointer);
 	++self->num_ticks_;
@@ -266,6 +288,10 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					break;
 				case 'H':
 					channel.vibrato_depth = 8 * self->Vibrato(channel);
+					channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
+					break;
+				case 'U':
+					channel.vibrato_depth = 2 * self->Vibrato(channel);
 					channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
 					break;
 			}
@@ -335,14 +361,15 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				}
 				
 				if (cell.HasEffect()) {
-					if ((channel.effect != 0xff && cell.Effect() != channel.effect) || cell.EffectValue() > 0) {
+					if (cell.EffectValue() > 0 || (channel.effect != 0xff && !EffectsShareMemory(cell.Effect(), channel.effect))) {
 						// If the effect did not change and the value is 0, leave value as is. Otherwise, update.
 						channel.effect_value = cell.EffectValue();
 					}
 					channel.effect = cell.Effect();
 					if (channel.effect != 'R') {
 						channel.tremolo_volume = 0;					
-					} else if (channel.effect != 'H') {
+					}
+					if (channel.effect != 'H' && channel.effect != 'U') {
 						channel.vibrato_depth = 0;
 					}
 					switch(cell.Effect()) {

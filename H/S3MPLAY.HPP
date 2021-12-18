@@ -77,6 +77,7 @@ protected:
 	int Tremolo(SongChannel &channel);
 	int Vibrato(SongChannel &channel);
 	DWORD PlayVolume(const SongChannel &channel) const;
+	static bool EffectsShareMemory(char fx1, char fx2);
 };
 
 #endif
