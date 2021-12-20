@@ -74,6 +74,8 @@
 
 #include <video.h>
 
+#include <irq.h>
+
 #ifdef __cplusplus
   };
 #endif
