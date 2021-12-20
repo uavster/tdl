@@ -22,12 +22,13 @@
 ;              EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 WUFInit         proc
+		push	ebp		; Make sure this is callable from C.
         LPrintS "Starting wuF! - Wave Buffer v1.00:"
 
         ; Start sound device
         LPrintS "  ş Detecting audio device..."
         call    SearchSoundDevice
-        ErrorCode NO_SOUND_DEVICE
+        ErrorCodePOP NO_SOUND_DEVICE, ebp
         PrintS  "    ş Found device:  "
         call    GetSoundDeviceName
         mov     esi,eax
@@ -40,9 +41,9 @@ WUFInit         proc
 		LPrintS ""
         LPrintS "  ş Opening audio device driver..."
         call    OpenSoundDevice
-        ErrorCode SDEV_OPEN_ERROR
+        ErrorCodePOP SDEV_OPEN_ERROR,ebp
         call    SDPlay
-        ErrorCode eax
+        ErrorCodePOP eax,ebp
 
         mov     esi,offset mix_msg
         call    Printf
@@ -67,7 +68,7 @@ WUFInit         proc
         mov     cl,MAX_MIXER_CHANNELS
 		push	eax ebx
         call    OpenMixer
-        ErrorCode eax, ebx ecx
+        ErrorCodePOP eax, ebx ecx ebp
 		pop		ebx eax
         mov     mix_rate,eax
         mov     mix_bits,bl
@@ -85,6 +86,7 @@ WUFInit         proc
 						mov		esi,offset n_channels_msg						
         num_channels_label_found:
         call    Printf
+		pop		ebp
         ret
 WUFInit         endp
 
