@@ -4,13 +4,13 @@ LIBDIR = $(TDLPATH)\lib
 
 !ifdef DEBUG
 
-CFLAGS = -4r -hw -db -d2 -fpi87 -fp3 -i$(INCDIR) -mf -w5 -ze -zp4 -zdp
+CFLAGS = -4r -hw -db -d2 -fpi87 -fp3 -i$(INCDIR) -mf -w5 -ze -zp4 -zdp -zl
 AFLAGS = -f obj
 LFLAGS = system DarkX
 
 !else
 
-CFLAGS = -4r -fpi87 -fp3 -i$(INCDIR) -mf -w5 -ze -zdp
+CFLAGS = -4r -fpi87 -fp3 -i$(INCDIR) -mf -w5 -ze -zdp -zl
 AFLAGS = -f obj
 LFLAGS = system DarkX
 
