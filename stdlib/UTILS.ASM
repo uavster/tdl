@@ -374,18 +374,15 @@ FormatString	proc
 		endp
 		
 PrintFormatted	proc
+		push	ebp
 		mov		CharCallback,offset PrintChar
 		call	PrintFormatted_
+		pop		ebp
 		ret
 		endp
 		
 PrintFormatted_ proc
         push    eax ebx ecx edx esi
-        fnstcw  word ptr entero                 ; B52 - Setting rounding methode for float conversion
-        mov     ax,word ptr entero
-        mov     old_control_word,ax
-        or      word ptr entero,110000000000b   ; B52 - chop (truncate)
-        fldcw   word ptr entero                 ; B52
 PRFlab1:
         lodsb
         cmp     al,0
@@ -399,7 +396,6 @@ PRFlab16:
         jmp     PRFlab1
 PRFlab2:
         pop     esi edx ecx ebx eax
-        fldcw   old_control_word                ; B52 - Restore rounding control
         ret
 PRFlab3:
         lodsb
@@ -666,7 +662,15 @@ prflab41:       ; Si no hay justificacion
 
 ; -B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-B52-
 PRFlab521:
-        push    eax ebx ecx edx esi
+        push    eax ebx ecx edx esi ebp
+		sub		esp,3*4		; 0: integer, 4: mantisa, 8: old_control_word
+		mov		ebp,esp
+        fnstcw  word ptr ss:[ebp]                 ; B52 - Set rounding for float conversion
+        mov     ax,ss:[ebp]
+        mov     ss:[ebp+8],ax
+        or      word ptr ss:[ebp],110000000000b   ; B52 - chop (truncate)
+        fldcw   word ptr ss:[ebp]                 ; B52
+		
 		fld		qword ptr [ebx]
 		fxam
 		fstp	st(0)
@@ -726,15 +730,15 @@ PRFlab521:
 				factor_precalc_loop:
 						mul		ebx
 				loop	factor_precalc_loop
-				mov		factor_decimal,eax
+				mov		factor_decimal,eax	; OK to overwrite if any IRQ precalculated this before
 				pop		ebx
 		factor_is_precalculated:
         fld     qword ptr [ebx]
-        fist    entero
-        fisub   entero
+        fist    dword ptr ss:[ebp]
+        fisub   dword ptr ss:[ebp]
         fimul   factor_decimal
-        fistp   mantisa
-        mov     eax,entero
+        fistp   dword ptr ss:[ebp+4]
+        mov     eax,dword ptr ss:[ebp]
         mov     ebx,10
         mov     esi,offset PRFbuff
         call    TransToBase
@@ -749,7 +753,7 @@ PRFlab521:
         loop    print_entero
         mov     al,'.'
         call    [CharCallback]
-        mov     eax,mantisa
+        mov     eax,dword ptr ss:[ebp+4]
         mov     ebx,10
         mov     esi,offset PRFbuff
         call    TransToBase
@@ -775,13 +779,12 @@ PRFlab521:
                 pop     esi
         loop    print_mantisa
 		float_done:
-        pop     esi edx ecx ebx eax
+        fldcw   word ptr ss:[ebp+8]                ; B52 - Restore rounding control
+		add		esp,3*4
+        pop     ebp esi edx ecx ebx eax
         jmp     PRFlab1
 
-entero                  dd ?
-mantisa                 dd ?
 factor_decimal          dd 0
-old_control_word        dw ?
 CharCallback			dd ?
 msg_nan					db "NaN",0
 msg_inf					db "inf",0
