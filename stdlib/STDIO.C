@@ -51,9 +51,16 @@ void printf(char *cadena,...) {
                 }
                 else
                 {
-                        tmpstr[j]=cadena[i];
-                        i++;
-                        j++;
+						if (cadena[i] == '\n') {
+							tmpstr[j] = '\r';
+							tmpstr[++j] = '\n';
+							i++;
+							j++;
+						} else {
+							tmpstr[j]=cadena[i];
+							i++;
+							j++;
+						}
                 }
         }
         tmpstr[j]='\0';
