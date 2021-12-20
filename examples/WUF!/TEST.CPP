@@ -1,5 +1,13 @@
 #include "tdl.h"
 
+// Setting this to non-zero polls the default key buffers in real mode.
+// It works on DOSBox as the overhead of switching between real and protected modes is low.
+// However, it halts in PCem with actual DOS, probably because the overhead of mode switching
+// is much higher.
+// Setting this to zero, installs protected mode keyboard handlers. It works on both DOSBox and PCem, 
+// as everything happens in protected mode.
+#define HANDLE_KEYS_POLLING_DOS	0
+
 TWave *LoadWaveOrDie(const char *file_name) {
 	DWORD error_code;
 	TWave *wave = WUFLoadWave(file_name, &error_code);
@@ -25,9 +33,41 @@ void PlaySound(const TWave *sound) {
 void MixerCallback(HMixerCallback callback_handler, void *user_pointer) {
 	const static char symbols[][3] = {"|\r", "/\r", "-\r", "\\\r"};
 	static int symbol_index = 0;
-	printf(symbols[symbol_index]);
-	symbol_index = (symbol_index + 1) % (sizeof(symbols) / 3);
+	if (!(IRQDOSFlags() & 0xff)) {
+		printf(symbols[symbol_index]);
+		symbol_index = (symbol_index + 1) % (sizeof(symbols) / 3);
+	}
 }
+
+volatile bool do_loop = true;
+TWave *wave_8bit_mono, *wave_8bit_stereo, *wave_16bit_mono, *wave_16bit_stereo;
+
+#if !(HANDLE_KEYS_POLLING_DOS)
+int KeyESCHandler() {
+	do_loop = false;
+	return 0;
+}
+
+int Key1Handler() {
+	PlaySound(wave_8bit_mono);
+	return 0;
+}
+
+int Key2Handler() {
+	PlaySound(wave_8bit_stereo);
+	return 0;
+}
+
+int Key3Handler() {
+	PlaySound(wave_16bit_mono);
+	return 0;
+}
+
+int Key4Handler() {
+	PlaySound(wave_16bit_stereo);
+	return 0;
+}
+#endif
 
 int main() {	
 	WUFInit();
@@ -39,15 +79,23 @@ int main() {
 	printf("Bits per sample: %dn", play_props.SPBitsPerSample); printf("\n");
 	printf("Number of channels: %dn", play_props.SPNumChannels); printf("\n");
 
-	const TWave *wave_8bit_mono = LoadWaveOrDie("w8m22k.wav");
-	const TWave *wave_8bit_stereo = LoadWaveOrDie("w8s8k.wav");
-	const TWave *wave_16bit_mono = LoadWaveOrDie("w16m8k.wav");
-	const TWave *wave_16bit_stereo = LoadWaveOrDie("w16s44k.wav");
+	wave_8bit_mono = LoadWaveOrDie("w8m22k.wav");
+	wave_8bit_stereo = LoadWaveOrDie("w8s8k.wav");
+	wave_16bit_mono = LoadWaveOrDie("w16m8k.wav");
+	wave_16bit_stereo = LoadWaveOrDie("w16s44k.wav");
 	
 	WUFAddMixerCallback(static_cast<DWORD>(0.25 * 65536), &MixerCallback, NULL);
-	
-	bool do_loop = true;
+
+#if !(HANDLE_KEYS_POLLING_DOS)	
+	add_key(&Key1Handler, Key_1);
+	add_key(&Key2Handler, Key_2);
+	add_key(&Key3Handler, Key_3);
+	add_key(&Key4Handler, Key_4);
+	add_key(&KeyESCHandler, Key_ESC);
+#endif
+
 	while(do_loop) {
+#if (HANDLE_KEYS_POLLING_DOS)
 		if (kbhit()) {
 			switch(getch()) {
 				case 27: do_loop = false; break;
@@ -57,9 +105,8 @@ int main() {
 				case '4': PlaySound(wave_16bit_stereo); break;
 			}
 		}
-	//	for (int i = 0; i < 100000; i++) {}
+#endif
 	}
-
 	WUFClose();
 
 	return 0;
