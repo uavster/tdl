@@ -70,6 +70,19 @@ int is_key_pressed(int sc);
 #define Key_f11         0x85
 #define Key_f12         0x86
 #define Key_SPACE       0x39
+#define Key_1			2
+#define Key_2			3
+#define Key_3			4
+#define Key_4			5
+#define Key_5			6
+#define Key_6			7
+#define Key_7			8
+#define Key_8			9
+#define Key_9			10
+#define Key_Q			10h
+#define Key_A			1eh
+#define Key_W			11h
+#define Key_S			1fh
 
 #ifdef __cplusplus
   };
