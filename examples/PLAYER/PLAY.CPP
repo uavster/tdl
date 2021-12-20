@@ -25,6 +25,12 @@ void PlaySound(const TWave *sound) {
 	WUFPlaySound(sound, channel, 1 << 24, 64, 0);
 }
 
+bool loop = true;
+
+int EscHandler() {
+	loop = false;
+	return 0;
+}
 
 int main(int argc, char **argv) {
 	if (argc != 1) {
@@ -46,7 +52,8 @@ int main(int argc, char **argv) {
 		error = song->LastError();
 		goto error_exit;
 	}
-	getch();
+	add_key(&EscHandler, Key_ESC);
+	while(loop) {}
 	printf("Exiting...\n");
 	
 error_exit:
