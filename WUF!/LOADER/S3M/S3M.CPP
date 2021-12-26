@@ -22,7 +22,7 @@ S3MSong::S3MSong(const char *file_name) {
 		}
 	}
 
-	patterns_ = new S3MPattern[NumPatterns()];
+	patterns_ = new S3MPattern[NumPatterns() + 1];	// Last pattern is empty; empty last orders point at it.
 	{
 		for (int i = 0; i < NumPatterns(); ++i) {
 			patterns_[i].song_ = song_;
@@ -37,6 +37,13 @@ S3MSong::S3MSong(const char *file_name) {
 			if (j > 0) {
 				patterns_[i].rows_[j - 1].num_bytes_ = patterns_[i].Pattern().header.size - sizeof(patterns_[i].Pattern().header) - patterns_[i].Pattern().row_indices[j - 1] - sizeof(TS3MPatternCellHeader);
 			}
+		}
+		// Empty pattern.
+		patterns_[i].song_ = song_;
+		patterns_[i].index_ = -1;
+		for (int j = 0; j < sizeof(patterns_[i].rows_) / sizeof(patterns_[i].rows_[0]); ++j) {
+			patterns_[i].rows_[j].num_bytes_ = 0;
+			patterns_[i].rows_[j].cells_ = NULL;
 		}
 	}
 }
@@ -78,8 +85,11 @@ const S3MInstrument *S3MSong::Instrument(const int instrument_index) const {
 }
 
 const S3MPattern *S3MSong::Pattern(const int pattern_index) const {
-	if (pattern_index < 0 || pattern_index >= NumPatterns()) {
+	if (pattern_index < 0) {
 		return NULL;
+	}
+	if (pattern_index >= NumPatterns()) {
+		return &patterns_[NumPatterns()];
 	}
 	return &patterns_[pattern_index];
 }
@@ -224,6 +234,9 @@ bool S3MSong::HasCustomPan() const {
 // }
 
 int S3MPattern::NumRows() const {
+	if (index_ < 0) {
+		return 64;
+	}
 	return Pattern().num_rows;
 }
 
@@ -247,6 +260,7 @@ S3MCellIterator::S3MCellIterator(int num_bytes, const BYTE *cells, int byte_inde
 S3MCellIterator S3MCellIterator::operator++(int) {
 	S3MCellIterator it = *this;
 	if (byte_index_ >= num_bytes_) {
+		byte_index_ = num_bytes_;
 		return it;
 	}
 	const TS3MPatternCellHeader &cell_header = *(TS3MPatternCellHeader *)&cells_[byte_index_];
