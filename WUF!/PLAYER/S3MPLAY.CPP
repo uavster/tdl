@@ -212,10 +212,10 @@ int S3MPlayable::Tremolo(SongChannel &channel) {
 
 int S3MPlayable::Vibrato(SongChannel &channel) {
 	const DWORD kWaveformTableLength = sizeof(waveform_tables_[SINE]) / sizeof(int);
-	DWORD vibrato_speed = channel.effect_value >> 4;
-	DWORD vibrato_depth = channel.effect_value & 0xf;
+	DWORD vibrato_speed = channel.vibrato_data >> 4;
+	DWORD vibrato_amplitude = channel.vibrato_data & 0xf;
 	channel.vibrato_index = (channel.vibrato_index + vibrato_speed) % kWaveformTableLength;
-	return vibrato_depth * waveform_tables_[channel.vibrato_waveform][channel.vibrato_index];
+	return vibrato_amplitude * waveform_tables_[channel.vibrato_waveform][channel.vibrato_index];
 }
 
 bool S3MPlayable::EffectsShareMemory(char fx1, char fx2) {
@@ -447,6 +447,12 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 									break;
 							}
 							break;
+						case 'H':
+						case 'U':
+							if (cell.EffectValue() != 0) {
+								channel.vibrato_data = cell.EffectValue();
+							}
+							break;
 					}
 				} else {
 					channel.effect = 0xff;
@@ -567,6 +573,7 @@ void S3MPlayable::SongChannel::Reset() {
 	tremolo_volume = 0;
 
 	vibrato_waveform = SINE;
+	vibrato_data = 0;
 	vibrato_index = 0;
 	vibrato_depth = 0;
 }

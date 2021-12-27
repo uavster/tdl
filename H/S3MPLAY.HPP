@@ -64,6 +64,7 @@ private:
 		int tremolo_volume;
 		
 		WaveformType vibrato_waveform;
+		BYTE vibrato_data;
 		BYTE vibrato_index;
 		int vibrato_depth;		
 	};
