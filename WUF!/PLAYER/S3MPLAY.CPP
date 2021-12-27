@@ -365,6 +365,11 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						// If the effect did not change and the value is 0, leave value as is. Otherwise, update.
 						channel.effect_value = cell.EffectValue();
 					}
+					if (channel.effect == 'G' && cell.Effect() != 'G') {
+						channel.note = channel.last_note;
+						channel.octave = channel.last_octave;
+						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
+					}
 					channel.effect = cell.Effect();
 					if (channel.effect != 'R') {
 						channel.tremolo_volume = 0;					
