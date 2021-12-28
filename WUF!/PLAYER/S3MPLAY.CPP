@@ -173,7 +173,7 @@ DWORD S3MPlayable::FreqMultiplierForNote(BYTE note, BYTE octave, int period_incr
 	// However, we choose to go with stability rather than fidelity to the original behavior.
 	// period = 1;		
 	const DWORD numerator = 894841u << 12;
-	int denominator = ((8363u * period_by_note[note]) >> (octave - 1)) + (((static_cast<int>(instrument_frequency) * (period_increment * 256 + vibrato))) / (256 * 16));
+	int denominator = ((8363u * period_by_note[note]) >> (octave - 1)) + (((static_cast<int>(instrument_frequency) * (period_increment * 4 * 16 + vibrato / 4))) / (4 * 16 * 16));
 	if (denominator < 4096) {
 		return numerator;
 	} else if (denominator > numerator) {
