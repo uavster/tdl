@@ -349,7 +349,7 @@ BYTE S3MCell::Instrument() const {
 }
 
 bool S3MCell::HasVolume() const {
-	return ((TS3MPatternCellHeader *)cell_)->has_volume;
+	return ((TS3MPatternCellHeader *)cell_)->has_volume && !HasStop();
 }
 
 BYTE S3MCell::Volume() const {
@@ -361,7 +361,7 @@ BYTE S3MCell::Volume() const {
 }
 
 bool S3MCell::HasEffect() const {
-	return ((TS3MPatternCellHeader *)cell_)->has_effect;
+	return ((TS3MPatternCellHeader *)cell_)->has_effect && !HasStop();
 }
 
 char S3MCell::Effect() const {
