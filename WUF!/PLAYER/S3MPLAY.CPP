@@ -182,6 +182,56 @@ DWORD S3MPlayable::FreqMultiplierForNote(BYTE note, BYTE octave, int period_incr
 	return (numerator / static_cast<DWORD>(denominator)) << 12;
 }
 
+void S3MPlayable::VolumeSlideRow(SongChannel &channel) {
+	if ((channel.effect_value & 0xf0) == 0xf0) {
+		// Fine slide down.
+		BYTE slide_down = channel.effect_value & 0xf;
+		if (slide_down < channel.volume) {
+			channel.volume -= slide_down;
+		} else {
+			channel.volume = 0;
+		}
+	}
+	if ((channel.effect_value & 0xf) == 0xf) {
+		// Slide up.
+		BYTE slide_up = channel.effect_value >> 4;
+		if (slide_up == 0) {
+			if (0xf < channel.volume) {
+				channel.volume -= 0xf;
+			} else {
+				channel.volume = 0;
+			}
+		} else {
+			if (slide_up < 64 - channel.volume) {
+				channel.volume += slide_up;
+			} else {
+				channel.volume = 64;
+			}
+		}
+	}
+}
+
+void S3MPlayable::VolumeSlideTick(SongChannel &channel) {
+	BYTE slide_up = channel.effect_value >> 4;
+	BYTE slide_down = channel.effect_value & 0xf;
+	if (!slide_up && slide_down) {
+		// Slide down.
+		if (slide_down < channel.volume) {
+			channel.volume -= slide_down;
+		} else {
+			channel.volume = 0;
+		}
+	}
+	if (slide_up && !slide_down) {
+		// Slide up.
+		if (slide_up < 64 - channel.volume) {
+			channel.volume += slide_up;
+		} else {
+			channel.volume = 64;
+		}
+	}
+}
+
 void S3MPlayable::TonePortamento(SongChannel &channel) {
 	DWORD new_freq_mult = FreqMultiplierForNote(channel.note, channel.octave, 0, channel.instrument_freq, channel.vibrato_depth);
 //printf("note:%dn, octave:%dn, last_note:%dn, last_octave:%dn, period_inc: %dn, nfm:%dn, fm:%dn, fxv:%dn\n", channel.note, channel.octave, channel.last_note, channel.last_octave, channel.period_increment, new_freq_mult, channel.freq_multiplier, channel.effect_value);
@@ -216,6 +266,11 @@ int S3MPlayable::Vibrato(SongChannel &channel) {
 	DWORD vibrato_amplitude = channel.vibrato_data & 0xf;
 	channel.vibrato_index = (channel.vibrato_index + vibrato_speed) % kWaveformTableLength;
 	return vibrato_amplitude * waveform_tables_[channel.vibrato_waveform][channel.vibrato_index];
+}
+
+void S3MPlayable::VibratoTick(SongChannel &channel) {
+	channel.vibrato_depth = 8 * Vibrato(channel);
+	channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
 }
 
 bool S3MPlayable::EffectsShareMemory(char fx1, char fx2) {
@@ -261,24 +316,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					}
 					break;
 				case 'D':
-					BYTE slide_up = channel.effect_value >> 4;
-					BYTE slide_down = channel.effect_value & 0xf;
-					if (!slide_up && slide_down) {
-						// Slide down.
-						if (slide_down < channel.volume) {
-							channel.volume -= slide_down;
-						} else {
-							channel.volume = 0;
-						}
-					}
-					if (slide_up && !slide_down) {
-						// Slide up.
-						if (slide_up < 64 - channel.volume) {
-							channel.volume += slide_up;
-						} else {
-							channel.volume = 64;
-						}
-					}
+					self->VolumeSlideTick(channel);
 					break;
 				case 'G':
 					self->TonePortamento(channel);
@@ -287,12 +325,15 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					channel.tremolo_volume = self->Tremolo(channel);
 					break;
 				case 'H':
-					channel.vibrato_depth = 8 * self->Vibrato(channel);
-					channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
+					self->VibratoTick(channel);
 					break;
 				case 'U':
 					channel.vibrato_depth = 2 * self->Vibrato(channel);
 					channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
+					break;
+				case 'K':
+					self->VolumeSlideTick(channel);
+					self->VibratoTick(channel);
 					break;
 			}
 			if (channel.is_playing) {
@@ -408,33 +449,9 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 								channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
 							}
 							break;
+						case 'K':
 						case 'D':
-							if ((channel.effect_value & 0xf0) == 0xf0) {
-								// Fine slide down.
-								BYTE slide_down = channel.effect_value & 0xf;
-								if (slide_down < channel.volume) {
-									channel.volume -= slide_down;
-								} else {
-									channel.volume = 0;
-								}
-							}
-							if ((channel.effect_value & 0xf) == 0xf) {
-								// Slide up.
-								BYTE slide_up = channel.effect_value >> 4;
-								if (slide_up == 0) {
-									if (0xf < channel.volume) {
-										channel.volume -= 0xf;
-									} else {
-										channel.volume = 0;
-									}
-								} else {
-									if (slide_up < 64 - channel.volume) {
-										channel.volume += slide_up;
-									} else {
-										channel.volume = 64;
-									}
-								}
-							}
+							self->VolumeSlideRow(channel);
 							break;
 						case 'G':
 							self->TonePortamento(channel);

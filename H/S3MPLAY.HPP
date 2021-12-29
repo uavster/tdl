@@ -77,8 +77,11 @@ protected:
 	void TonePortamento(SongChannel &channel);
 	int Tremolo(SongChannel &channel);
 	int Vibrato(SongChannel &channel);
+	void VibratoTick(SongChannel &channel);
 	DWORD PlayVolume(const SongChannel &channel) const;
 	static bool EffectsShareMemory(char fx1, char fx2);
+	void VolumeSlideRow(SongChannel &channel);
+	void VolumeSlideTick(SongChannel &channel);
 };
 
 #endif
