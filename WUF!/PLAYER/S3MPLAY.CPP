@@ -199,7 +199,7 @@ void S3MPlayable::TonePortamento(SongChannel &channel) {
 			channel.freq_multiplier = new_freq_mult;
 			channel.period_increment = 0;
 		}
-	}	
+	}
 }
 
 int S3MPlayable::Tremolo(SongChannel &channel) {
@@ -302,6 +302,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 	} else {
 		// New pattern row.
 		int next_order = -1;
+		int next_row = -1;
 		int last_read_channel_index = 0;
 		// Interpret song cells.
 		const S3MRow *row = self->song_->Pattern(self->song_->Order(self->order_))->Row(self->row_index_);
@@ -382,7 +383,14 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 							self->ticks_per_row_ = cell.EffectValue();
 							break;
 						case 'B':
-							next_order = cell.EffectValue();
+							if (cell.EffectValue() < self->song_->NumOrders()) {
+								next_order = cell.EffectValue();
+							}
+							break;
+						case 'C':
+							if (cell.EffectValue() < 64) {
+								next_row = cell.EffectValue();
+							}
 							break;
 						case 'T':
 							self->ticks_per_second_ = cell.EffectValue();
@@ -542,11 +550,11 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 		self->num_ticks_ = 0;
 		if (next_order >= 0) {
 			self->order_ = next_order;
-			self->row_index_ = 0;
+			self->row_index_ = next_row < 0 ? 0 : next_row;
 		} else {
 			++self->row_index_;
-			if (self->row_index_ >= self->song_->Pattern(self->song_->Order(self->order_))->NumRows()) {
-				self->row_index_ = 0;
+			if (self->row_index_ >= self->song_->Pattern(self->song_->Order(self->order_))->NumRows() || next_row >= 0) {
+				self->row_index_ = next_row < 0 ? 0 : next_row;
 				++self->order_;
 				if (self->order_ >= self->song_->NumOrders() || self->song_->Order(self->order_) == 0xff) {
 					self->order_ = 0;
