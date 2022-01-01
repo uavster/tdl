@@ -295,10 +295,52 @@ bool S3MPlayable::EffectsShareMemory(char fx1, char fx2) {
 	return fx1 == fx2;
 }
 
+void S3MPlayable::HandleNewNote(const S3MCell &cell, SongChannel &channel, TWave **instrument, DWORD *sample_offset) {
+	*sample_offset = -1;
+	if (cell.HasInstrument()) {
+		channel.volume = cell.HasVolume() ? cell.Volume() : 64;
+		if (!cell.HasEffect() || cell.Effect() != 'G' || channel.instrument != cell.Instrument() - 1 || channel.note == 0xff) {
+			*instrument = &instruments_[cell.Instrument() - 1];
+			channel.period_increment = 0;
+			*sample_offset = 0;
+		}
+		channel.instrument = cell.Instrument() - 1;
+		channel.instrument_freq = instruments_[channel.instrument].BaseRate;
+	} else {
+		if (cell.HasVolume()) {
+			channel.volume = cell.Volume();
+		}
+		// channel.instrument = 0xff;
+	}
+	if (cell.HasNote()) {
+		channel.is_playing = true;
+		channel.last_note = channel.note;
+		channel.last_octave = channel.octave;
+		channel.note = cell.Note();
+		channel.octave = cell.Octave();
+		channel.tremolo_index = 0;
+		channel.vibrato_index = 0;
+		if (channel.last_note == 0xff) {
+			channel.last_note = channel.note;
+			channel.last_octave = channel.octave;
+			channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, 0, channel.instrument_freq, channel.vibrato_depth);
+		}
+	}
+	if (channel.note != 0xff && channel.octave != 0xff) {
+		// Update frequency multiplier if the current note and octave are valid for the channel.
+		if (!cell.HasEffect() || cell.Effect() != 'G') {	// Tone Portamento adjusts the multiplier progressively to the current note.
+			channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
+		}
+	}
+	channel.remaining_delay_ticks = 0;
+}
+
 void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 	S3MPlayable *self = static_cast<S3MPlayable *>(user_pointer);
 	++self->num_ticks_;
 	if (self->num_ticks_ < self->ticks_per_row_) {
+		TWave *instrument = NULL;
+		DWORD sample_offset = -1;
 		// Update channel states with effects.
 		for (int i = 0; i < self->NumMixerChannels(); ++i) {
 			SongChannel &channel = self->song_channels_[i];
@@ -335,9 +377,18 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					self->VolumeSlideTick(channel);
 					self->VibratoTick(channel);
 					break;
+				case 'S':
+					if ((channel.effect_value >> 4) == 0xd) {
+						if (channel.remaining_delay_ticks > 0) {
+							if (--channel.remaining_delay_ticks == 0) {							
+								self->HandleNewNote(channel.delayed_cell, channel, &instrument, &sample_offset);
+							}
+						}
+					}
+					break;
 			}
 			if (channel.is_playing) {
-				WUFPlaySound(NULL, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, self->PlayVolume(channel), -1);
+				WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, self->PlayVolume(channel), sample_offset);
 			}
 		}
 	} else {
@@ -366,40 +417,8 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				WUFPauseSound(WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]));
 			} else {
 				DWORD sample_offset = -1;
-				if (cell.HasInstrument()) {
-					channel.volume = cell.HasVolume() ? cell.Volume() : 64;
-					if (!cell.HasEffect() || cell.Effect() != 'G' || channel.instrument != cell.Instrument() - 1 || channel.note == 0xff) {
-						instrument = &self->instruments_[cell.Instrument() - 1];
-						channel.period_increment = 0;
-						sample_offset = 0;
-					}
-					channel.instrument = cell.Instrument() - 1;
-					channel.instrument_freq = self->instruments_[channel.instrument].BaseRate;
-				} else {
-					if (cell.HasVolume()) {
-						channel.volume = cell.Volume();
-					}
-					// channel.instrument = 0xff;
-				}
-				if (cell.HasNote()) {
-					channel.is_playing = true;
-					channel.last_note = channel.note;
-					channel.last_octave = channel.octave;
-					channel.note = cell.Note();
-					channel.octave = cell.Octave();
-					channel.tremolo_index = 0;
-					channel.vibrato_index = 0;
-					if (channel.last_note == 0xff) {
-						channel.last_note = channel.note;
-						channel.last_octave = channel.octave;
-						channel.freq_multiplier = self->FreqMultiplierForNote(channel.note, channel.octave, 0, channel.instrument_freq, channel.vibrato_depth);
-					}
-				}
-				if (channel.note != 0xff && channel.octave != 0xff) {
-					// Update frequency multiplier if the current note and octave are valid for the channel.
-					if (!cell.HasEffect() || cell.Effect() != 'G') {	// Tone Portamento adjusts the multiplier progressively to the current note.
-						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
-					}
+				if (!cell.HasEffect() || cell.Effect() != 'S' || (cell.EffectValue() >> 4) != 0xd) {
+					self->HandleNewNote(cell, channel, &instrument, &sample_offset);
 				}
 				
 				if (cell.HasEffect()) {
@@ -474,6 +493,10 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 									break;
 								case 3:
 									channel.vibrato_waveform = cell.EffectValue() & 0xf;
+									break;
+								case 0xd:
+									channel.delayed_cell = cell;
+									channel.remaining_delay_ticks = cell.EffectValue() & 0xf;
 									break;
 							}
 							break;
@@ -606,6 +629,8 @@ void S3MPlayable::SongChannel::Reset() {
 	vibrato_data = 0;
 	vibrato_index = 0;
 	vibrato_depth = 0;
+	
+	remaining_delay_ticks = 0;
 }
 
 DWORD S3MPlayable::PlayVolume(const SongChannel &channel) const {

@@ -66,7 +66,10 @@ private:
 		WaveformType vibrato_waveform;
 		BYTE vibrato_data;
 		BYTE vibrato_index;
-		int vibrato_depth;		
+		int vibrato_depth;
+		
+		BYTE remaining_delay_ticks;
+		S3MCell delayed_cell;
 	};
 	// One-to-one correspondence with mixer_channels_
 	SongChannel *song_channels_;
@@ -82,6 +85,7 @@ protected:
 	static bool EffectsShareMemory(char fx1, char fx2);
 	void VolumeSlideRow(SongChannel &channel);
 	void VolumeSlideTick(SongChannel &channel);
+	void HandleNewNote(const S3MCell &cell, SongChannel &channel, TWave **instrument, DWORD *sample_offset);
 };
 
 #endif

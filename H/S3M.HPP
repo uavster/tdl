@@ -12,6 +12,8 @@ class S3MCell {
 public:
 	friend class S3MCellIterator;
 	
+	S3MCell();
+
 	BYTE ChannelNumber() const;
 	
 	bool HasNote() const;

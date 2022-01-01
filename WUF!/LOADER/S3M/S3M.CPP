@@ -297,6 +297,8 @@ S3MCell S3MCellIterator::Cell() const {
 
 S3MCell::S3MCell(const BYTE *cell) : cell_(cell) {}
 
+S3MCell::S3MCell() : cell_(NULL) {}
+
 BYTE S3MCell::ChannelNumber() const {
 	return ((TS3MPatternCellHeader *)cell_)->channel_number;
 }
