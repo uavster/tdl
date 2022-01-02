@@ -25,10 +25,21 @@ void PlaySound(const TWave *sound) {
 	WUFPlaySound(sound, channel, 1 << 24, 64, 0);
 }
 
-bool loop = true;
+volatile bool loop = true;
+volatile int pattern_increase = 0;
 
 int EscHandler() {
 	loop = false;
+	return 0;
+}
+
+int LeftKeyHandler() {
+	--pattern_increase;
+	return 0;
+}
+
+int RightKeyHandler() {
+	++pattern_increase;
 	return 0;
 }
 
@@ -53,7 +64,22 @@ int main(int argc, char **argv) {
 		goto error_exit;
 	}
 	add_key(&EscHandler, Key_ESC);
-	while(loop) {}
+	add_key(&LeftKeyHandler, Key_Left);
+	add_key(&RightKeyHandler, Key_Right);
+	while(loop) {
+		// TODO: Do this with an x86 atomic xchg (new atomics library)
+		int pattern_increase_copy = pattern_increase;
+		pattern_increase = 0;
+		if (pattern_increase_copy > 0) {
+			while(pattern_increase_copy-- > 0) {
+				song->Forward();
+			}
+		} else if (pattern_increase_copy < 0) {
+			while(pattern_increase_copy++ < 0) {
+				song->Backward();
+			}
+		}		
+	}
 	printf("Exiting...\n");
 	
 error_exit:
