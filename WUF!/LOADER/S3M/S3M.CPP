@@ -120,7 +120,7 @@ const S3MInstrumentType S3MInstrument::Type() const {
 	return (S3MInstrumentType)Instrument().header.type;
 }
 
-int S3MInstrument::DefaultVolume() const {
+BYTE S3MInstrument::DefaultVolume() const {
 	return Instrument().header.spec.sampled.default_volume;
 }
 

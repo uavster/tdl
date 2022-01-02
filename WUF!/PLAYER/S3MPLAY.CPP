@@ -646,3 +646,20 @@ DWORD S3MPlayable::PlayVolume(const SongChannel &channel) const {
 	}
 	return static_cast<DWORD>(volume) >> 8;
 }
+
+void S3MPlayable::Forward() {
+	++order_;
+	if (order_ >= song_->NumOrders() || song_->Order(order_) == 0xff) {
+		order_ = 0;
+	}
+	row_index_ = 0;
+}
+
+void S3MPlayable::Backward() {
+	if (order_ == 0) {
+		order_ = song_->NumOrders() - 1;
+	} else {
+		--order_;
+	}
+	row_index_ = 0;
+}

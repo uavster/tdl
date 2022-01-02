@@ -15,9 +15,14 @@ public:
 	bool Play();
 	void Pause();
 	void Stop();
+	// TODO: implement volume interface.
 	void Volume(float volume);
 	float Volume();
-
+	
+	// This functions should not be called from an IRQ with higher priority than that of the sound card.
+	void Forward();
+	void Backward();
+	
 	enum WaveformType { SINE = 0, SAWTOOTH = 1, SQUARE = 2, RANDOM = 3, NUM_WAVEFORMS = 4 };
 	
 protected:
