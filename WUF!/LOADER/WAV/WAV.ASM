@@ -112,6 +112,7 @@ LoadWAV proc
         mov     [ebx.WavePtr],eax
         mov     eax,TestBuffer.nSamplesPerSec
         mov     [ebx.BaseRate],eax
+		mov		[ebx.BaseVolume],64
 
         movzx   edi,TestBuffer.nChannels
 		dec		edi

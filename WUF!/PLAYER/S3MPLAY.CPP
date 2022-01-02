@@ -56,6 +56,7 @@ S3MPlayable::S3MPlayable(const char *file_name)
 			instruments_[j].WavePtr = instrument->Samples();
 			instruments_[j].WaveLen = instrument->NumSamples();
 			instruments_[j].BaseRate = instrument->C2Frequency();
+			instruments_[j].BaseVolume = instrument->DefaultVolume();
 			if (instrument->HasLoop()) {
 				instruments_[j].LoopStart = instrument->LoopStart();
 				instruments_[j].LoopEnd = instrument->LoopEnd();
@@ -634,7 +635,9 @@ void S3MPlayable::SongChannel::Reset() {
 }
 
 DWORD S3MPlayable::PlayVolume(const SongChannel &channel) const {
-	int volume = static_cast<int>(static_cast<DWORD>(channel.volume) << 8) + channel.tremolo_volume;
+	DWORD instrument_volume = channel.instrument != 0xff ? instruments_[channel.instrument].BaseVolume : 0;
+	// ((instrument_volume * channel_volume) << 8) / 64 + tremolo_volume
+	int volume = static_cast<int>((instrument_volume * static_cast<DWORD>(channel.volume)) << (8-6)) + channel.tremolo_volume;
 	if (volume <= 0) {
 		return 0;
 	}

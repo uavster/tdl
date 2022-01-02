@@ -106,7 +106,7 @@ public:
 
 	const char *Name() const;
 	const S3MInstrumentType Type() const;
-	int DefaultVolume() const;
+	BYTE DefaultVolume() const;
 	bool HasLoop() const;
 	DWORD LoopStart() const;
 	DWORD LoopEnd() const;

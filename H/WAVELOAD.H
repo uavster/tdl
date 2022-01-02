@@ -17,6 +17,7 @@ typedef struct {
         void *WavePtr;	// -> Sound data
         DWORD WaveLen;	// Sound length in samples
         DWORD BaseRate;	// Base sample rate
+		DWORD BaseVolume; 	// Base sample volume [0, 64]
 		DWORD LoopStart;	// Sample index where loop starts (included); -1 and -2 are reserved values.
 		DWORD LoopEnd;	// Sample index where loop ends (not included); no loop if LoopStart==LoopEnd==-1; -1 and -2 are reserved values.
 } TWave;
