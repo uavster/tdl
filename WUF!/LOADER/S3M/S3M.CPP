@@ -351,11 +351,11 @@ BYTE S3MCell::Instrument() const {
 }
 
 bool S3MCell::HasVolume() const {
-	return ((TS3MPatternCellHeader *)cell_)->has_volume && !HasStop();
+	return ((TS3MPatternCellHeader *)cell_)->has_volume;
 }
 
 BYTE S3MCell::Volume() const {
-	if (HasInstrument()) {
+	if (((TS3MPatternCellHeader *)cell_)->has_note_and_instrument) {
 		return cell_[3];
 	} else {
 		return cell_[1];
@@ -363,12 +363,12 @@ BYTE S3MCell::Volume() const {
 }
 
 bool S3MCell::HasEffect() const {
-	return ((TS3MPatternCellHeader *)cell_)->has_effect && !HasStop();
+	return ((TS3MPatternCellHeader *)cell_)->has_effect;
 }
 
 char S3MCell::Effect() const {
 	int index = 1;
-	if (HasInstrument()) {
+	if (((TS3MPatternCellHeader *)cell_)->has_note_and_instrument) {
 		index += 2;
 	}
 	if (HasVolume()) {
@@ -379,7 +379,7 @@ char S3MCell::Effect() const {
 
 BYTE S3MCell::EffectValue() const {
 	int index = 2;
-	if (HasInstrument()) {
+	if (((TS3MPatternCellHeader *)cell_)->has_note_and_instrument) {
 		index += 2;
 	}
 	if (HasVolume()) {
