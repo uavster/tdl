@@ -311,7 +311,7 @@ void S3MPlayable::HandleNewNote(const S3MCell &cell, SongChannel &channel, TWave
 	*sample_offset = -1;
 	if (cell.HasInstrument()) {
 		channel.volume = cell.HasVolume() ? cell.Volume() : 64;
-		if (!cell.HasEffect() || cell.Effect() != 'G' || channel.instrument != cell.Instrument() - 1 || channel.note == 0xff) {
+		if (channel.instrument != cell.Instrument() - 1) {
 			*instrument = &instruments_[cell.Instrument() - 1];
 			channel.period_increment = 0;
 			*sample_offset = 0;
@@ -325,6 +325,11 @@ void S3MPlayable::HandleNewNote(const S3MCell &cell, SongChannel &channel, TWave
 		// channel.instrument = 0xff;
 	}
 	if (cell.HasNote()) {
+		if (channel.note == 0xff || !cell.HasEffect() || cell.Effect() != 'G') {
+			*instrument = &instruments_[channel.instrument];
+			channel.period_increment = 0;
+			*sample_offset = 0;
+		}
 		channel.is_playing = true;
 		channel.last_note = channel.note;
 		channel.last_octave = channel.octave;
