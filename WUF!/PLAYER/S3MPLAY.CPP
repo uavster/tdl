@@ -251,6 +251,8 @@ void S3MPlayable::TonePortamento(SongChannel &channel) {
 		channel.period_increment -= 4 * channel.effect_value;
 		channel.freq_multiplier = FreqMultiplierForNote(channel.last_note, channel.last_octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
 		if (new_freq_mult < channel.freq_multiplier) {
+			channel.last_note = channel.note;
+			channel.last_octave = channel.octave;
 			channel.freq_multiplier = new_freq_mult;
 			channel.period_increment = 0;
 		}
@@ -258,6 +260,8 @@ void S3MPlayable::TonePortamento(SongChannel &channel) {
 		channel.period_increment += 4 * channel.effect_value;
 		channel.freq_multiplier = FreqMultiplierForNote(channel.last_note, channel.last_octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
 		if (new_freq_mult > channel.freq_multiplier) {
+			channel.last_note = channel.note;
+			channel.last_octave = channel.octave;
 			channel.freq_multiplier = new_freq_mult;
 			channel.period_increment = 0;
 		}
@@ -310,7 +314,6 @@ bool S3MPlayable::EffectsShareMemory(char fx1, char fx2) {
 void S3MPlayable::HandleNewNote(const S3MCell &cell, SongChannel &channel, TWave **instrument, DWORD *sample_offset) {
 	*sample_offset = -1;
 	if (cell.HasInstrument()) {
-		channel.volume = cell.HasVolume() ? cell.Volume() : 64;
 		if (channel.instrument != cell.Instrument() - 1) {
 			*instrument = &instruments_[cell.Instrument() - 1];
 			channel.period_increment = 0;
@@ -318,6 +321,7 @@ void S3MPlayable::HandleNewNote(const S3MCell &cell, SongChannel &channel, TWave
 		}
 		channel.instrument = cell.Instrument() - 1;
 		channel.instrument_freq = instruments_[channel.instrument].BaseRate;
+		channel.volume = cell.HasVolume() ? cell.Volume() : instruments_[channel.instrument].BaseVolume;
 	} else {
 		if (cell.HasVolume()) {
 			channel.volume = cell.Volume();
@@ -443,7 +447,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					// If the effect did not change and the value is 0, leave value as is. Otherwise, update.
 					channel.effect_value = cell.EffectValue();
 				}
-				if (channel.effect == 'G' && cell.Effect() != 'G') {
+				if (channel.effect == 'G' && cell.Effect() != 'G' && !cell.HasNote()) {
 					channel.note = channel.last_note;
 					channel.octave = channel.last_octave;
 					channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
@@ -525,6 +529,11 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						break;
 				}
 			} else {
+				if (channel.effect == 'G' && !cell.HasNote()) {
+					channel.note = channel.last_note;
+					channel.octave = channel.last_octave;
+					channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
+				}
 				channel.effect = 0xff;
 //				channel.effect_value = 0;
 				channel.tremolo_volume = 0;
@@ -654,7 +663,7 @@ DWORD S3MPlayable::PlayVolume(const SongChannel &channel) const {
 		return -1;
 	}
 	// ((instrument_volume * channel_volume) << 8) / 64 + tremolo_volume
-	int volume = static_cast<int>((instruments_[channel.instrument].BaseVolume * static_cast<DWORD>(channel.volume)) << (8-6)) + channel.tremolo_volume;
+	int volume = static_cast<int>(static_cast<DWORD>(channel.volume) << 8) + channel.tremolo_volume;
 	if (volume <= 0) {
 		return 0;
 	}
