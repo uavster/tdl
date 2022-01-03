@@ -8,6 +8,7 @@ public:
 	virtual bool Play() = 0;
 	virtual void Pause() = 0;
 	virtual void Stop() = 0;
+	virtual bool IsPlaying() = 0;
 	virtual void Volume(float volume) = 0;
 	virtual float Volume() = 0;
 	virtual void Forward() = 0;

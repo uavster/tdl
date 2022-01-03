@@ -14,6 +14,7 @@ public:
 	// Playable interface
 	bool Play();
 	void Pause();
+	bool IsPlaying();
 	void Stop();
 	// TODO: implement volume interface.
 	void Volume(float volume);
@@ -80,6 +81,7 @@ private:
 	SongChannel *song_channels_;
 	
 	int waveform_tables_[NUM_WAVEFORMS][64];
+	bool is_playing_;
 	
 protected:
 	void TonePortamento(SongChannel &channel);

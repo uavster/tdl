@@ -6,7 +6,7 @@
 #include "random.h"
 
 S3MPlayable::S3MPlayable(const char *file_name)
-	: Playable(), song_(NULL), min_channel_index_(1), max_channel_index_(0), mixer_channels_(NULL), mixer_callback_(kHMixerCallbackInvalid), num_ticks_(0), row_index_(0), order_(0), instruments_(NULL), song_channels_(NULL) {
+	: Playable(), song_(NULL), min_channel_index_(1), max_channel_index_(0), mixer_channels_(NULL), mixer_callback_(kHMixerCallbackInvalid), num_ticks_(0), row_index_(0), order_(0), instruments_(NULL), song_channels_(NULL), is_playing_(false) {
 	song_ = new S3MSong(file_name);
 	if (!song_->IsLoaded()) {
 		Destroy();
@@ -119,6 +119,9 @@ bool S3MPlayable::Play() {
 	if (LastError() != kSuccess) {
 		return false;
 	}
+	if (is_playing_) {
+		return true;
+	}
 	// Limited audio resources are allocated before playing, 
 	// so that multiple playables can stay in memory without
 	// consuming resources.
@@ -126,18 +129,25 @@ bool S3MPlayable::Play() {
 		LastError(kCantAllocateMixerChannels);
 		return false;
 	}
-	printf("Ticks per second: %dn\n", ticks_per_second_);
 	mixer_callback_ = WUFAddMixerCallback(MixerCallbackPeriod(ticks_per_second_), &Tick, this);
 	if (mixer_callback_ == kHMixerCallbackInvalid) {
 		WUFFreeChannels(NumMixerChannels(), mixer_channels_);
 		LastError(kCantAddMixerCallback);
 		return false;
 	}
+	is_playing_ = true;
 	return true;
+}
+
+bool S3MPlayable::IsPlaying() {
+	return is_playing_;
 }
 
 void S3MPlayable::Pause() {
 	if (LastError() != kSuccess) {
+		return;
+	}
+	if (!is_playing_) {
 		return;
 	}
 	if (mixer_callback_ != kHMixerCallbackInvalid) {
@@ -147,6 +157,7 @@ void S3MPlayable::Pause() {
 	if (mixer_channels_ != NULL) {
 		WUFFreeChannels(NumMixerChannels(), mixer_channels_);
 	}
+	is_playing_ = false;
 }
 
 void S3MPlayable::Stop() {
@@ -340,10 +351,10 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 	S3MPlayable *self = static_cast<S3MPlayable *>(user_pointer);
 	++self->num_ticks_;
 	if (self->num_ticks_ < self->ticks_per_row_) {
-		TWave *instrument = NULL;
-		DWORD sample_offset = -1;
 		// Update channel states with effects.
 		for (int i = 0; i < self->NumMixerChannels(); ++i) {
+			TWave *instrument = NULL;
+			DWORD sample_offset = -1;
 			SongChannel &channel = self->song_channels_[i];
 			switch(channel.effect) {
 				case 'F':
@@ -381,7 +392,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				case 'S':
 					if ((channel.effect_value >> 4) == 0xd) {
 						if (channel.remaining_delay_ticks > 0) {
-							if (--channel.remaining_delay_ticks == 0) {							
+							if (--channel.remaining_delay_ticks == 0) {
 								self->HandleNewNote(channel.delayed_cell, channel, &instrument, &sample_offset);
 							}
 						}
@@ -409,6 +420,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 			processed_channels[mixer_channel_index] = true;
 			SongChannel &channel = self->song_channels_[mixer_channel_index];
 			TWave *instrument = NULL;
+			DWORD sample_offset = -1;
 			bool is_invalid_instrument = cell.HasInstrument() &&
 				(cell.Instrument() == 0 || 
 				cell.Instrument() > self->song_->NumInstruments() || 
@@ -417,107 +429,105 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				channel.is_playing = false;
 				WUFPauseSound(WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]));
 			} else {
-				DWORD sample_offset = -1;
 				if (!cell.HasEffect() || cell.Effect() != 'S' || (cell.EffectValue() >> 4) != 0xd) {
 					self->HandleNewNote(cell, channel, &instrument, &sample_offset);
 				}
-				
-				if (cell.HasEffect()) {
-					if (cell.EffectValue() > 0 || (channel.effect != 0xff && !EffectsShareMemory(cell.Effect(), channel.effect))) {
-						// If the effect did not change and the value is 0, leave value as is. Otherwise, update.
-						channel.effect_value = cell.EffectValue();
-					}
-					if (channel.effect == 'G' && cell.Effect() != 'G') {
-						channel.note = channel.last_note;
-						channel.octave = channel.last_octave;
-						channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
-					}
-					channel.effect = cell.Effect();
-					if (channel.effect != 'R') {
-						channel.tremolo_volume = 0;					
-					}
-					if (channel.effect != 'H' && channel.effect != 'U') {
-						channel.vibrato_depth = 0;
-					}
-					switch(cell.Effect()) {
-						case 'A':
-							self->ticks_per_row_ = cell.EffectValue();
-							break;
-						case 'B':
-							if (cell.EffectValue() < self->song_->NumOrders()) {
-								next_order = cell.EffectValue();
-							}
-							break;
-						case 'C':
-							if (cell.EffectValue() < 64) {
-								next_row = cell.EffectValue();
-							}
-							break;
-						case 'T':
-							self->ticks_per_second_ = cell.EffectValue();
-							WUFSetMixerCallbackPeriod(self->mixer_callback_, MixerCallbackPeriod(self->ticks_per_second_));
-							break;
-						case 'F':
-							if (channel.effect_value >= 0xE0) {
-								channel.period_increment -= (channel.effect_value >= 0xF0 ? 4 : 1) * (channel.effect_value & 0xf);
-								channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
-							}
-							break;
-						case 'E':
-							if (channel.effect_value >= 0xE0) {
-								channel.period_increment += (channel.effect_value >= 0xF0 ? 4 : 1) * (channel.effect_value & 0xf);
-								channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
-							}
-							break;
-						case 'K':
-						case 'D':
-							self->VolumeSlideRow(channel);
-							break;
-						case 'G':
-							self->TonePortamento(channel);
-							break;
-						case 'O':
-							sample_offset = cell.EffectValue() << 8;
-							if (instrument != NULL && instrument->LoopStart != -1 && instrument->LoopEnd != -1 && sample_offset >= instrument->LoopEnd) {
-								// Set loop at start, if offset if beyond the loop end.
-								sample_offset = instrument->LoopStart;
-							}
-							sample_offset <<= 8;	// Format is fixed point 24.8.
-							break;
-						case 'V':
-							WUFSetGlobalVolume(cell.EffectValue());
-							break;
-						case 'S':
-							switch(cell.EffectValue() >> 4) {
-								case 4:
-									channel.tremolo_waveform = cell.EffectValue() & 0xf;
-									break;
-								case 3:
-									channel.vibrato_waveform = cell.EffectValue() & 0xf;
-									break;
-								case 0xd:
-									channel.delayed_cell = cell;
-									channel.remaining_delay_ticks = cell.EffectValue() & 0xf;
-									break;
-							}
-							break;
-						case 'H':
-						case 'U':
-							if (cell.EffectValue() != 0) {
-								channel.vibrato_data = cell.EffectValue();
-							}
-							break;
-					}
-				} else {
-					channel.effect = 0xff;
-	//				channel.effect_value = 0;
-					channel.tremolo_volume = 0;
+			}
+			if (cell.HasEffect()) {
+				if (cell.EffectValue() > 0 || (channel.effect != 0xff && !EffectsShareMemory(cell.Effect(), channel.effect))) {
+					// If the effect did not change and the value is 0, leave value as is. Otherwise, update.
+					channel.effect_value = cell.EffectValue();
+				}
+				if (channel.effect == 'G' && cell.Effect() != 'G') {
+					channel.note = channel.last_note;
+					channel.octave = channel.last_octave;
+					channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
+				}
+				channel.effect = cell.Effect();
+				if (channel.effect != 'R') {
+					channel.tremolo_volume = 0;					
+				}
+				if (channel.effect != 'H' && channel.effect != 'U') {
 					channel.vibrato_depth = 0;
 				}
-				if (channel.is_playing) {
-					WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, self->PlayVolume(channel), sample_offset);	
+				switch(cell.Effect()) {
+					case 'A':
+						self->ticks_per_row_ = cell.EffectValue();
+						break;
+					case 'B':
+						if (cell.EffectValue() < self->song_->NumOrders()) {
+							next_order = cell.EffectValue();
+						}
+						break;
+					case 'C':
+						if (cell.EffectValue() < 64) {
+							next_row = cell.EffectValue();
+						}
+						break;
+					case 'T':
+						self->ticks_per_second_ = cell.EffectValue();
+						WUFSetMixerCallbackPeriod(self->mixer_callback_, MixerCallbackPeriod(self->ticks_per_second_));
+						break;
+					case 'F':
+						if (channel.effect_value >= 0xE0) {
+							channel.period_increment -= (channel.effect_value >= 0xF0 ? 4 : 1) * (channel.effect_value & 0xf);
+							channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
+						}
+						break;
+					case 'E':
+						if (channel.effect_value >= 0xE0) {
+							channel.period_increment += (channel.effect_value >= 0xF0 ? 4 : 1) * (channel.effect_value & 0xf);
+							channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
+						}
+						break;
+					case 'K':
+					case 'D':
+						self->VolumeSlideRow(channel);
+						break;
+					case 'G':
+						self->TonePortamento(channel);
+						break;
+					case 'O':
+						sample_offset = cell.EffectValue() << 8;
+						if (instrument != NULL && instrument->LoopStart != -1 && instrument->LoopEnd != -1 && sample_offset >= instrument->LoopEnd) {
+							// Set loop at start, if offset if beyond the loop end.
+							sample_offset = instrument->LoopStart;
+						}
+						sample_offset <<= 8;	// Format is fixed point 24.8.
+						break;
+					case 'V':
+						WUFSetGlobalVolume(cell.EffectValue());
+						break;
+					case 'S':
+						switch(cell.EffectValue() >> 4) {
+							case 4:
+								channel.tremolo_waveform = cell.EffectValue() & 0xf;
+								break;
+							case 3:
+								channel.vibrato_waveform = cell.EffectValue() & 0xf;
+								break;
+							case 0xd:
+								channel.delayed_cell = cell;
+								channel.remaining_delay_ticks = cell.EffectValue() & 0xf;
+								break;
+						}
+						break;
+					case 'H':
+					case 'U':
+						if (cell.EffectValue() != 0) {
+							channel.vibrato_data = cell.EffectValue();
+						}
+						break;
 				}
-			}			
+			} else {
+				channel.effect = 0xff;
+//				channel.effect_value = 0;
+				channel.tremolo_volume = 0;
+				channel.vibrato_depth = 0;
+			}
+			if (channel.is_playing) {
+				WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, self->PlayVolume(channel), sample_offset);	
+			}
 		}
 		
 		// Clear effects on all channels with empty cells.
@@ -635,9 +645,11 @@ void S3MPlayable::SongChannel::Reset() {
 }
 
 DWORD S3MPlayable::PlayVolume(const SongChannel &channel) const {
-	DWORD instrument_volume = channel.instrument != 0xff ? instruments_[channel.instrument].BaseVolume : 0;
+	if (channel.instrument == 0xff) {
+		return -1;
+	}
 	// ((instrument_volume * channel_volume) << 8) / 64 + tremolo_volume
-	int volume = static_cast<int>((instrument_volume * static_cast<DWORD>(channel.volume)) << (8-6)) + channel.tremolo_volume;
+	int volume = static_cast<int>((instruments_[channel.instrument].BaseVolume * static_cast<DWORD>(channel.volume)) << (8-6)) + channel.tremolo_volume;
 	if (volume <= 0) {
 		return 0;
 	}
