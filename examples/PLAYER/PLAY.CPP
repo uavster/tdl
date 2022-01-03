@@ -27,6 +27,7 @@ void PlaySound(const TWave *sound) {
 
 volatile bool loop = true;
 volatile int pattern_increase = 0;
+volatile bool toggle_play_pause = false;
 
 int EscHandler() {
 	loop = false;
@@ -40,6 +41,11 @@ int LeftKeyHandler() {
 
 int RightKeyHandler() {
 	++pattern_increase;
+	return 0;
+}
+
+int SpaceKeyHandler() {
+	toggle_play_pause = true;
 	return 0;
 }
 
@@ -66,7 +72,8 @@ int main(int argc, char **argv) {
 	add_key(&EscHandler, Key_ESC);
 	add_key(&LeftKeyHandler, Key_Left);
 	add_key(&RightKeyHandler, Key_Right);
-	while(loop) {
+	add_key(&SpaceKeyHandler, Key_SPACE);
+	while(loop) {		
 		// TODO: Do this with an x86 atomic xchg (new atomics library)
 		int pattern_increase_copy = pattern_increase;
 		pattern_increase = 0;
@@ -78,7 +85,16 @@ int main(int argc, char **argv) {
 			while(pattern_increase_copy++ < 0) {
 				song->Backward();
 			}
-		}		
+		}
+		
+		if (toggle_play_pause) {
+			if (song->IsPlaying()) {
+				song->Pause();
+			} else {
+				song->Play();
+			}
+			toggle_play_pause = false;
+		}
 	}
 	printf("Exiting...\n");
 	
