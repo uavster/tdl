@@ -76,6 +76,8 @@ private:
 		
 		BYTE remaining_delay_ticks;
 		S3MCell delayed_cell;
+		
+		BYTE remaining_retrigger_ticks;
 	};
 	// One-to-one correspondence with mixer_channels_
 	SongChannel *song_channels_;
@@ -93,6 +95,7 @@ protected:
 	void VolumeSlideRow(SongChannel &channel);
 	void VolumeSlideTick(SongChannel &channel);
 	void HandleNewNote(const S3MCell &cell, SongChannel &channel, TWave **instrument, DWORD *sample_offset);
+	bool NeedsRetrigger(SongChannel &channel);
 };
 
 #endif

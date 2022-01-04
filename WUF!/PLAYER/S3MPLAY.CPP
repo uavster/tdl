@@ -290,6 +290,9 @@ void S3MPlayable::VibratoTick(SongChannel &channel) {
 }
 
 bool S3MPlayable::EffectsShareMemory(char fx1, char fx2) {
+	if (fx1 == 'Q') {
+		return true;
+	}
 	if ((fx1 == 'H' && fx2 == 'U') || (fx1 == 'U' && fx2 == 'H')) {
 		return true;
 	}
@@ -405,6 +408,12 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 								self->HandleNewNote(channel.delayed_cell, channel, &instrument, &sample_offset);
 							}
 						}
+					}
+					break;
+				case 'Q':
+					if (self->NeedsRetrigger(channel)) {
+						instrument = &self->instruments_[channel.instrument];
+						sample_offset = 0;
 					}
 					break;
 			}
@@ -527,6 +536,19 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 							channel.vibrato_data = cell.EffectValue();
 						}
 						break;
+					case 'Q':
+						// Retrigger differs from Scream Tracker and Impulse Tracker:
+						// Scream Tracker: the effect lasts the duration of the original sample (without retriggering).
+						// Impulse Tracker: the effect lasts while Q is in consecutive rows; Q after row without Q no longer retriggers.
+						// This: the effect last while Q is in consecutive rows; Q after row without Q keeps retriggering.
+						if (channel.remaining_retrigger_ticks == 0xff) { 
+							channel.remaining_retrigger_ticks = channel.effect_value & 0xf;
+						}
+						if (self->NeedsRetrigger(channel)) {
+							instrument = &self->instruments_[channel.instrument];
+							sample_offset = 0;
+						}
+						break;
 				}
 			} else {
 				if (channel.effect == 'G' && !cell.HasNote()) {
@@ -538,6 +560,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 //				channel.effect_value = 0;
 				channel.tremolo_volume = 0;
 				channel.vibrato_depth = 0;
+				channel.remaining_retrigger_ticks = 0xff;
 			}
 			if (channel.is_playing) {
 				WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, self->PlayVolume(channel), sample_offset);	
@@ -656,6 +679,7 @@ void S3MPlayable::SongChannel::Reset() {
 	vibrato_depth = 0;
 	
 	remaining_delay_ticks = 0;
+	remaining_retrigger_ticks = 0xff;
 }
 
 DWORD S3MPlayable::PlayVolume(const SongChannel &channel) const {
@@ -688,4 +712,42 @@ void S3MPlayable::Backward() {
 		--order_;
 	}
 	row_index_ = 0;
+}
+
+bool S3MPlayable::NeedsRetrigger(SongChannel &channel) {
+	if (channel.remaining_retrigger_ticks > 0) {
+		if (--channel.remaining_retrigger_ticks == 0) {
+			channel.remaining_retrigger_ticks = channel.effect_value & 0xf;
+			BYTE retrigger_volume = channel.effect_value >> 4;
+			int volume = channel.volume;
+			if (retrigger_volume > 0 && retrigger_volume <= 5) {
+				volume -= static_cast<DWORD>(1) << (retrigger_volume - 1);
+			} else if (retrigger_volume >= 9 && retrigger_volume <= 0xd) {
+				volume += static_cast<DWORD>(1) << (retrigger_volume - 9);
+			} else {
+				switch(retrigger_volume) {
+					case 6:
+						volume = (volume << 1) / 3;
+						break;
+					case 7:
+						volume = volume >> 1;
+						break;
+					case 0xe:
+						volume = (volume * 3) >> 1;
+						break;
+					case 0xf:
+						volume *= 2;
+						break;
+				}
+			}
+			if (volume < 0) {
+				volume = 0;
+			} else if (volume > 64) {
+				volume = 64;
+			}
+			channel.volume = volume;
+			return true;
+		}
+	}
+	return false;
 }
