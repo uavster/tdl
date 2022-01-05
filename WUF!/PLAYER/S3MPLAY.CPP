@@ -248,18 +248,20 @@ void S3MPlayable::TonePortamento(SongChannel &channel) {
 	DWORD new_freq_mult = FreqMultiplierForNote(channel.note, channel.octave, 0, channel.instrument_freq, channel.vibrato_depth);
 //printf("note:%dn, octave:%dn, last_note:%dn, last_octave:%dn, period_inc: %dn, nfm:%dn, fm:%dn, fxv:%dn\n", channel.note, channel.octave, channel.last_note, channel.last_octave, channel.period_increment, new_freq_mult, channel.freq_multiplier, channel.effect_value);
 	if (new_freq_mult > channel.freq_multiplier) {
-		channel.period_increment -= 4 * channel.effect_value;
-		channel.freq_multiplier = FreqMultiplierForNote(channel.last_note, channel.last_octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
-		if (new_freq_mult < channel.freq_multiplier) {
+		channel.freq_multiplier = FreqMultiplierForNote(channel.last_note, channel.last_octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);		
+		if (new_freq_mult >= channel.freq_multiplier) {
+			channel.period_increment -= 4 * channel.effect_value;
+		} else {
 			channel.last_note = channel.note;
 			channel.last_octave = channel.octave;
 			channel.freq_multiplier = new_freq_mult;
 			channel.period_increment = 0;
 		}
 	} else if (new_freq_mult < channel.freq_multiplier) {
-		channel.period_increment += 4 * channel.effect_value;
 		channel.freq_multiplier = FreqMultiplierForNote(channel.last_note, channel.last_octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
-		if (new_freq_mult > channel.freq_multiplier) {
+		if (new_freq_mult <= channel.freq_multiplier) {
+			channel.period_increment += 4 * channel.effect_value;
+		} else {
 			channel.last_note = channel.note;
 			channel.last_octave = channel.octave;
 			channel.freq_multiplier = new_freq_mult;
