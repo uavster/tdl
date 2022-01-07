@@ -56,18 +56,18 @@ static bool LoadS3MPattern(int pattern_offset, TS3MPattern &pattern, DWORD f) {
 	if (!read_field(&pattern.header, sizeof(TS3MPatternHeader), f)) {
 		return false;
 	}
-	pattern.cells = new BYTE[pattern.header.size];
+	int total_bytes = pattern.header.size - sizeof(pattern.header);
+	pattern.cells = new BYTE[total_bytes];
 	if (pattern.cells == NULL) {
 		return false;
 	}
-	if (!read_field(pattern.cells, pattern.header.size, f)) {
+	if (!read_field(pattern.cells, total_bytes, f)) {
 		return false;
 	}
 	// Build row index.
 	pattern.num_rows = 0;
 	int i = 0;
 	pattern.row_indices[pattern.num_rows] = i;
-	int total_bytes = pattern.header.size - sizeof(pattern.header);
 	while (i < total_bytes) {
 		if (*(BYTE *)&pattern.cells[i] == 0) {
 			++pattern.num_rows;
