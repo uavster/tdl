@@ -6,7 +6,9 @@
 #include "random.h"
 
 S3MPlayable::S3MPlayable(const char *file_name)
-	: Playable(), song_(NULL), min_channel_index_(1), max_channel_index_(0), mixer_channels_(NULL), mixer_callback_(kHMixerCallbackInvalid), num_ticks_(0), row_index_(0), order_(0), instruments_(NULL), song_channels_(NULL), is_playing_(false) {
+	: Playable(), song_(NULL), min_channel_index_(1), max_channel_index_(0), mixer_channels_(NULL), 
+	mixer_callback_(kHMixerCallbackInvalid), num_ticks_(0), row_index_(0), order_(0), next_order_(-1), instruments_(NULL),
+	repeat_row_times_(0xff), song_channels_(NULL), is_playing_(false) {
 	song_ = new S3MSong(file_name);
 	if (!song_->IsLoaded()) {
 		Destroy();
@@ -361,6 +363,68 @@ void S3MPlayable::HandleNewNote(const S3MCell &cell, SongChannel &channel, TWave
 	channel.remaining_delay_ticks = 0;
 }
 
+void S3MPlayable::PrintRow() {
+	// If DOS error mode flag, we cannot call any int 21h service, e.g. printf
+	if (!(IRQDOSFlags() & 0xff) && repeat_row_times_ == 0xff) {
+		// Even if InDOS flag is set, services 1 thru 0ch can be called safely; printf() uses service 2.
+		printf("p:%d02n r:%d02n|", song_->Order(order_), row_index_);
+		const S3MRow *row = song_->Pattern(song_->Order(order_))->Row(row_index_);
+		int channel_number = 0;
+		for (S3MCellIterator it = row->begin(); it != row->end(); it++) {
+			// Unused previous channels.
+			for (; channel_number < it.Cell().ChannelNumber(); ++channel_number) {
+				printf("... .. .. ...");
+				if (channel_number < 31) {
+					printf("|");
+				}
+			}
+			++channel_number;
+			// Print cell data.
+			if (it.Cell().HasNote()) {
+				char note_name[4];
+				it.Cell().GetNoteName(note_name);
+				printf(note_name);
+				printf(" ");
+			} else {
+				if (it.Cell().HasStop()) {
+					printf("^^^ ");
+				} else {
+					printf("... ");
+				}
+			}
+			if (it.Cell().HasInstrument()) {
+				printf("%d02n ", it.Cell().Instrument());
+			} else {
+				printf(".. ");
+			}
+			if (it.Cell().HasVolume()) {
+				printf("%d02n ", it.Cell().Volume());
+			} else {
+				printf(".. ");
+			}
+			if (it.Cell().HasEffect()) {
+				char effect_name[2];
+				effect_name[0] = it.Cell().Effect();
+				effect_name[1] = '\0';
+				printf(effect_name);
+				printf("%d02hn", it.Cell().EffectValue());
+			} else {
+				printf("...");
+			}
+			if (channel_number < 31) {
+				printf("|");
+			}
+		}
+		for (; channel_number < NumMixerChannels(); ++channel_number) {
+			printf("... .. .. ...");
+			if (channel_number < 31) {
+				printf("|");
+			}
+		}
+		printf("\n");
+	}
+}
+
 void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 	S3MPlayable *self = static_cast<S3MPlayable *>(user_pointer);
 	++self->num_ticks_;
@@ -423,9 +487,10 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, self->PlayVolume(channel), sample_offset);
 			}
 		}
-	} else {
+	} else {		
 		// New pattern row.
-		int next_order = -1;
+		self->PrintRow();
+
 		int next_row = -1;
 		int last_read_channel_index = 0;
 		// Interpret song cells.
@@ -434,6 +499,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 		for (int i = 0; i < self->NumMixerChannels(); ++i) {
 			processed_channels[i] = false;
 		}		
+		bool do_trigger_instruments = self->repeat_row_times_ == 0xff;
 		for (S3MCellIterator it = row->begin(); it != row->end(); it++) {
 			S3MCell cell = it.Cell();
 			int mixer_channel_index = self->MixerChannelIndexForCellChannelIndex(cell.ChannelNumber());
@@ -449,7 +515,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				channel.is_playing = false;
 				WUFPauseSound(WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]));
 			} else {
-				if (!cell.HasEffect() || cell.Effect() != 'S' || (cell.EffectValue() >> 4) != 0xd) {
+				if (do_trigger_instruments && (!cell.HasEffect() || cell.Effect() != 'S' || (cell.EffectValue() >> 4) != 0xd)) {
 					self->HandleNewNote(cell, channel, &instrument, &sample_offset);
 				}
 			}
@@ -476,7 +542,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						break;
 					case 'B':
 						if (cell.EffectValue() < self->song_->NumOrders()) {
-							next_order = cell.EffectValue();
+							self->next_order_ = cell.EffectValue();
 						}
 						break;
 					case 'C':
@@ -530,6 +596,13 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 								channel.delayed_cell = cell;
 								channel.remaining_delay_ticks = cell.EffectValue() & 0xf;
 								break;
+							case 0xe:
+								// Pattern delay.
+								if (self->repeat_row_times_ == 0xff) {
+									// 0xff means not set yet in this row.
+									self->repeat_row_times_ = cell.EffectValue() & 0xf;
+								}
+								break;
 						}
 						break;
 					case 'H':
@@ -577,78 +650,32 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 			}
 		}
 		
-		// If DOS error mode flag, we cannot call any int 21h service, e.g. printf
-		if (!(IRQDOSFlags() & 0xff)) {
-			// Even if InDOS flag is set, services 1 thru 0ch can be called safely; printf() uses service 2.
-			printf("p:%d02n r:%d02n|", self->song_->Order(self->order_), self->row_index_);
-			const S3MRow *row = self->song_->Pattern(self->song_->Order(self->order_))->Row(self->row_index_);
-			int channel_number = 0;
-			for (S3MCellIterator it = row->begin(); it != row->end(); it++) {
-				// Unused previous channels.
-				for (; channel_number < it.Cell().ChannelNumber(); ++channel_number) {
-					printf("... .. .. ...");
-					if (channel_number < 31) {
-						printf("|");
-					}
-				}
-				++channel_number;
-				// Print cell data.
-				if (it.Cell().HasNote()) {
-					char note_name[4];
-					it.Cell().GetNoteName(note_name);
-					printf(note_name);
-					printf(" ");
-				} else {
-					if (it.Cell().HasStop()) {
-						printf("^^^ ");
-					} else {
-						printf("... ");
-					}
-				}
-				if (it.Cell().HasInstrument()) {
-					printf("%d02n ", it.Cell().Instrument());
-				} else {
-					printf(".. ");
-				}
-				if (it.Cell().HasVolume()) {
-					printf("%d02n ", it.Cell().Volume());
-				} else {
-					printf(".. ");
-				}
-				if (it.Cell().HasEffect()) {
-					char effect_name[2];
-					effect_name[0] = it.Cell().Effect();
-					effect_name[1] = '\0';
-					printf(effect_name);
-					printf("%d02hn", it.Cell().EffectValue());
-				} else {
-					printf("...");
-				}
-				if (channel_number < 31) {
-					printf("|");
-				}
-			}
-			for (; channel_number < self->NumMixerChannels(); ++channel_number) {
-				printf("... .. .. ...");
-				if (channel_number < 31) {
-					printf("|");
-				}
-			}
-			printf("\n");
-		}
-
 		self->num_ticks_ = 0;
-		if (next_order >= 0) {
-			self->order_ = next_order;
-			self->row_index_ = next_row < 0 ? 0 : next_row;
+		if (self->repeat_row_times_ == 0xff) {
+			self->AdvanceRow(next_row);
 		} else {
-			++self->row_index_;
-			if (self->row_index_ >= self->song_->Pattern(self->song_->Order(self->order_))->NumRows() || next_row >= 0) {
-				self->row_index_ = next_row < 0 ? 0 : next_row;
-				++self->order_;
-				if (self->order_ >= self->song_->NumOrders() || self->song_->Order(self->order_) == 0xff) {
-					self->order_ = 0;
-				}
+			if (self->repeat_row_times_ > 0) {
+				--self->repeat_row_times_;
+			} else {
+				self->AdvanceRow(next_row);
+			}
+		}
+	}
+}
+
+void S3MPlayable::AdvanceRow(int next_row) {
+	repeat_row_times_ = 0xff;
+	if (next_order_ >= 0) {
+		order_ = next_order_;
+		next_order_ = -1;
+		row_index_ = next_row < 0 ? 0 : next_row;
+	} else {
+		++row_index_;
+		if (row_index_ >= song_->Pattern(song_->Order(order_))->NumRows() || next_row >= 0) {
+			row_index_ = next_row < 0 ? 0 : next_row;
+			++order_;
+			if (order_ >= song_->NumOrders() || song_->Order(order_) == 0xff) {
+				order_ = 0;
 			}
 		}
 	}
@@ -681,7 +708,7 @@ void S3MPlayable::SongChannel::Reset() {
 	vibrato_depth = 0;
 	
 	remaining_delay_ticks = 0;
-	remaining_retrigger_ticks = 0xff;
+	remaining_retrigger_ticks = 0xff;	
 }
 
 DWORD S3MPlayable::PlayVolume(const SongChannel &channel) const {

@@ -33,6 +33,7 @@ protected:
 	static DWORD FreqMultiplierForNote(BYTE note, BYTE octave, int period_increment, DWORD instrument_frequency, int vibrato);
 	static DWORD MixerCallbackPeriod(DWORD ticks_per_second);
 	int MixerChannelIndexForCellChannelIndex(int cell_channel_index) const;
+	void PrintRow();
 	
 private:
 	S3MSong *song_;
@@ -43,9 +44,11 @@ private:
 	int num_ticks_;
 	int row_index_;
 	BYTE order_;
+	int next_order_;
 	int ticks_per_second_;
 	int ticks_per_row_;
 	TWave *instruments_;
+	BYTE repeat_row_times_;
 	
 	class SongChannel {
 	public:
@@ -77,7 +80,7 @@ private:
 		BYTE remaining_delay_ticks;
 		S3MCell delayed_cell;
 		
-		BYTE remaining_retrigger_ticks;
+		BYTE remaining_retrigger_ticks;		
 	};
 	// One-to-one correspondence with mixer_channels_
 	SongChannel *song_channels_;
@@ -96,6 +99,7 @@ protected:
 	void VolumeSlideTick(SongChannel &channel);
 	void HandleNewNote(const S3MCell &cell, SongChannel &channel, TWave **instrument, DWORD *sample_offset);
 	bool NeedsRetrigger(SongChannel &channel);
+	void AdvanceRow(int next_row);
 };
 
 #endif
