@@ -80,7 +80,9 @@ private:
 		BYTE remaining_delay_ticks;
 		S3MCell delayed_cell;
 		
-		BYTE remaining_retrigger_ticks;		
+		BYTE remaining_retrigger_ticks;
+		
+		BYTE tremor_remaining_ticks;
 	};
 	// One-to-one correspondence with mixer_channels_
 	SongChannel *song_channels_;
@@ -100,6 +102,8 @@ protected:
 	void HandleNewNote(const S3MCell &cell, SongChannel &channel, TWave **instrument, DWORD *sample_offset);
 	bool NeedsRetrigger(SongChannel &channel);
 	void AdvanceRow(int next_row);
+	void TremorRow(SongChannel &channel);
+	void TremorTick(SongChannel &channel);
 };
 
 #endif

@@ -293,6 +293,19 @@ void S3MPlayable::VibratoTick(SongChannel &channel) {
 	channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
 }
 
+void S3MPlayable::TremorRow(SongChannel &channel) {
+	TremorTick(channel);
+}
+
+void S3MPlayable::TremorTick(SongChannel &channel) {
+	if (channel.tremor_remaining_ticks == 0 || channel.tremor_remaining_ticks == 0xff) {
+		channel.tremor_remaining_ticks = (channel.effect_value >> 4) + (channel.effect_value & 0xf) + 2;
+	}
+	if (channel.tremor_remaining_ticks > 0) {
+		--channel.tremor_remaining_ticks;		
+	}
+}
+
 bool S3MPlayable::EffectsShareMemory(char fx1, char fx2) {
 	if (fx1 == 'Q') {
 		return true;
@@ -348,6 +361,7 @@ void S3MPlayable::HandleNewNote(const S3MCell &cell, SongChannel &channel, TWave
 		channel.octave = cell.Octave();
 		channel.tremolo_index = 0;
 		channel.vibrato_index = 0;
+		channel.tremor_remaining_ticks = 0xff;
 		if (channel.last_note == 0xff) {
 			channel.last_note = channel.note;
 			channel.last_octave = channel.octave;
@@ -481,6 +495,9 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						instrument = &self->instruments_[channel.instrument];
 						sample_offset = 0;
 					}
+					break;
+				case 'I':
+					self->TremorTick(channel);
 					break;
 			}
 			if (channel.is_playing) {
@@ -624,6 +641,9 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 							sample_offset = 0;
 						}
 						break;
+					case 'I':
+						self->TremorRow(channel);						
+						break;
 				}
 			} else {
 				if (channel.effect == 'G' && !cell.HasNote()) {
@@ -709,6 +729,8 @@ void S3MPlayable::SongChannel::Reset() {
 	
 	remaining_delay_ticks = 0;
 	remaining_retrigger_ticks = 0xff;	
+	
+	tremor_remaining_ticks = 0xff;
 }
 
 DWORD S3MPlayable::PlayVolume(const SongChannel &channel) const {
@@ -717,7 +739,7 @@ DWORD S3MPlayable::PlayVolume(const SongChannel &channel) const {
 	}
 	// ((instrument_volume * channel_volume) << 8) / 64 + tremolo_volume
 	int volume = static_cast<int>(static_cast<DWORD>(channel.volume) << 8) + channel.tremolo_volume;
-	if (volume <= 0) {
+	if (volume <= 0 || (channel.tremor_remaining_ticks < (channel.effect_value & 0xf) + 1)) {
 		return 0;
 	}
 	else if (volume >= 64 * 256) {
