@@ -452,9 +452,12 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 	if (self->num_ticks_ < self->ticks_per_row_) {
 		// Update channel states with effects.
 		for (int i = 0; i < self->NumMixerChannels(); ++i) {
+			if (!self->song_->Channel(self->SongChannelIndexForMixerChannelIndex(i))->IsEnabled()) {
+				continue;
+			}
 			TWave *instrument = NULL;
 			DWORD sample_offset = -1;
-			SongChannel &channel = self->song_channels_[i];
+			SongChannel &channel = self->song_channels_[i];			
 			switch(channel.effect) {
 				case 'F':
 					if (channel.effect_value < 0xE0) {
@@ -527,6 +530,9 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 		for (S3MCellIterator it = row->begin(); it != row->end(); it++) {
 			S3MCell cell = it.Cell();
 			int mixer_channel_index = self->MixerChannelIndexForCellChannelIndex(cell.ChannelNumber());
+			if (!self->song_->Channel(self->SongChannelIndexForMixerChannelIndex(mixer_channel_index))->IsEnabled()) {
+				continue;
+			}
 			processed_channels[mixer_channel_index] = true;
 			SongChannel &channel = self->song_channels_[mixer_channel_index];
 			TWave *instrument = NULL;
