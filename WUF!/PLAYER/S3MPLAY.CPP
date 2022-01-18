@@ -41,6 +41,9 @@ S3MPlayable::S3MPlayable(const char *file_name)
 			mixer_channels_[i] = NULL;
 		}
 		song_channels_ = new SongChannel[NumMixerChannels()];
+		for (int k = 0; k < NumMixerChannels(); ++k) {
+			song_channels_[i].panning = song_->IsStereo() ? song_->Channel(SongChannelIndexForMixerChannelIndex(i))->Pan() : 32;
+		}
 	}
 	// Create TWave for each instrument.
 	if (song_->NumInstruments() > 0) {
@@ -115,6 +118,10 @@ int S3MPlayable::MixerChannelIndexForCellChannelIndex(int cell_channel_index) co
 
 static DWORD S3MPlayable::MixerCallbackPeriod(DWORD ticks_per_second) {
 	return ((2500 * 65536) / 1000) / ticks_per_second;
+}
+
+int S3MPlayable::SongChannelIndexForMixerChannelIndex(int mixer_channel_index) const {
+	return  mixer_channel_index + min_channel_index_;
 }
 
 bool S3MPlayable::Play() {

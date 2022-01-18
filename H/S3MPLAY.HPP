@@ -33,6 +33,7 @@ protected:
 	static DWORD FreqMultiplierForNote(BYTE note, BYTE octave, int period_increment, DWORD instrument_frequency, int vibrato);
 	static DWORD MixerCallbackPeriod(DWORD ticks_per_second);
 	int MixerChannelIndexForCellChannelIndex(int cell_channel_index) const;
+	int SongChannelIndexForMixerChannelIndex(int mixer_channel_index) const;
 	void PrintRow();
 	
 private:
@@ -83,6 +84,8 @@ private:
 		BYTE remaining_retrigger_ticks;
 		
 		BYTE tremor_remaining_ticks;
+		
+		BYTE panning;	// 0 = left, 64 = right
 	};
 	// One-to-one correspondence with mixer_channels_
 	SongChannel *song_channels_;

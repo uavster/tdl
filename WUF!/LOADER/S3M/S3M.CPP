@@ -394,8 +394,8 @@ bool S3MChannel::IsEnabled() const {
 
 BYTE S3MChannel::Pan() const {
 	if (song_->pans.channel_pans[index_].has_custom_pan) {
-		return song_->pans.channel_pans[index_].pan;
+		return song_->pans.channel_pans[index_].pan * 4 + 2;
 	} else {
-		return song_->header.channels[index_].type < 8 ? 0 : 15;
+		return song_->header.channels[index_].type < 8 ? 0 : 64;
 	}
 }

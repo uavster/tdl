@@ -92,7 +92,7 @@ public:
 	friend class S3MSong;
 	
 	bool IsEnabled() const;
-	// 0..15, being 0=left and 15=right.
+	// 0..64, being 0=left and 64=right.
 	BYTE Pan() const;
 	
 private:
