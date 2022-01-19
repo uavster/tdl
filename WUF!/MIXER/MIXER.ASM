@@ -831,7 +831,9 @@ local	channel_is_not_looping
 endm
 
 MixStereoS16InMonoBuffer macro
-local sample_loop
+local sample_loop, out_ptr
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr-4],edi
 IfSampleIsLoopingAdjustForLoop 4
 sample_loop:
 		mov		ecx,edx
@@ -842,7 +844,8 @@ sample_loop:
 		movsx	eax,ax
 		add     eax,ecx
 		rol		eax,6	; *64 (volume)
-		add		[edi+ebp*4],eax
+		add		[ebp*4+12345678h],eax
+out_ptr:
 		inc		ebp
 		jz		no_samp_end
 		add     edx,sample_increment
@@ -854,7 +857,10 @@ sample_loop:
 endm
 
 MixStereoS16WithVolumeInMonoBuffer macro
-local sample_loop
+local sample_loop, out_ptr1, out_ptr2
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr1-4],edi
+mov		dword ptr [out_ptr2-4],edi
 IfSampleIsLoopingAdjustForLoop 4
 sample_loop:
 		; Left channel
@@ -863,7 +869,8 @@ sample_loop:
 		mov     eax,[ebx+ecx*4]
 		movsx   eax,ax
 		ScaleSampleByVolume16		
-		add		[edi+ebp*4],eax
+		add		[ebp*4+12345678h],eax
+out_ptr1:
 		; Right channel
 		mov		ecx,edx
 		shr		ecx,8
@@ -871,7 +878,8 @@ sample_loop:
 		shr		eax,16
 		movsx	eax,ax
 		ScaleSampleByVolume16
-		add		[edi+ebp*4],eax
+		add		[ebp*4+12345678h],eax
+out_ptr2:
 		inc		ebp
 		jz		no_samp_end
 		add     edx,sample_increment
@@ -883,14 +891,17 @@ sample_loop:
 endm
 
 MixMonoS16InMonoBuffer macro
-local sample_loop
+local sample_loop, out_ptr
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr-4],edi
 IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
 		movsx   eax,word ptr [ebx+ecx*2]
 		rol		eax,EXPANSION_BITS+6	; Expand to match 16+1 bits in stereo16, *64 (volume)
-		add		[edi+ebp*4],eax
+		add		[ebp*4+12345678h],eax
+out_ptr:
 		inc		ebp
 		jz		no_samp_end
 		add     edx,sample_increment
@@ -902,7 +913,9 @@ sample_loop:
 endm
 
 MixMonoS16WithVolumeInMonoBuffer macro
-local sample_loop
+local sample_loop, out_ptr
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr-4],edi
 IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		ecx,edx
@@ -910,7 +923,8 @@ sample_loop:
 		movsx   eax,word ptr [ebx+ecx*2]
 		ScaleSampleByVolume16
 		rol		eax,EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
-		add		[edi+ebp*4],eax
+		add		[ebp*4+12345678h],eax
+out_ptr:
 		inc		ebp
 		jz		no_samp_end
 		add     edx,sample_increment
@@ -922,7 +936,9 @@ sample_loop:
 endm
 
 MixStereoU8InMonoBuffer macro
-local sample_loop
+local sample_loop, out_ptr
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr-4],edi
 IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		ecx,edx
@@ -934,7 +950,8 @@ sample_loop:
 		movsx	eax,al
 		add		eax,ecx
 		rol		eax,8+6	; Expand to match 16+1 bits in stereo16, *64 (volume)
-		add		[edi+ebp*4],eax
+		add		[ebp*4+12345678h],eax
+out_ptr:
 		inc		ebp
 		jz		no_samp_end
 		add     edx,sample_increment
@@ -946,7 +963,9 @@ sample_loop:
 endm
 
 MixStereoU8WithVolumeInMonoBuffer macro
-local sample_loop
+local sample_loop, out_ptr
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr-4],edi
 IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		eax,edx
@@ -963,7 +982,8 @@ sample_loop:
 		
 		add		eax,ecx
 		rol		eax,8	; Expand to match 16+1 bits in stereo16
-		add		[edi+ebp*4],eax
+		add		[ebp*4+12345678h],eax
+out_ptr:
 		inc		ebp
 		jz		no_samp_end
 		add     edx,sample_increment
@@ -975,7 +995,9 @@ sample_loop:
 endm
 
 MixMonoU8InMonoBuffer macro
-local sample_loop
+local sample_loop, out_ptr
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr-4],edi
 IfSampleIsLoopingAdjustForLoop 1
 sample_loop:
 		mov		ecx,edx
@@ -984,7 +1006,8 @@ sample_loop:
 		sub		al,128
 		movsx	eax,al
 		rol		eax,8+EXPANSION_BITS+6	; Expand to match 16+1 bits in stereo16, *64 (volume)
-		add		[edi+ebp*4],eax
+		add		[ebp*4+12345678h],eax
+out_ptr:
 		inc		ebp
 		jz		no_samp_end
 		add     edx,sample_increment
@@ -996,7 +1019,9 @@ sample_loop:
 endm
 
 MixMonoU8WithVolumeInMonoBuffer macro
-local sample_loop
+local sample_loop, out_ptr
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr-4],edi
 IfSampleIsLoopingAdjustForLoop 1
 sample_loop:
 		mov		ecx,edx
@@ -1006,7 +1031,8 @@ sample_loop:
 		movsx	eax,al
 		ScaleSampleByVolume8
 		rol		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
-		add		[edi+ebp*4],eax
+		add		[ebp*4+12345678h],eax
+out_ptr:
 		inc		ebp
 		jz		no_samp_end
 		add     edx,sample_increment
@@ -1118,7 +1144,11 @@ MixChannelToMono	endp
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
 MixStereoS16WithVolume macro
-local sample_loop
+local sample_loop, out_ptr_left, out_ptr_right
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr_left-4],edi
+mov		dword ptr [out_ptr_right-4],edi
+add		dword ptr [out_ptr_right-4],4
 IfSampleIsLoopingAdjustForLoop 4
 sample_loop:		
 		; Precondition: EDX = Current sample index (fixed point 24.8)
@@ -1129,7 +1159,8 @@ sample_loop:
 		movsx   eax,ax	; eax = left channel
 		ScaleSampleByVolume16
 		rol		eax,EXPANSION_BITS
-		add		[edi+ebp*8],eax
+		add		[ebp*8+12345678h],eax
+out_ptr_left:
 		
 		; Precondition: EDX = Current sample index (fixed point 24.8)
 		; Load right channel sample in EAX
@@ -1140,7 +1171,8 @@ sample_loop:
 		movsx	eax,ax	; eax = right channel
 		ScaleSampleByVolume16
 		rol		eax,EXPANSION_BITS
-		add		[edi+ebp*8+4],eax
+		add		[ebp*8+4+12345678h],eax
+out_ptr_right:
 		
 		inc		ebp
 		jz		no_samp_end_s
@@ -1153,7 +1185,11 @@ sample_loop:
 endm
 
 MixStereoS16 macro
-local sample_loop
+local sample_loop, out_ptr_left, out_ptr_right
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr_left-4],edi
+mov		dword ptr [out_ptr_right-4],edi
+add		dword ptr [out_ptr_right-4],4
 IfSampleIsLoopingAdjustForLoop 4
 sample_loop:
 		mov		ecx,edx
@@ -1164,8 +1200,10 @@ sample_loop:
 		movsx	eax,ax	; eax = right channel
 		rol		ecx,EXPANSION_BITS+6	; *64 (volume)
 		rol		eax,EXPANSION_BITS+6	; *64 (volume)
-		add		[edi+ebp*8],ecx
-		add		[edi+ebp*8+4],eax
+		add		[ebp*8+12345678h],ecx
+out_ptr_left:
+		add		[ebp*8+4+12345678h],eax
+out_ptr_right:
 		inc		ebp
 		jz		no_samp_end_s
 		add     edx,sample_increment
@@ -1177,7 +1215,11 @@ sample_loop:
 endm
 
 MixMonoS16WithVolume macro
-local sample_loop
+local sample_loop, out_ptr_left, out_ptr_right
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr_left-4],edi
+mov		dword ptr [out_ptr_right-4],edi
+add		dword ptr [out_ptr_right-4],4
 IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		ecx,edx
@@ -1185,8 +1227,10 @@ sample_loop:
 		movsx   eax,word ptr [ebx+ecx*2]
 		ScaleSampleByVolume16
 		rol		eax,EXPANSION_BITS
-		add		[edi+ebp*8],eax
-		add		[edi+ebp*8+4],eax
+		add		[ebp*8+12345678h],eax
+out_ptr_left:
+		add		[ebp*8+4+12345678h],eax
+out_ptr_right:
 		inc		ebp
 		jz		no_samp_end_s
 		add     edx,sample_increment
@@ -1198,15 +1242,21 @@ sample_loop:
 endm
 
 MixMonoS16 macro
-local sample_loop
+local sample_loop, out_ptr_left, out_ptr_right
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr_left-4],edi
+mov		dword ptr [out_ptr_right-4],edi
+add		dword ptr [out_ptr_right-4],4
 IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
 		movsx   eax,word ptr [ebx+ecx*2]
 		rol		eax,EXPANSION_BITS+6	; *64 (volume)
-		add		[edi+ebp*8],eax
-		add		[edi+ebp*8+4],eax
+		add		[ebp*8+12345678h],eax
+out_ptr_left:
+		add		[ebp*8+4+12345678h],eax
+out_ptr_right:
 		inc		ebp
 		jz		no_samp_end_s
 		add     edx,sample_increment
@@ -1218,7 +1268,11 @@ sample_loop:
 endm
 
 MixStereoU8WithVolume macro
-local sample_loop
+local sample_loop, out_ptr_left, out_ptr_right
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr_left-4],edi
+mov		dword ptr [out_ptr_right-4],edi
+add		dword ptr [out_ptr_right-4],4
 IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		eax,edx
@@ -1229,11 +1283,13 @@ sample_loop:
 		movsx	eax,cl	; left channel
 		ScaleSampleByVolume8
 		rol		eax,8+EXPANSION_BITS
-		add		[edi+ebp*8],eax
+		add		[ebp*8+12345678h],eax
+out_ptr_left:
 		movsx	eax,ch	; right channel
 		ScaleSampleByVolume8
 		rol		eax,8+EXPANSION_BITS
-		add		[edi+ebp*8+4],eax
+		add		[ebp*8+4+12345678h],eax
+out_ptr_right:
 		inc		ebp
 		jz		no_samp_end_s
 		add     edx,sample_increment
@@ -1245,7 +1301,11 @@ sample_loop:
 endm
 
 MixStereoU8 macro
-local sample_loop
+local sample_loop, out_ptr_left, out_ptr_right
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr_left-4],edi
+mov		dword ptr [out_ptr_right-4],edi
+add		dword ptr [out_ptr_right-4],4
 IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		ecx,edx
@@ -1257,8 +1317,10 @@ sample_loop:
 		movsx	eax,al	; eax = left channel
 		rol		ecx,8+EXPANSION_BITS+6	; *64 (volume)
 		rol		eax,8+EXPANSION_BITS+6	; *64 (volume)
-		add		[edi+ebp*8],eax
-		add		[edi+ebp*8+4],ecx
+		add		[ebp*8+12345678h],eax
+out_ptr_left:
+		add		[ebp*8+4+12345678h],ecx
+out_ptr_right:
 		inc		ebp
 		jz		no_samp_end_s
 		add     edx,sample_increment
@@ -1270,7 +1332,11 @@ sample_loop:
 endm
 
 MixMonoU8WithVolume macro
-local sample_loop
+local sample_loop, out_ptr_left, out_ptr_right
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr_left-4],edi
+mov		dword ptr [out_ptr_right-4],edi
+add		dword ptr [out_ptr_right-4],4
 IfSampleIsLoopingAdjustForLoop 1
 sample_loop:
 		mov		ecx,edx
@@ -1280,8 +1346,10 @@ sample_loop:
 		movsx	eax,al
 		ScaleSampleByVolume8		
 		rol		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
-		add		[edi+ebp*8],eax
-		add		[edi+ebp*8+4],eax
+		add		[ebp*8+12345678h],eax
+out_ptr_left:
+		add		[ebp*8+4+12345678h],eax
+out_ptr_right:
 		inc		ebp
 		jz		no_samp_end_s
 		add     edx,sample_increment
@@ -1293,7 +1361,11 @@ sample_loop:
 endm
 
 MixMonoU8 macro
-local sample_loop
+local sample_loop, out_ptr_left, out_ptr_right
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr_left-4],edi
+mov		dword ptr [out_ptr_right-4],edi
+add		dword ptr [out_ptr_right-4],4
 IfSampleIsLoopingAdjustForLoop 1
 sample_loop:
 		mov		ecx,edx
@@ -1302,8 +1374,10 @@ sample_loop:
 		sub		al,128
 		movsx	eax,al
 		rol		eax,8+EXPANSION_BITS+6	; Expand to match 16+1 bits in stereo16, *64 (volume)
-		add		[edi+ebp*8],eax
-		add		[edi+ebp*8+4],eax
+		add		[ebp*8+12345678h],eax
+out_ptr_left:
+		add		[ebp*8+4+12345678h],eax
+out_ptr_right:
 		inc		ebp
 		jz		no_samp_end_s
 		add     edx,sample_increment
