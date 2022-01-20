@@ -30,6 +30,7 @@ ReservedChannelKeyHandler	proc
 		mov		edx,channel_volume
 		mov		ecx,frequency_multiplier
 		xor		esi,esi
+		mov		edi,32
         call    WUFPlaySound		
 		xor		eax,eax		; Do not chain with default ISR
 		ret
@@ -46,6 +47,7 @@ AnyFreeChannelKeyHandler	proc
 				mov		edx,channel_volume
 				mov		ecx,frequency_multiplier
 				xor		esi,esi
+				mov		edi,32
 				call    WUFPlaySound		
 		no_more_free_channels:
 		xor		eax,eax		; Do not chain with default ISR

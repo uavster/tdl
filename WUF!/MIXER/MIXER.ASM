@@ -401,9 +401,9 @@ WUFAllocateChannel		proc
 		call	SearchFreeChannel
 		pop		eax
 		jc		no_free_channel_found
-		and		eax,MIXER_CHANNEL_AUTO_FREE	; only MIXER_CHANNEL_AUTO_FREE is supported
-		or		eax,MIXER_CHANNEL_ALLOCATED
-		mov		[TChannel ptr ebx.Flags],eax
+		and		al,MIXER_CHANNEL_AUTO_FREE	; only MIXER_CHANNEL_AUTO_FREE is supported
+		or		al,MIXER_CHANNEL_ALLOCATED
+		mov		[TChannel ptr ebx.Flags],al
 		popf
 		clc
 		ret
@@ -527,19 +527,21 @@ CopyBackChannelPoolToFront	proc
 				; Always copy channel flags, so that IRQ knows which channels were allocated and which channels to autofree.
 				; Clear the edited flag so that editions inside the audio IRQ from higher priority IRQs are sensed,
 				; and the interface does not keep pushing the one-time changes to the audio IRQ.
-				mov		eax,[TChannel ptr esi.Flags]
-				mov		ebx,eax
-				and		eax,NOT MIXER_CHANNEL_EDITED
-				mov		[TChannel ptr esi.Flags],eax
-				mov		[TChannel ptr edi.Flags],eax
+				mov		al,[TChannel ptr esi.Flags]
+				mov		bl,al
+				and		al,NOT MIXER_CHANNEL_EDITED
+				mov		[TChannel ptr esi.Flags],al
+				mov		[TChannel ptr edi.Flags],al
 				
-				test	ebx,MIXER_CHANNEL_EDITED
+				test	bl,MIXER_CHANNEL_EDITED
 				jz		dont_copy_unedited_channel
 						; Copy channel data except for flags
 						push	esi edi ecx		
-						mov		ecx,size TChannel-4	; size TChannel-size TChannel.Flags does not work (equals 0)
-						add		esi,4	; size TChannel.Flags does not work (equals 0)
-						add		edi,4	; size TChannel.Flags does not work (equals 0)
+						mov		ecx,size TChannel-2	; size TChannel-size TChannel.Flags-size Reserved does not work (equals 0)
+						add		esi,2	; size TChannel.Flags+size Reserved does not work (equals 0)
+						add		edi,2	; size TChannel.Flags+size Reserved does not work (equals 0)
+						cld
+						; When entering the IRQ, we set ES = DS
 						call	Memcopy
 						pop		ecx edi esi
 				dont_copy_unedited_channel:
@@ -558,19 +560,21 @@ CopyFrontChannelPoolToBack	proc
 		cli
 		copy_front_to_back:
 				; Always copy channel allocation status, so that the API knows which channels were auto freed (or allocated in the callback)
-				mov		eax,[TChannel ptr esi.Flags]
-				and		eax,NOT MIXER_CHANNEL_EDITED	; Clear edited flag introduced by mixer callback (via WUFPlaySound) to avoid propagation to back channels
-				xchg	[TChannel ptr edi.Flags],eax
+				mov		al,[TChannel ptr esi.Flags]
+				and		al,NOT MIXER_CHANNEL_EDITED	; Clear edited flag introduced by mixer callback (via WUFPlaySound) to avoid propagation to back channels
+				xchg	[TChannel ptr edi.Flags],al
 				
 				; If the channel was edited from the API in the middle of the audio IRQ, do not copy back the channel data,
 				; as it would overwrite API-passed values, which have priority.
-				test	eax,MIXER_CHANNEL_EDITED
+				test	al,MIXER_CHANNEL_EDITED
 				jnz		dont_copy_edited_channel	; TODO: Copy values that are "left as is" for continuity
 						; Otherwise, copy channel data except for flags
 						push	esi edi ecx		
-						mov		ecx,size TChannel-4	; size TChannel-size TChannel.Flags does not work (equals 0)
-						add		esi,4	; size TChannel.Flags does not work (equals 0)
-						add		edi,4	; size TChannel.Flags does not work (equals 0)
+						mov		ecx,size TChannel-2	; size TChannel-size TChannel.Flags-size Reserved does not work (equals 0)
+						add		esi,2	; size TChannel.Flags+size Reserved does not work (equals 0)
+						add		edi,2	; size TChannel.Flags+size Reserved does not work (equals 0)
+						cld
+						; When entering the IRQ, we set ES = DS
 						call	Memcopy
 						pop		ecx edi esi
 				dont_copy_edited_channel:
@@ -601,6 +605,7 @@ CopyFrontChannelPoolToBack	endp
 ;		   ESI = New wave offset (fixed point 24.8), or -1 to leave as is. 
 ;				 The sound won't loop if the offset is beyond the loop end. 
 ;				 No sound is played if the offset is beyond the sound end.
+;		   EDI = Panning, from 0 (left) to 64 (right), or -1 to leave as is.
 ;
 ; OUTPUT : CF = 0 if no error
 ;               EAX = NO_ERROR
@@ -613,9 +618,12 @@ WUFPlaySound       proc
 		cli
 		
 		; For safety, check that the channel was actually allocated
-		mov		edi,[TChannel ptr ebx.Flags]
-		and		edi,MIXER_CHANNEL_ALLOCATED
-		AssertDword edi, _NE, 0
+		push	eax
+		movzx	eax,[TChannel ptr ebx.Flags]
+		and		eax,MIXER_CHANNEL_ALLOCATED
+		AssertDword eax, _NE, 0
+		pop		eax
+		
 		; If this function runs outside an IRQ, the audio IRQ will not touch the channel state from here.
 		; If this function runs inside an IRQ, it could be one with higher priority than the audio IRQ (e.g. keyboard).
 		; In such case, we could be changing channel state in the middle of channel mixing.
@@ -646,8 +654,17 @@ WUFPlaySound       proc
 		; Set volume.
 		cmp		edx,-1
 		jz		leave_volume_as_is
-				mov		[TChannel ptr ebx.Volume],edx
+				mov		[TChannel ptr ebx.Volume],dl
 		leave_volume_as_is:
+		
+		; Set panning.
+		cmp		edi,-1
+		jz		leave_panning_as_is
+				push	eax
+				mov		eax,edi
+				mov		[TChannel ptr ebx.Panning],al
+				pop		eax
+		leave_panning_as_is:
 		
 		; Recalculate sample increment
 		cmp		ecx,-1
@@ -700,7 +717,7 @@ WUFPlaySound       endp
 ; INPUT  : EBX -> TChannel where sound is playing
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 WUFPauseSound	proc
-	or		[TChannel ptr ebx.flags],MIXER_CHANNEL_IS_PAUSED
+	or		[TChannel ptr ebx.Flags],MIXER_CHANNEL_IS_PAUSED
 	ret
 WUFPauseSound	endp
 
@@ -1061,7 +1078,7 @@ MixChannelToMono	proc
 		mov		ecx,[TChannel ptr eax.SampleIncrement]
 		mov		sample_increment,ecx
 		; Volume table offset
-		mov		ecx,[TChannel ptr eax.Volume]
+		movzx	ecx,[TChannel ptr eax.Volume]
 		shl		ecx,8+2
 		add		ecx,VolumeTable
 		mov		volume_table_ptr,ecx
@@ -1406,7 +1423,7 @@ MixChannelToStereo	proc
 		mov		ecx,[TChannel ptr eax.SampleIncrement]
 		mov		sample_increment,ecx
 		; Volume table offset
-		mov		ecx,[TChannel ptr eax.Volume]
+		movzx	ecx,[TChannel ptr eax.Volume]
 		shl		ecx,8+2
 		add		ecx,VolumeTable
 		mov		volume_table_ptr,ecx

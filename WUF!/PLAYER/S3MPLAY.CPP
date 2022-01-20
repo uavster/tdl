@@ -511,7 +511,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					break;
 			}
 			if (channel.is_playing) {
-				WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, self->PlayVolume(channel), sample_offset);
+				WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[i]), channel.freq_multiplier, self->PlayVolume(channel), channel.panning, sample_offset);
 			}
 		}
 	} else {		
@@ -671,7 +671,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				channel.remaining_retrigger_ticks = 0xff;
 			}
 			if (channel.is_playing) {
-				WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, self->PlayVolume(channel), sample_offset);	
+				WUFPlaySound(instrument, WUFChannelInCallback(self->mixer_channels_[mixer_channel_index]), channel.freq_multiplier, self->PlayVolume(channel), channel.panning, sample_offset);	
 			}
 		}
 		

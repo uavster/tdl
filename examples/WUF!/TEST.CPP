@@ -27,7 +27,7 @@ void PlaySound(const TWave *sound) {
 		printf("Unable to allocate channel.\n");
 		return;
 	}
-	WUFPlaySound(sound, channel, 1 << 24, 64, 0);
+	WUFPlaySound(sound, channel, 1 << 24, 64, 32, 0);
 }
 
 void MixerCallback(HMixerCallback callback_handler, void *user_pointer) {

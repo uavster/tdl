@@ -109,12 +109,14 @@ int WUFSetProperties(const SoundProperties *play_props, const SoundProperties *r
 #define kMixerChannelAutoFree		4
 									
 typedef struct {
-		DWORD Flags;			 	// Channel flags (see above)
+		BYTE Flags;				 	// Channel flags (see above)
+		BYTE Reserved;
+		BYTE Volume;				// Volume from 0 (silent) to 64 (original volume)
+		BYTE Panning;				// Panning from 0 (left) to 64 (right)
         TWave *ChanWave;			// Pointer to TWave structure or NULL if not active
 		DWORD FreqMultiplier; 		// Fixed point 8.24
 		DWORD SampleIncrement;		// Fixed point 24.8
         DWORD CurrentSample;		// Fixed point 24.8
-		DWORD Volume;				// Volume from 0 (silent) to 64 (original volume)
 } TChannel;
 
 typedef void * HMixerCallback;
@@ -300,8 +302,8 @@ void WUFFreeChannels(int num_channels, TChannel **channels);
 ;					FREQUENCY_TOO_HIGH: Base frequency * multiplier > 16,776,960 Hz
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 */
-int WUFPlaySound(const TWave *wave, TChannel *channel, DWORD freq_multiplier, DWORD volume, DWORD sample_offset);
-#pragma aux WUFPlaySound "*"	parm [eax] [ebx] [ecx] [edx] [esi]\
+int WUFPlaySound(const TWave *wave, TChannel *channel, DWORD freq_multiplier, DWORD volume, DWORD panning, DWORD sample_offset);
+#pragma aux WUFPlaySound "*"	parm [eax] [ebx] [ecx] [edx] [edi] [esi]\
 								modify [eax ebx ecx edx esi edi ebp]\
 								value [eax];
 

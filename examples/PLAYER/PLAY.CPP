@@ -16,15 +16,6 @@ TWave *LoadWaveOrDie(const char *file_name) {
 	return wave;
 }
 
-void PlaySound(const TWave *sound) {
-	TChannel *channel = WUFAllocateChannel(kWUFChannelAutoFree);
-	if (channel == NULL) {
-		printf("Unable to allocate channel.\n");
-		return;
-	}
-	WUFPlaySound(sound, channel, 1 << 24, 64, 0);
-}
-
 volatile bool loop = true;
 volatile int pattern_increase = 0;
 volatile bool toggle_play_pause = false;
