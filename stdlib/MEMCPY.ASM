@@ -58,7 +58,7 @@ Normal_MemCopy  proc
 aligned_to_word:
     test    edi, 10b
     jz      aligned_to_dword
-    stosw
+    movsw
     sub     ecx, 2
     jz      finmemcopy
 aligned_to_dword:
@@ -77,15 +77,16 @@ buclecopydwords:
     inc     ecx
     mov     [edi+ecx*4], eax
     jnz     buclecopydwords
-
+	
+	add		edi, 4
 nodwords:
-    shr     edx, 1
-    jnc     nooddword
-    stosw
+	test	edx, 10b
+    jz     	nooddword
+    movsw
 nooddword:
-    shr     edx, 1
-    jnc     finmemcopy
-    stosb
+    test	edx, 1
+    jz     	finmemcopy
+    movsb
 finmemcopy:
     ret
     endp
