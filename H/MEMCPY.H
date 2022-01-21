@@ -11,7 +11,7 @@
   extern "C" {
 #endif
 
-void memcpy(void *dest, void *src, DWORD len);
+void memcpy(void *dest, const void *src, DWORD len);
 #pragma aux memcpy =      \
   "   push    ecx"        \
   "   shr     ecx, 2"     \
