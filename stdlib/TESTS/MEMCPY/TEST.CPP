@@ -58,6 +58,12 @@ void amemcpyTest(const char *name, const BYTE *expected_buffer, const DWORD len)
 	CheckResult(expected_buffer, test_output, len);
 }
 
+void memcpyTest(const char *name, const BYTE *expected_buffer, const DWORD len) {
+	NewTest(name);
+	memcpy(test_output, expected_buffer, len);
+	CheckResult(expected_buffer, test_output, len);
+}
+
 int main() {
 	// Our malloc guarantees 4-byte alignment of the buffer.
 	BYTE *expected_buffer = (BYTE *)malloc(kTestBufferSize);
@@ -104,6 +110,47 @@ int main() {
 
 	amemcpyTest("amemcpy() nothing", expected_buffer, 0);
 	
+	memcpyTest("memcpy() multiple dwords", expected_buffer, kTestBufferSize);
+	memcpyTest("memcpy() multiple dwords, word", expected_buffer, kTestBufferSize - 2);
+	memcpyTest("memcpy() multiple dwords, byte", expected_buffer, kTestBufferSize - 3);
+	memcpyTest("memcpy() multiple dwords, word, byte", expected_buffer, kTestBufferSize - 1);
+	
+	memcpyTest("memcpy() byte, multiple dwords", expected_buffer + 3, kTestBufferSize - 3);
+	memcpyTest("memcpy() byte, multiple dwords, word", expected_buffer + 3, kTestBufferSize - 1);
+	memcpyTest("memcpy() byte, multiple dwords, byte", expected_buffer + 3, kTestBufferSize - 2);
+	memcpyTest("memcpy() byte, multiple dwords, word, byte", expected_buffer + 3, kTestBufferSize - 4);
+	
+	memcpyTest("memcpy() word, multiple dwords", expected_buffer + 2, kTestBufferSize - 2);
+	memcpyTest("memcpy() word, multiple dwords, word", expected_buffer + 2, kTestBufferSize - 4);
+	memcpyTest("memcpy() word, multiple dwords, byte", expected_buffer + 2, kTestBufferSize - 5);
+	memcpyTest("memcpy() word, multiple dwords, word, byte", expected_buffer + 2, kTestBufferSize - 3);
+	
+	memcpyTest("memcpy() byte, word, multiple dwords", expected_buffer + 1, kTestBufferSize - 1);
+	memcpyTest("memcpy() byte, word, multiple dwords, word", expected_buffer + 1, kTestBufferSize - 3);
+	memcpyTest("memcpy() byte, word, multiple dwords, byte", expected_buffer + 1, kTestBufferSize - 4);
+	memcpyTest("memcpy() byte, word, multiple dwords, word, byte", expected_buffer + 1, kTestBufferSize - 2);
+	
+	memcpyTest("memcpy() dword", expected_buffer, 4);
+	memcpyTest("memcpy() word", expected_buffer, 2);
+
+	memcpyTest("memcpy() word", expected_buffer + 2, 2);
+	memcpyTest("memcpy() word, byte", expected_buffer, 3);
+	memcpyTest("memcpy() word, word", expected_buffer + 2, 4);
+	memcpyTest("memcpy() word, word, byte", expected_buffer + 2, 5);
+	memcpyTest("memcpy() word, dword", expected_buffer + 2, 6);
+	
+	memcpyTest("memcpy() byte, byte", expected_buffer + 1, 2);
+	memcpyTest("memcpy() byte, word", expected_buffer + 1, 3);
+	memcpyTest("memcpy() byte, word, byte", expected_buffer + 1, 4);
+	memcpyTest("memcpy() byte, word, word", expected_buffer + 1, 5);
+	memcpyTest("memcpy() byte, word, word, byte", expected_buffer + 1, 6);
+	
+	memcpyTest("memcpy() byte-aligned byte", expected_buffer + 1, 1);
+	memcpyTest("memcpy() word-aligned byte", expected_buffer + 2, 1);
+	memcpyTest("memcpy() dword-aligned byte", expected_buffer, 1);
+
+	memcpyTest("memcpy() nothing", expected_buffer, 0);	
+
 	free(expected_buffer);
 	return 0;
 }
