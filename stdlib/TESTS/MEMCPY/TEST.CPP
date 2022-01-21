@@ -151,6 +151,8 @@ int main() {
 
 	memcpyTest("memcpy() nothing", expected_buffer, 0);	
 
+	printf("[SUCCESS] %dn tests passed.", num_tests);
+
 	free(expected_buffer);
 	return 0;
 }
