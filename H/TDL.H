@@ -76,6 +76,8 @@
 
 #include <irq.h>
 
+#include <memcpy.h>
+
 #ifdef __cplusplus
   };
 #endif

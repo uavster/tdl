@@ -62,17 +62,6 @@ void memset(void *ptr, BYTE c, DWORD len);
   "   rep     stosb"      \
   parm [edi] [al] [ecx] modify [eax edi ecx edx];
 
-void memcpy(void *dest, void *src, DWORD len);
-#pragma aux memcpy =      \
-  "   push    ecx"        \
-  "   shr     ecx, 2"     \
-  "   cld"                \
-  "   rep     movsd"      \
-  "   pop     ecx"        \
-  "   and     ecx, 3"     \
-  "   rep     movsb"      \
-  parm [edi] [esi] [ecx] modify [edi esi ecx];
-
 #define exit _exit_
 void _exit_(BYTE);
 #pragma aux _exit_ "*" parm [al]\
