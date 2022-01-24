@@ -1096,6 +1096,7 @@ MixChannelToMono	proc
 				; 16-bit signed samples
 				test    [esi.WaveType],10b
 				jz      mono16
+						call	SetVolumeTablePointersForChannel_Stereo						
 						mov		esi,volume_table_ptr
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_s16_m
@@ -1108,6 +1109,7 @@ MixChannelToMono	proc
 								jmp		wave_mixed
 								
 				mono16:
+						call	SetVolumeTablePointersForChannel_Mono
 						mov		esi,volume_table_ptr
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_m16_m
@@ -1121,6 +1123,7 @@ MixChannelToMono	proc
 				; 8-bit unsigned samples
 				test	[esi.WaveType],10b
 				jz		mono8
+						call	SetVolumeTablePointersForChannel_Stereo
 						mov		esi,volume_table_ptr
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_s8_m
@@ -1133,6 +1136,7 @@ MixChannelToMono	proc
 								jmp		wave_mixed
 								
 				mono8:
+						call	SetVolumeTablePointersForChannel_Mono
 						mov		esi,volume_table_ptr
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_m8_m
@@ -1435,6 +1439,7 @@ endm
 ;		   CF = 1 if channel went inactive
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 MixChannelToStereo	proc
+		call	SetVolumeTablePointersForChannel_Stereo
 		; Number of loops = min(NumOutputSamples, esi.WaveLen - eax.CurrentSample) 
 		mov		ecx,[TChannel ptr eax.SampleIncrement]
 		mov		sample_increment,ecx
@@ -1516,13 +1521,28 @@ MixChannelToStereo	proc
 MixChannelToStereo	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-; Sets the volume pointers to the right rows given the channel volume and panning
+; Sets the volume table pointer to the right row given the channel volume in mono output
+;
+; INPUT  : EAX -> TChannel structure
+; OUTPUT : volume_table_ptr -> volume table row channel volume
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetVolumeTablePointersForChannel_Mono	proc
+		; Set volume table offset
+		movzx	ecx,[TChannel ptr eax.Volume]
+		shl		ecx,8+2
+		add		ecx,VolumeTable
+		mov		volume_table_ptr,ecx
+		ret
+SetVolumeTablePointersForChannel_Mono	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Sets the volume table pointers to the right rows given the channel volume and panning in stereo output
 ;
 ; INPUT  : EAX -> TChannel structure
 ; OUTPUT : volume_table_ptr -> volume table row for (channel_volume * (64 - channel_panning) / 64)
 ; 		   volume_table_ptr_right -> volume table row for (channel_volume * channel_panning / 64)
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-SetVolumeTablePointersForChannel	proc
+SetVolumeTablePointersForChannel_Stereo	proc
 		; Set volume table offsets
 		push	ebx
 		; Left channel volume: volume * (64 - panning) / 64
@@ -1549,7 +1569,7 @@ SetVolumeTablePointersForChannel	proc
 		mov		volume_table_ptr_right,ecx
 		pop		ebx
 		ret
-SetVolumeTablePointersForChannel	endp
+SetVolumeTablePointersForChannel_Stereo	endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Mixes all active channels
@@ -1627,7 +1647,6 @@ endif
 					shl		ecx,8
 					cmp     edx,ecx
 					jae		channel_mixed
-							call	SetVolumeTablePointersForChannel
 							cmp		NumOutputChannels,2
 							jz		stereo_output
 									call	MixChannelToMono
