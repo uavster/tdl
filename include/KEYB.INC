@@ -97,3 +97,5 @@ Key_Q			equ		10h
 Key_A			equ		1eh
 Key_W			equ		11h
 Key_S			equ		1fh
+Key_E			equ		12h		
+Key_D			equ		20h

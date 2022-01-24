@@ -758,23 +758,23 @@ WUFSetGlobalVolume	endp
 ; OUTPUT : EAX = Signed 16-bit sample scaled by volume
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
-ScaleSampleByVolume8	macro
+ScaleSampleByVolume8	macro	volume_table_ptr_reg
 	local	is_negative_u8
 	local	volume_done_u8
 	cmp		eax,7fffffffh	; 1
 	ja		is_negative_u8	; 1 (not jump) or 3 (jump)
-			mov		eax,[esi+eax*4]	; 1
+			mov		eax,[volume_table_ptr_reg+eax*4]	; 1
 ;			shr		eax,6	; 2
 			jmp 	volume_done_u8	; 3
 	is_negative_u8:
 			neg		eax		; 1
-			mov		eax,[esi+eax*4]	; 1
+			mov		eax,[volume_table_ptr_reg+eax*4]	; 1
 ;			shr		eax,6	; 2
 			neg		eax		; 1
 	volume_done_u8:
 endm
 
-ScaleSampleByVolume16	macro
+ScaleSampleByVolume16	macro	volume_table_ptr_reg
 	local	is_negative_s16
 	local	volume_done_s16
 	cmp		eax,7fffffffh	; 1
@@ -782,10 +782,10 @@ ScaleSampleByVolume16	macro
 			mov		ecx,eax	; 1
 
 			shr		eax,8	; 2
-			mov		eax,[esi+eax*4]	; 1
+			mov		eax,[volume_table_ptr_reg+eax*4]	; 1
 			shl		eax,8	; 2
 			xor		ch,ch	; 1
-			add		eax,[esi+ecx*4]	; 2	(may be better as mov+add in 386)
+			add		eax,[volume_table_ptr_reg+ecx*4]	; 2	(may be better as mov+add in 386)
 
 ;			shr		eax,6	; 2
 
@@ -795,11 +795,11 @@ ScaleSampleByVolume16	macro
 			mov		ecx,eax	; 1
 
 			shr		eax,8	; 2
-			mov		eax,[esi+eax*4]	; 1
+			mov		eax,[volume_table_ptr_reg+eax*4]	; 1
 			shl		eax,8	; 2
 
 			xor		ch,ch	; 1
-			add		eax,[esi+ecx*4]	; 2
+			add		eax,[volume_table_ptr_reg+ecx*4]	; 2
 
 ;			shr		eax,6	; 2
 			neg		eax		; 1
@@ -878,6 +878,7 @@ local sample_loop, out_ptr1, out_ptr2
 ; Edit code to include output offset as literal
 mov		dword ptr [out_ptr1-4],edi
 mov		dword ptr [out_ptr2-4],edi
+mov		edi,volume_table_ptr_right
 IfSampleIsLoopingAdjustForLoop 4
 sample_loop:
 		; Left channel
@@ -885,7 +886,7 @@ sample_loop:
 		shr		ecx,8
 		mov     eax,[ebx+ecx*4]
 		movsx   eax,ax
-		ScaleSampleByVolume16		
+		ScaleSampleByVolume16 esi
 		add		[ebp*4+12345678h],eax
 out_ptr1:
 		; Right channel
@@ -894,7 +895,7 @@ out_ptr1:
 		mov     eax,[ebx+ecx*4]
 		shr		eax,16
 		movsx	eax,ax
-		ScaleSampleByVolume16
+		ScaleSampleByVolume16 edi
 		add		[ebp*4+12345678h],eax
 out_ptr2:
 		inc		ebp
@@ -938,7 +939,7 @@ sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
 		movsx   eax,word ptr [ebx+ecx*2]
-		ScaleSampleByVolume16
+		ScaleSampleByVolume16 esi
 		rol		eax,EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
 		add		[ebp*4+12345678h],eax
 out_ptr:
@@ -983,6 +984,7 @@ MixStereoU8WithVolumeInMonoBuffer macro
 local sample_loop, out_ptr
 ; Edit code to include output offset as literal
 mov		dword ptr [out_ptr-4],edi
+mov		edi,volume_table_ptr_right
 IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		eax,edx
@@ -990,12 +992,12 @@ sample_loop:
 		mov		cx,[ebx+eax*2]
 		sub		cl,128		
 		movsx	eax,cl
-		ScaleSampleByVolume8
+		ScaleSampleByVolume8 esi
 		
 		sub		ch,128
 		movsx	ecx,ch
 		xchg	eax,ecx
-		ScaleSampleByVolume8
+		ScaleSampleByVolume8 edi
 		
 		add		eax,ecx
 		rol		eax,8	; Expand to match 16+1 bits in stereo16
@@ -1046,7 +1048,7 @@ sample_loop:
 		mov   	al,byte ptr [ebx+ecx]
 		sub		al,128
 		movsx	eax,al
-		ScaleSampleByVolume8
+		ScaleSampleByVolume8 esi
 		rol		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
 		add		[ebp*4+12345678h],eax
 out_ptr:
@@ -1077,11 +1079,6 @@ MixChannelToMono	proc
 		; Number of loops = min(NumOutputSamples, esi.WaveLen - eax.CurrentSample)
 		mov		ecx,[TChannel ptr eax.SampleIncrement]
 		mov		sample_increment,ecx
-		; Volume table offset
-		movzx	ecx,[TChannel ptr eax.Volume]
-		shl		ecx,8+2
-		add		ecx,VolumeTable
-		mov		volume_table_ptr,ecx
 		; wave_len = min([esi.WaveLen], [esi.LoopEnd])
 		mov		ecx,[esi.WaveLen]
 		cmp		ecx,[esi.LoopEnd]
@@ -1102,6 +1099,8 @@ MixChannelToMono	proc
 						mov		esi,volume_table_ptr
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_s16_m
+						cmp		[TChannel ptr eax.Panning],32
+						jne		mix_with_volume_s16_m
 								MixStereoS16InMonoBuffer
 								jmp		wave_mixed
 						mix_with_volume_s16_m:
@@ -1125,6 +1124,8 @@ MixChannelToMono	proc
 						mov		esi,volume_table_ptr
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_s8_m
+						cmp		[TChannel ptr eax.Panning],32
+						jne		mix_with_volume_s8_m
 								MixStereoU8InMonoBuffer
 								jmp		wave_mixed
 						mix_with_volume_s8_m:
@@ -1166,6 +1167,7 @@ local sample_loop, out_ptr_left, out_ptr_right
 mov		dword ptr [out_ptr_left-4],edi
 mov		dword ptr [out_ptr_right-4],edi
 add		dword ptr [out_ptr_right-4],4
+mov		edi,volume_table_ptr_right
 IfSampleIsLoopingAdjustForLoop 4
 sample_loop:		
 		; Precondition: EDX = Current sample index (fixed point 24.8)
@@ -1174,7 +1176,7 @@ sample_loop:
 		shr		ecx,8
 		mov     eax,[ebx+ecx*4]
 		movsx   eax,ax	; eax = left channel
-		ScaleSampleByVolume16
+		ScaleSampleByVolume16 esi
 		rol		eax,EXPANSION_BITS
 		add		[ebp*8+12345678h],eax
 out_ptr_left:
@@ -1186,7 +1188,7 @@ out_ptr_left:
 		mov     eax,[ebx+ecx*4]
 		shr		eax,16
 		movsx	eax,ax	; eax = right channel
-		ScaleSampleByVolume16
+		ScaleSampleByVolume16 edi
 		rol		eax,EXPANSION_BITS
 		add		[ebp*8+4+12345678h],eax
 out_ptr_right:
@@ -1237,15 +1239,21 @@ local sample_loop, out_ptr_left, out_ptr_right
 mov		dword ptr [out_ptr_left-4],edi
 mov		dword ptr [out_ptr_right-4],edi
 add		dword ptr [out_ptr_right-4],4
+mov		edi,volume_table_ptr_right
 IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
 		movsx   eax,word ptr [ebx+ecx*2]
-		ScaleSampleByVolume16
+		ScaleSampleByVolume16 esi
 		rol		eax,EXPANSION_BITS
 		add		[ebp*8+12345678h],eax
 out_ptr_left:
+		mov		ecx,edx
+		shr		ecx,8
+		movsx   eax,word ptr [ebx+ecx*2]
+		ScaleSampleByVolume16 edi
+		rol		eax,EXPANSION_BITS		
 		add		[ebp*8+4+12345678h],eax
 out_ptr_right:
 		inc		ebp
@@ -1290,6 +1298,7 @@ local sample_loop, out_ptr_left, out_ptr_right
 mov		dword ptr [out_ptr_left-4],edi
 mov		dword ptr [out_ptr_right-4],edi
 add		dword ptr [out_ptr_right-4],4
+mov		edi,volume_table_ptr_right
 IfSampleIsLoopingAdjustForLoop 2
 sample_loop:
 		mov		eax,edx
@@ -1298,12 +1307,12 @@ sample_loop:
 		sub		ch,128
 		sub		cl,128
 		movsx	eax,cl	; left channel
-		ScaleSampleByVolume8
+		ScaleSampleByVolume8 esi
 		rol		eax,8+EXPANSION_BITS
 		add		[ebp*8+12345678h],eax
 out_ptr_left:
 		movsx	eax,ch	; right channel
-		ScaleSampleByVolume8
+		ScaleSampleByVolume8 edi
 		rol		eax,8+EXPANSION_BITS
 		add		[ebp*8+4+12345678h],eax
 out_ptr_right:
@@ -1354,6 +1363,7 @@ local sample_loop, out_ptr_left, out_ptr_right
 mov		dword ptr [out_ptr_left-4],edi
 mov		dword ptr [out_ptr_right-4],edi
 add		dword ptr [out_ptr_right-4],4
+mov		edi,volume_table_ptr_right
 IfSampleIsLoopingAdjustForLoop 1
 sample_loop:
 		mov		ecx,edx
@@ -1361,10 +1371,14 @@ sample_loop:
 		mov   	al,byte ptr [ebx+ecx]
 		sub		al,128
 		movsx	eax,al
-		ScaleSampleByVolume8		
+		mov		ecx,eax
+		ScaleSampleByVolume8 esi		
 		rol		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
 		add		[ebp*8+12345678h],eax
 out_ptr_left:
+		mov		eax,ecx
+		ScaleSampleByVolume8 edi		
+		rol		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
 		add		[ebp*8+4+12345678h],eax
 out_ptr_right:
 		inc		ebp
@@ -1414,6 +1428,8 @@ endm
 ;		   ESI -> ChanWave structure
 ;		   EDI -> offset MixingBuffer + MixBytesPerSample(4) * NumOutputChannels(2) * (NumOutputSamples + MixOffsetSamples)
 ;		   EBP = -NumOutputSamples
+;		   wave_table_ptr -> Row of volume table for the channel volume and panning
+;		   wave_table_ptr_right -> Row of volume table for the channel volume and panning
 ; OUTPUT : EDX = Current sample index (fixed point 24.8)
 ;		   CF = 0 if channel is still active
 ;		   CF = 1 if channel went inactive
@@ -1422,11 +1438,7 @@ MixChannelToStereo	proc
 		; Number of loops = min(NumOutputSamples, esi.WaveLen - eax.CurrentSample) 
 		mov		ecx,[TChannel ptr eax.SampleIncrement]
 		mov		sample_increment,ecx
-		; Volume table offset
-		movzx	ecx,[TChannel ptr eax.Volume]
-		shl		ecx,8+2
-		add		ecx,VolumeTable
-		mov		volume_table_ptr,ecx
+		
 		; wave_len = min([esi.WaveLen], [esi.LoopEnd])
 		mov		ecx,[esi.WaveLen]
 		cmp		ecx,[esi.LoopEnd]
@@ -1439,6 +1451,7 @@ MixChannelToStereo	proc
 		mov		wave_loop_start,ecx
 		
 		; Choose inner loop depending on sample type
+		push	edi
 		test    [esi.WaveType],1
 		jz      its_8_bits_s
 				; 16-bit signed samples
@@ -1447,6 +1460,8 @@ MixChannelToStereo	proc
 						mov		esi,volume_table_ptr
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_s16
+						cmp		[TChannel ptr eax.Panning],32
+						jne		mix_with_volume_s16
 								MixStereoS16
 								jmp		wave_mixed_s
 						mix_with_volume_s16:
@@ -1457,6 +1472,8 @@ MixChannelToStereo	proc
 						mov		esi,volume_table_ptr
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_m16
+						cmp		[TChannel ptr eax.Panning],32
+						jne		mix_with_volume_m16
 								MixMonoS16
 								jmp		wave_mixed_s
 						mix_with_volume_m16:
@@ -1470,27 +1487,69 @@ MixChannelToStereo	proc
 						mov		esi,volume_table_ptr
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_s8
+						cmp		[TChannel ptr eax.Panning],32
+						jne		mix_with_volume_s8
 								MixStereoU8
 								jmp		wave_mixed_s
 						mix_with_volume_s8:
 								MixStereoU8WithVolume
 								jmp		wave_mixed_s
 				mono8_s:
-						mov		esi,volume_table_ptr
+						mov		esi,volume_table_ptr						
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_m8
+						cmp		[TChannel ptr eax.Panning],32
+						jne		mix_with_volume_m8
 								MixMonoU8
 								jmp		wave_mixed_s
 						mix_with_volume_m8:
 								MixMonoU8WithVolume
 								jmp		wave_mixed_s
 		wave_mixed_s:
+		pop		edi
 		stc
 		ret
 		no_samp_end_s:
+		pop		edi
 		clc
 		ret
 MixChannelToStereo	endp
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+; Sets the volume pointers to the right rows given the channel volume and panning
+;
+; INPUT  : EAX -> TChannel structure
+; OUTPUT : volume_table_ptr -> volume table row for (channel_volume * (64 - channel_panning) / 64)
+; 		   volume_table_ptr_right -> volume table row for (channel_volume * channel_panning / 64)
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+SetVolumeTablePointersForChannel	proc
+		; Set volume table offsets
+		push	ebx
+		; Left channel volume: volume * (64 - panning) / 64
+		mov		ebx,64
+		movzx	ecx,[TChannel ptr eax.Panning]
+		sub		ebx,ecx
+		shl		ebx,8+2
+		add		ebx,VolumeTable
+		movzx	ecx,[TChannel ptr eax.Volume]
+		mov		ecx,[ebx+4*ecx]
+		shr		ecx,6
+		shl		ecx,8+2
+		add		ecx,VolumeTable
+		mov		volume_table_ptr,ecx
+		; Right channel volume: volume * panning / 64
+		movzx	ebx,[TChannel ptr eax.Panning]
+		shl		ebx,8+2
+		add		ebx,VolumeTable
+		movzx	ecx,[TChannel ptr eax.Volume]
+		mov		ecx,[ebx+4*ecx]
+		shr		ecx,6
+		shl		ecx,8+2
+		add		ecx,VolumeTable
+		mov		volume_table_ptr_right,ecx
+		pop		ebx
+		ret
+SetVolumeTablePointersForChannel	endp
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Mixes all active channels
@@ -1568,6 +1627,7 @@ endif
 					shl		ecx,8
 					cmp     edx,ecx
 					jae		channel_mixed
+							call	SetVolumeTablePointersForChannel
 							cmp		NumOutputChannels,2
 							jz		stereo_output
 									call	MixChannelToMono
@@ -1672,7 +1732,7 @@ endif
 				
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
-				ScaleSampleByVolume8
+				ScaleSampleByVolume8 esi
 				sar		eax,6
 				
 				; Signed -> unsigned
@@ -1706,7 +1766,7 @@ endif
 				
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
-				ScaleSampleByVolume16
+				ScaleSampleByVolume16 esi
 				sar		eax,6
 				
 				; Write output
@@ -1742,7 +1802,7 @@ endif
 				
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
-				ScaleSampleByVolume8
+				ScaleSampleByVolume8 esi
 				sar		eax,6
 
 				; Compress right channel
@@ -1761,7 +1821,7 @@ endif
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
 				xchg	eax,edx
-				ScaleSampleByVolume8
+				ScaleSampleByVolume8 esi
 				sar		eax,6
 				xchg	eax,edx				
 				
@@ -1808,7 +1868,7 @@ endif
 				
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
-				ScaleSampleByVolume16
+				ScaleSampleByVolume16 esi
 				sar		eax,6
 				
 				; Scale 
@@ -1828,7 +1888,7 @@ endif
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
 				xchg	eax,edx
-				ScaleSampleByVolume16
+				ScaleSampleByVolume16 esi
 				sar		eax,6
 				xchg	eax,edx
 				
@@ -1890,6 +1950,7 @@ sample_increment		dd ?
 wave_loop_start			dd ?
 
 volume_table_ptr		dd ?
+volume_table_ptr_right	dd ?
 VolumeTable				dd ?
 
 MissingMixerBufferSamples	dd ?

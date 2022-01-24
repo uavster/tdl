@@ -23,6 +23,9 @@ FREQ_MULTIPLIER_INCREMENT	EQU (1 SHL (24 - 4))	; 1/16 in fixed point 8.24
 CHANNEL_VOLUME_INCREMENT	EQU 1
 CHANNEL_VOLUME_MAX			EQU 64
 
+CHANNEL_PANNING_INCREMENT	EQU 1
+CHANNEL_PANNING_MAX			EQU 64
+
 ReservedChannelKeyHandler	proc
 		sub		eax,Key_1
 		mov		ebx,[mixer_channels+eax*4]
@@ -30,7 +33,7 @@ ReservedChannelKeyHandler	proc
 		mov		edx,channel_volume
 		mov		ecx,frequency_multiplier
 		xor		esi,esi
-		mov		edi,32
+		mov		edi,channel_panning
         call    WUFPlaySound		
 		xor		eax,eax		; Do not chain with default ISR
 		ret
@@ -47,7 +50,7 @@ AnyFreeChannelKeyHandler	proc
 				mov		edx,channel_volume
 				mov		ecx,frequency_multiplier
 				xor		esi,esi
-				mov		edi,32
+				mov		edi,channel_panning
 				call    WUFPlaySound		
 		no_more_free_channels:
 		xor		eax,eax		; Do not chain with default ISR
@@ -109,7 +112,31 @@ DecChannelVolume	proc
 		xor		eax,eax		; Do not chain with default ISR
 		ret
 		endp
+		
+IncChannelPanning	proc
+		cmp		channel_panning,CHANNEL_PANNING_MAX-CHANNEL_PANNING_INCREMENT
+		ja		max_channel_panning
+				add		channel_panning,CHANNEL_PANNING_INCREMENT
+				xor		eax,eax		; Do not chain with default ISR
+				ret
+		max_channel_panning:
+		mov		channel_panning,CHANNEL_PANNING_MAX
+		xor		eax,eax		; Do not chain with default ISR
+		ret
+		endp
 
+DecChannelPanning	proc
+		cmp		channel_panning,CHANNEL_PANNING_INCREMENT
+		jb		zero_channel_panning
+				sub		channel_panning,CHANNEL_PANNING_INCREMENT
+				xor		eax,eax		; Do not chain with default ISR
+				ret
+		zero_channel_panning:
+		mov		channel_panning,0
+		xor		eax,eax		; Do not chain with default ISR
+		ret
+		endp
+		
 MixerCallback	proc
 		; Do not call printf if a DOS service was interrupted, 
 		; as it would reenter DOS through service 40h, which might crash.
@@ -180,6 +207,13 @@ start:
 		call	add_key
 		mov		al,Key_S
 		mov		ebx,offset DecChannelVolume
+		call	add_key
+		
+		mov		al,Key_E
+		mov		ebx,offset IncChannelPanning
+		call	add_key
+		mov		al,Key_D
+		mov		ebx,offset DecChannelPanning
 		call	add_key
 		
 		mov		ebx,offset DefaultKeyHandler
@@ -302,6 +336,7 @@ wcps			dd ?
 exit_loop		db 0
 frequency_multiplier	dd 1 SHL 24	; Fixed point 8.24
 channel_volume			dd 64
+channel_panning			dd 32
 
 comment #
 sound_struc     TWave <0,offset my_sound,50000,44000,?>

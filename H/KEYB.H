@@ -83,6 +83,8 @@ int is_key_pressed(int sc);
 #define Key_A			1eh
 #define Key_W			11h
 #define Key_S			1fh
+#define Key_E			12h		
+#define Key_D			20h
 
 #ifdef __cplusplus
   };
