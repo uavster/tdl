@@ -42,7 +42,7 @@ S3MPlayable::S3MPlayable(const char *file_name)
 		}
 		song_channels_ = new SongChannel[NumMixerChannels()];
 		for (int k = 0; k < NumMixerChannels(); ++k) {
-			song_channels_[i].panning = song_->IsStereo() ? song_->Channel(SongChannelIndexForMixerChannelIndex(i))->Pan() : 32;
+			song_channels_[k].panning = song_->IsStereo() ? song_->Channel(SongChannelIndexForMixerChannelIndex(k))->Pan() : 32;
 		}
 	}
 	// Create TWave for each instrument.
