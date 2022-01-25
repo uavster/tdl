@@ -124,11 +124,11 @@ OpenMixer       proc
 		
 		; Create channel volume table.
 		; Each int32_t table entry at (volume,sample) contains (volume*sample), 
-		; where sample is within [0,255], and volume is within [0,64].
+		; where sample is within [0,255], and volume is within [0,256].
 		; How to scale samples by their volume:
 		; 8-bit: scaled_sample = sing(sample) * volume_table[volume][abs(sample)] >> 6
 		; 16-bit: scaled_sample = sign(sample) * ((volume_table[volume][abs(sample) >> 8] << 8) + volume_table[volume][abs(sample) & 0xff]) >> 6
-		mov		ecx,65*256*4
+		mov		ecx,257*256*4
 		call	malloc
 		ErrorExit "Unable to allocate volume table."
 		mov		VolumeTable,ebx
@@ -148,7 +148,7 @@ OpenMixer       proc
 				inc		bl
 				jnz		loop_sample_values
 		inc		ecx
-		cmp		ecx,65
+		cmp		ecx,257
 		jnz		loop_volumes
 
 		mov		eax,64
@@ -743,7 +743,7 @@ WUFSetGlobalVolume	proc
 		pushf
 		cli
 		AssertD 	eax,_leu,64
-		shl			eax,8+2
+		shl			eax,2+8+2	; volume_units * num_rows_per_volume_unit (256/64=4) * sample_values_per_row (256) * sizeof(DWORD) (4)
 		add			eax,VolumeTable
 		mov			GlobalVolumeTablePtr,eax
 		popf
@@ -860,7 +860,7 @@ sample_loop:
 		shr		eax,16
 		movsx	eax,ax
 		add     eax,ecx
-		rol		eax,6	; *64 (volume)
+		rol		eax,6+2	; *64*4 (volume)
 		add		[ebp*4+12345678h],eax
 out_ptr:
 		inc		ebp
@@ -917,7 +917,7 @@ sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
 		movsx   eax,word ptr [ebx+ecx*2]
-		rol		eax,EXPANSION_BITS+6	; Expand to match 16+1 bits in stereo16, *64 (volume)
+		rol		eax,EXPANSION_BITS+6+2	; Expand to match 16+1 bits in stereo16, *64*4 (volume)
 		add		[ebp*4+12345678h],eax
 out_ptr:
 		inc		ebp
@@ -967,7 +967,7 @@ sample_loop:
 		movsx	ecx,ah
 		movsx	eax,al
 		add		eax,ecx
-		rol		eax,8+6	; Expand to match 16+1 bits in stereo16, *64 (volume)
+		rol		eax,8+6+2	; Expand to match 16+1 bits in stereo16, *64*4 (volume)
 		add		[ebp*4+12345678h],eax
 out_ptr:
 		inc		ebp
@@ -1024,7 +1024,7 @@ sample_loop:
 		mov   	al,byte ptr [ebx+ecx]
 		sub		al,128
 		movsx	eax,al
-		rol		eax,8+EXPANSION_BITS+6	; Expand to match 16+1 bits in stereo16, *64 (volume)
+		rol		eax,8+EXPANSION_BITS+6+2	; Expand to match 16+1 bits in stereo16, *64*4 (volume)
 		add		[ebp*4+12345678h],eax
 out_ptr:
 		inc		ebp
@@ -1221,8 +1221,8 @@ sample_loop:
 		movsx   ecx,ax	; ecx = left channel
 		shr		eax,16
 		movsx	eax,ax	; eax = right channel
-		rol		ecx,EXPANSION_BITS+6	; *64 (volume)
-		rol		eax,EXPANSION_BITS+6	; *64 (volume)
+		rol		ecx,EXPANSION_BITS+6+2	; *64*4 (volume)
+		rol		eax,EXPANSION_BITS+6+2	; *64*4 (volume)
 		add		[ebp*8+12345678h],ecx
 out_ptr_left:
 		add		[ebp*8+4+12345678h],eax
@@ -1281,7 +1281,7 @@ sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
 		movsx   eax,word ptr [ebx+ecx*2]
-		rol		eax,EXPANSION_BITS+6	; *64 (volume)
+		rol		eax,EXPANSION_BITS+6+2	; *64*4 (volume)
 		add		[ebp*8+12345678h],eax
 out_ptr_left:
 		add		[ebp*8+4+12345678h],eax
@@ -1345,8 +1345,8 @@ sample_loop:
 		sub		al,128
 		movsx	ecx,ah	; ecx = right channel
 		movsx	eax,al	; eax = left channel
-		rol		ecx,8+EXPANSION_BITS+6	; *64 (volume)
-		rol		eax,8+EXPANSION_BITS+6	; *64 (volume)
+		rol		ecx,8+EXPANSION_BITS+6+2	; *64*4 (volume)
+		rol		eax,8+EXPANSION_BITS+6+2	; *64*4 (volume)
 		add		[ebp*8+12345678h],eax
 out_ptr_left:
 		add		[ebp*8+4+12345678h],ecx
@@ -1408,7 +1408,7 @@ sample_loop:
 		mov   	al,byte ptr [ebx+ecx]
 		sub		al,128
 		movsx	eax,al
-		rol		eax,8+EXPANSION_BITS+6	; Expand to match 16+1 bits in stereo16, *64 (volume)
+		rol		eax,8+EXPANSION_BITS+6+2	; Expand to match 16+1 bits in stereo16, *64*4 (volume)
 		add		[ebp*8+12345678h],eax
 out_ptr_left:
 		add		[ebp*8+4+12345678h],eax
@@ -1529,7 +1529,7 @@ MixChannelToStereo	endp
 SetVolumeTablePointersForChannel_Mono	proc
 		; Set volume table offset
 		movzx	ecx,[TChannel ptr eax.Volume]
-		shl		ecx,8+2
+		shl		ecx,2+8+2		; volume_units * num_rows_per_volume_unit (256/64=4) * sample_values_per_row (256) * sizeof(DWORD) (4)
 		add		ecx,VolumeTable
 		mov		volume_table_ptr,ecx
 		ret
@@ -1549,22 +1549,22 @@ SetVolumeTablePointersForChannel_Stereo	proc
 		mov		ebx,64
 		movzx	ecx,[TChannel ptr eax.Panning]
 		sub		ebx,ecx
-		shl		ebx,8+2
+		shl		ebx,2+8+2	; volume_units * num_rows_per_volume_unit (256/64=4) * sample_values_per_row (256) * sizeof(DWORD) (4)
 		add		ebx,VolumeTable
 		movzx	ecx,[TChannel ptr eax.Volume]
 		mov		ecx,[ebx+4*ecx]
-		shr		ecx,6
-		shl		ecx,8+2
+		shr		ecx,6		; Values in volume table are pre-multiplied by volume dynamic range
+		shl		ecx,2+8	; volume_units * num_rows_per_volume_unit (256/64=4) * sample_values_per_row (256) * sizeof(DWORD) (4)
 		add		ecx,VolumeTable
 		mov		volume_table_ptr,ecx
 		; Right channel volume: volume * panning / 64
 		movzx	ebx,[TChannel ptr eax.Panning]
-		shl		ebx,8+2
+		shl		ebx,2+8+2	; volume_units * num_rows_per_volume_unit (256/64=4) * sample_values_per_row (256) * sizeof(DWORD) (4)
 		add		ebx,VolumeTable
 		movzx	ecx,[TChannel ptr eax.Volume]
 		mov		ecx,[ebx+4*ecx]
-		shr		ecx,6
-		shl		ecx,8+2
+		shr		ecx,6		; Values in volume table are pre-multiplied by volume dynamic range
+		shl		ecx,2+8	; volume_units * num_rows_per_volume_unit (256/64=4) * sample_values_per_row (256) * sizeof(DWORD) (4)
 		add		ecx,VolumeTable
 		mov		volume_table_ptr_right,ecx
 		pop		ebx
@@ -1740,8 +1740,8 @@ endif
 				; Compress
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*4]
-				lea		eax,[eax*4+eax]			; Compression factor *5
-				sar		eax,4+8+EXPANSION_BITS+6	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /64 (volume normalization)s
+				lea		eax,[eax*4+eax]				; Compression factor *5
+				sar		eax,4+8+EXPANSION_BITS+6+2	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
 				; Saturate
 				cmp		eax,127
 				jg		sat_m8_pos
@@ -1752,7 +1752,7 @@ endif
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
 				ScaleSampleByVolume8 esi
-				sar		eax,6
+				sar		eax,6+2		; ~ /(64*4)
 				
 				; Signed -> unsigned
 				add		al,128
@@ -1774,8 +1774,8 @@ endif
 				; Compress
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*4]
-				lea		eax,[eax*4+eax]			; Compression factor *5
-				sar		eax,4+EXPANSION_BITS+6	; Compression factor /16, EXPANSION_BITS, /64 (volume normalization)
+				lea		eax,[eax*4+eax]				; Compression factor *5
+				sar		eax,4+EXPANSION_BITS+6+2	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
 				; Saturate
 				cmp		eax,32767
 				jg		sat_m16_pos
@@ -1786,7 +1786,7 @@ endif
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
 				ScaleSampleByVolume16 esi
-				sar		eax,6
+				sar		eax,6+2		; ~ /(64*4)
 				
 				; Write output
 				mov		[edi+ebx*2],ax
@@ -1809,8 +1809,8 @@ endif
 				; Compress left channel
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*8]
-				lea		eax,[eax*4+eax]			; Compression factor *5
-				sar		eax,4+8+EXPANSION_BITS+6	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /64 (volume normalization)
+				lea		eax,[eax*4+eax]				; Compression factor *5
+				sar		eax,4+8+EXPANSION_BITS+6+2	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
 				
 				; Saturate left channel
 				cmp		eax,127
@@ -1822,13 +1822,13 @@ endif
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
 				ScaleSampleByVolume8 esi
-				sar		eax,6
+				sar		eax,6+2		; ~ /(64*4)
 
 				; Compress right channel
 				mov		esi,MixingBuffer
 				mov		edx,[esi+ebx*8+4]
-				lea		edx,[edx*4+edx]			; Compression factor *5
-				sar		edx,4+8+EXPANSION_BITS+6	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /64 (volume normalization)
+				lea		edx,[edx*4+edx]				; Compression factor *5
+				sar		edx,4+8+EXPANSION_BITS+6+2	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
 				
 				; Saturate right channel
 				cmp		edx,127
@@ -1871,8 +1871,8 @@ endif
 				; Compress left channel
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*8]
-				lea		eax,[eax*4+eax]			; Compression factor *5
-				sar		eax,4+EXPANSION_BITS+6	; Compression factor /16, EXPANSION_BITS, /64 (volume normalization)
+				lea		eax,[eax*4+eax]				; Compression factor *5
+				sar		eax,4+EXPANSION_BITS+6+2	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
 
 				; Saturate left channel (cycles 386,486)
 				cmp		eax,32767		; 2, 1
@@ -1888,14 +1888,14 @@ endif
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
 				ScaleSampleByVolume16 esi
-				sar		eax,6
+				sar		eax,6+2		; ~ /(64*4)
 				
 				; Scale 
 				; Compress right channel
 				mov		esi,MixingBuffer
 				mov		edx,[esi+ebx*8+4]
-				lea		edx,[edx*4+edx]			; Compression factor *5
-				sar		edx,4+EXPANSION_BITS+6	; Compression factor /16, EXPANSION_BITS, /64 (volume normalization)
+				lea		edx,[edx*4+edx]				; Compression factor *5
+				sar		edx,4+EXPANSION_BITS+6+2	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
 
 				; Saturate right channel (same timing as left channel saturation)
 				cmp		edx,32767
@@ -1908,7 +1908,7 @@ endif
 				mov		esi,GlobalVolumeTablePtr
 				xchg	eax,edx
 				ScaleSampleByVolume16 esi
-				sar		eax,6
+				sar		eax,6+2		; ~ /(64*4)
 				xchg	eax,edx
 				
 				; Write output
