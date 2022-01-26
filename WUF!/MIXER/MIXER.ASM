@@ -903,6 +903,53 @@ out_ptr2:
 		IfSampleLoopsGoTo sample_loop,4
 endm
 
+MixStereoS16AllLeftInMonoBuffer macro
+local sample_loop, out_ptr1, out_ptr2
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr1-4],edi
+IfSampleIsLoopingAdjustForLoop 4
+sample_loop:
+		; Left channel
+		mov		ecx,edx
+		shr		ecx,8
+		movsx   eax,word ptr [ebx+ecx*4]
+		ScaleSampleByVolume16 esi
+		add		[ebp*4+12345678h],eax
+out_ptr1:
+		inc		ebp
+		jz		no_samp_end
+		add     edx,sample_increment
+		mov		ecx,wave_len
+		shl		ecx,8
+		cmp     edx,ecx
+		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,4
+endm
+
+MixStereoS16AllRightInMonoBuffer macro
+local sample_loop, out_ptr1, out_ptr2
+; Edit code to include output offset as literal
+mov		dword ptr [out_ptr1-4],edi
+mov		edi,volume_table_ptr_right
+IfSampleIsLoopingAdjustForLoop 4
+sample_loop:
+		; Right channel
+		mov		ecx,edx
+		shr		ecx,8
+		movsx   eax,word ptr [ebx+ecx*4+2]
+		ScaleSampleByVolume16 edi
+		add		[ebp*4+12345678h],eax
+out_ptr1:
+		inc		ebp
+		jz		no_samp_end
+		add     edx,sample_increment
+		mov		ecx,wave_len
+		shl		ecx,8
+		cmp     edx,ecx
+		jb		sample_loop
+		IfSampleLoopsGoTo sample_loop,4
+endm
+
 MixMonoS16InMonoBuffer macro
 local sample_loop, out_ptr
 ; Edit code to include output offset as literal
@@ -1100,7 +1147,17 @@ MixChannelToMono	proc
 								MixStereoS16InMonoBuffer
 								jmp		wave_mixed
 						mix_with_volume_s16_m:
+						cmp		[TChannel ptr eax.Panning],0
+						je		mix_all_left_s16_m
+						cmp		[TChannel ptr eax.Panning],64
+						je		mix_all_right_s16_m
 								MixStereoS16WithVolumeInMonoBuffer
+								jmp		wave_mixed
+						mix_all_left_s16_m:
+								MixStereoS16AllLeftInMonoBuffer
+								jmp		wave_mixed
+						mix_all_right_s16_m:
+								MixStereoS16AllRightInMonoBuffer
 								jmp		wave_mixed
 								
 				mono16:
