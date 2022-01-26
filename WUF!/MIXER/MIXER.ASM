@@ -764,12 +764,10 @@ ScaleSampleByVolume8	macro	volume_table_ptr_reg
 	cmp		eax,7fffffffh	; 1
 	ja		is_negative_u8	; 1 (not jump) or 3 (jump)
 			mov		eax,[volume_table_ptr_reg+eax*4]	; 1
-;			shr		eax,6	; 2
 			jmp 	volume_done_u8	; 3
 	is_negative_u8:
 			neg		eax		; 1
 			mov		eax,[volume_table_ptr_reg+eax*4]	; 1
-;			shr		eax,6	; 2
 			neg		eax		; 1
 	volume_done_u8:
 endm
@@ -787,8 +785,6 @@ ScaleSampleByVolume16	macro	volume_table_ptr_reg
 			xor		ch,ch	; 1
 			add		eax,[volume_table_ptr_reg+ecx*4]	; 2	(may be better as mov+add in 386)
 
-;			shr		eax,6	; 2
-
 			jmp 	volume_done_s16	; 3
 	is_negative_s16:
 			neg		eax		; 1
@@ -801,7 +797,6 @@ ScaleSampleByVolume16	macro	volume_table_ptr_reg
 			xor		ch,ch	; 1
 			add		eax,[volume_table_ptr_reg+ecx*4]	; 2
 
-;			shr		eax,6	; 2
 			neg		eax		; 1
 	volume_done_s16:
 endm
