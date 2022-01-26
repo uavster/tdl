@@ -1893,7 +1893,7 @@ endif
 				mov		esi,GlobalVolumeTablePtr
 				xchg	eax,edx
 				ScaleSampleByVolume8 esi
-				sar		eax,6
+				sar		eax,6+2		; ~ /(64*4)
 				xchg	eax,edx				
 				
 				; Signed -> unsigned
