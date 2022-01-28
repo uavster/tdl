@@ -855,7 +855,7 @@ sample_loop:
 		shr		eax,16
 		movsx	eax,ax
 		add     eax,ecx
-		rol		eax,6+2	; *64*4 (volume)
+		rol		eax,EXPANSION_BITS+6+2	; *64*4 (volume)
 		add		[ebp*4+12345678h],eax
 out_ptr:
 		inc		ebp
@@ -882,6 +882,7 @@ sample_loop:
 		mov     eax,[ebx+ecx*4]
 		movsx   eax,ax
 		ScaleSampleByVolume16 esi
+		rol		eax,EXPANSION_BITS
 		add		[ebp*4+12345678h],eax
 out_ptr1:
 		; Right channel
@@ -891,6 +892,7 @@ out_ptr1:
 		shr		eax,16
 		movsx	eax,ax
 		ScaleSampleByVolume16 edi
+		rol		eax,EXPANSION_BITS
 		add		[ebp*4+12345678h],eax
 out_ptr2:
 		inc		ebp
@@ -914,6 +916,7 @@ sample_loop:
 		shr		ecx,8
 		movsx   eax,word ptr [ebx+ecx*4]
 		ScaleSampleByVolume16 esi
+		rol		eax,EXPANSION_BITS
 		add		[ebp*4+12345678h],eax
 out_ptr1:
 		inc		ebp
@@ -938,6 +941,7 @@ sample_loop:
 		shr		ecx,8
 		movsx   eax,word ptr [ebx+ecx*4+2]
 		ScaleSampleByVolume16 edi
+		rol		eax,EXPANSION_BITS
 		add		[ebp*4+12345678h],eax
 out_ptr1:
 		inc		ebp
@@ -1009,7 +1013,7 @@ sample_loop:
 		movsx	ecx,ah
 		movsx	eax,al
 		add		eax,ecx
-		rol		eax,8+6+2	; Expand to match 16+1 bits in stereo16, *64*4 (volume)
+		rol		eax,8+EXPANSION_BITS+6+2	; Expand to match 16+1 bits in stereo16, *64*4 (volume)
 		add		[ebp*4+12345678h],eax
 out_ptr:
 		inc		ebp
@@ -1042,7 +1046,7 @@ sample_loop:
 		ScaleSampleByVolume8 edi
 		
 		add		eax,ecx
-		rol		eax,8	; Expand to match 16+1 bits in stereo16
+		rol		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
 		add		[ebp*4+12345678h],eax
 out_ptr:
 		inc		ebp
@@ -1894,6 +1898,7 @@ endif
 				xchg	eax,edx
 				ScaleSampleByVolume8 esi
 				sar		eax,6+2		; ~ /(64*4)
+
 				xchg	eax,edx				
 				
 				; Signed -> unsigned
