@@ -750,6 +750,21 @@ WUFSetGlobalVolume	proc
 		ret
 WUFSetGlobalVolume	endp
 
+; reg >= 0 -> 7 cycles, reg < 0 -> 8 cycles
+SignedDivByPow2	macro	reg,pow2_exponent
+	local	reg_is_neg
+	local	done
+	cmp		reg,0						; 1
+	jl		reg_is_neg					; 1 (not jump) or 3 (jump)
+			shr		reg,pow2_exponent	; 2
+			jmp		done				; 3
+	reg_is_neg:
+			neg		reg					; 1
+			shr		reg,pow2_exponent	; 2
+			neg		reg					; 1
+	done:
+endm
+
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; All macros below share the same interface.
 ;
@@ -1872,7 +1887,7 @@ endif
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]				; Compression factor *5
-				sar		eax,4+8+EXPANSION_BITS+6+2	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
+				SignedDivByPow2	eax,4+8+EXPANSION_BITS+6+2	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
 				
 				; Saturate left channel
 				cmp		eax,127
@@ -1889,7 +1904,7 @@ endif
 				mov		esi,MixingBuffer
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]				; Compression factor *5
-				sar		edx,4+8+EXPANSION_BITS+6+2	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
+				SignedDivByPow2	edx,4+8+EXPANSION_BITS+6+2	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
 				
 				; Saturate right channel
 				cmp		edx,127
