@@ -1464,7 +1464,7 @@ sample_loop:
 		mov   	al,byte ptr [ebx+ecx]
 		sub		al,128
 		movsx	eax,al
-		shl		eax,8+EXPANSION_BITS+6+2	; Expand to match 16+1 bits in stereo16, *64*4 (volume)
+		shl		eax,8+EXPANSION_BITS+6+2-1	; Expand to match 16+1 bits in stereo16, *64*4 (volume), /2 to be equivalent to center panning.
 		add		[ebp*8+12345678h],eax
 out_ptr_left:
 		add		[ebp*8+4+12345678h],eax
