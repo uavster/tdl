@@ -758,16 +758,22 @@ WUFSetGlobalVolume	endp
 ; OUTPUT : EAX = Signed 16-bit sample scaled by volume
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
-ScaleSampleByVolume8	macro	volume_table_ptr_reg
+ScaleSampleByVolume8	macro	volume_table_ptr_reg, post_table_op, post_table_op_arg1, post_table_op_arg2
 	local	is_negative_u8
 	local	volume_done_u8
 	cmp		eax,7fffffffh	; 1
 	ja		is_negative_u8	; 1 (not jump) or 3 (jump)
 			mov		eax,[volume_table_ptr_reg+eax*4]	; 1
+ifnb <post_table_op>
+			post_table_op	post_table_op_arg1, post_table_op_arg2
+endif
 			jmp 	volume_done_u8	; 3
 	is_negative_u8:
 			neg		eax		; 1
 			mov		eax,[volume_table_ptr_reg+eax*4]	; 1
+ifnb <post_table_op>
+			post_table_op	post_table_op_arg1, post_table_op_arg2
+endif
 			neg		eax		; 1
 	volume_done_u8:
 endm
@@ -1877,8 +1883,7 @@ endif
 				
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
-				ScaleSampleByVolume8 esi
-				sar		eax,6+2		; ~ /(64*4)
+				ScaleSampleByVolume8 esi,shr,eax,6+2	; (sample*volume*4)/256
 
 				; Compress right channel
 				mov		esi,MixingBuffer
@@ -1896,8 +1901,7 @@ endif
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
 				xchg	eax,edx
-				ScaleSampleByVolume8 esi
-				sar		eax,6+2		; ~ /(64*4)
+				ScaleSampleByVolume8 esi,shr,eax,6+2	; (sample*volume*4)/256
 
 				xchg	eax,edx				
 				
