@@ -808,7 +808,7 @@ ScaleSampleByVolume16	macro	volume_table_ptr_reg, post_table_op, post_table_op_a
 			and		ecx,0ffh	; 1
 			add		eax,[volume_table_ptr_reg+ecx*4]	; 2	(may be better as mov+add in 386)
 
-add eax,512/2 ; for rounding (TODO: necessary?)
+;add eax,512/2 ; for rounding (TODO: necessary?)
 add eax,256*256/2	; for rounding - dividing later by 256*256, so add 256*256/2
 
 ifnb <post_table_op>
@@ -825,7 +825,7 @@ endif
 			and		ecx,0ffh	; 1
 			add		eax,[volume_table_ptr_reg+ecx*4]	; 2
 
-add eax,512/2 ; for rounding (TODO: necessary?)
+;add eax,512/2 ; for rounding (TODO: necessary?)
 add eax,256*256/2	; for rounding - dividing later by 256*256, so add 256*256/2
 
 ifnb <post_table_op>
@@ -1901,16 +1901,21 @@ endif
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]				; Compression factor *5
-				SignedDivByPow2	eax,4+EXPANSION_BITS+6+2	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
+mov		ecx,eax
+lea		eax,[eax*8+eax]
+lea		ecx,[ecx*2+eax]
+				; The mixing is done with added bits: 8+EXPANSION_BIT+6+2
+				; Subtract all bits minus 8 to keep precision, and scale down by global volume in 16 bits instead of 8
+				SignedDivByPow2	eax,4+EXPANSION_BITS+6+2-1+3	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
 				
-				; Saturate left channel
+				; Saturate left channel; limits multiplied by 256 since we left 8 extra bits.
 				cmp		eax,127*256
 				jg		sat_l8_pos
 				cmp		eax,-128*256
 				jl		sat_l8_neg
 				sat_l8_done:
 				
-				; Apply global volume
+				; Apply global volume and take away the extra 8 bits from above and the extra 8 bits from the volume table
 				mov		esi,GlobalVolumeTablePtr
 				ScaleSampleByVolume16 esi,shr,eax,8+6+2	; (sample*volume*4)/256
 
@@ -1918,16 +1923,21 @@ endif
 				mov		esi,MixingBuffer
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]				; Compression factor *5
-				SignedDivByPow2	edx,4+EXPANSION_BITS+6+2	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
+mov		ecx,edx
+lea		edx,[edx*8+edx]
+lea		ecx,[ecx*2+edx]
+				; The mixing is done with added bits: 8+EXPANSION_BIT+6+2
+				; Subtract all bits minus 8 to keep precision, and scale down by global volume in 16 bits instead of 8
+				SignedDivByPow2	edx,4+EXPANSION_BITS+6+2-1+3	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
 				
-				; Saturate right channel
+				; Saturate right channel; limits multiplied by 256 since we left 8 extra bits.
 				cmp		edx,127*256
 				jg		sat_r8_pos
 				cmp		edx,-128*256
 				jl		sat_r8_neg
 				sat_r8_done:
 				
-				; Apply global volume
+				; Apply global volume and take away the extra 8 bits from above and the extra 8 bits from the volume table
 				mov		esi,GlobalVolumeTablePtr
 				xchg	eax,edx
 				ScaleSampleByVolume16 esi,shr,eax,8+6+2	; (sample*volume*4)/256
