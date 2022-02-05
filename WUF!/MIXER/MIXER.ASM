@@ -102,7 +102,7 @@ OpenMixer       proc
         xor     eax,eax
         cld
         rep     stosb
-		; Set frequency multipliers to 1.0 in case WUFPlaySounds passes "leave as is"
+		; Set frequency multipliers to 1.0 in case WUFPlaySound passes "leave as is"
 		movzx	ecx,MaxInputChannels
 		shl		ecx,1
 		mov		edi,ChannelPoolBack
@@ -750,16 +750,18 @@ WUFSetGlobalVolume	proc
 		ret
 WUFSetGlobalVolume	endp
 
-; reg >= 0 -> 7 cycles, reg < 0 -> 8 cycles
+; reg >= 0 -> 8 cycles, reg < 0 -> 9 cycles
 SignedDivByPow2	macro	reg,pow2_exponent
 	local	reg_is_neg
 	local	done
 	cmp		reg,0						; 1
 	jl		reg_is_neg					; 1 (not jump) or 3 (jump)
+			add		reg,1 SHL (pow2_exponent-1)	; 1
 			shr		reg,pow2_exponent	; 2
 			jmp		done				; 3
 	reg_is_neg:
 			neg		reg					; 1
+			add		reg,1 SHL (pow2_exponent-1)	; 1
 			shr		reg,pow2_exponent	; 2
 			neg		reg					; 1
 	done:
@@ -793,7 +795,7 @@ endif
 	volume_done_u8:
 endm
 
-ScaleSampleByVolume16	macro	volume_table_ptr_reg
+ScaleSampleByVolume16	macro	volume_table_ptr_reg, post_table_op, post_table_op_arg1, post_table_op_arg2
 	local	is_negative_s16
 	local	volume_done_s16
 	cmp		eax,7fffffffh	; 1
@@ -802,10 +804,16 @@ ScaleSampleByVolume16	macro	volume_table_ptr_reg
 
 			shr		eax,8	; 2
 			mov		eax,[volume_table_ptr_reg+eax*4]	; 1
-			shl		eax,8	; 2
-			xor		ch,ch	; 1
+			shl		eax,8		; 2
+			and		ecx,0ffh	; 1
 			add		eax,[volume_table_ptr_reg+ecx*4]	; 2	(may be better as mov+add in 386)
 
+add eax,512/2 ; for rounding (TODO: necessary?)
+add eax,256*256/2	; for rounding - dividing later by 256*256, so add 256*256/2
+
+ifnb <post_table_op>
+			post_table_op	post_table_op_arg1, post_table_op_arg2
+endif
 			jmp 	volume_done_s16	; 3
 	is_negative_s16:
 			neg		eax		; 1
@@ -813,11 +821,16 @@ ScaleSampleByVolume16	macro	volume_table_ptr_reg
 
 			shr		eax,8	; 2
 			mov		eax,[volume_table_ptr_reg+eax*4]	; 1
-			shl		eax,8	; 2
-
-			xor		ch,ch	; 1
+			shl		eax,8		; 2
+			and		ecx,0ffh	; 1
 			add		eax,[volume_table_ptr_reg+ecx*4]	; 2
 
+add eax,512/2 ; for rounding (TODO: necessary?)
+add eax,256*256/2	; for rounding - dividing later by 256*256, so add 256*256/2
+
+ifnb <post_table_op>
+			post_table_op	post_table_op_arg1, post_table_op_arg2
+endif
 			neg		eax		; 1
 	volume_done_s16:
 endm
@@ -1449,11 +1462,10 @@ IfSampleIsLoopingAdjustForLoop 1
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8						
-		mov   	al,byte ptr [ebx+ecx]
-		sub		al,128
-		movsx	eax,al
+		movzx   eax,byte ptr [ebx+ecx]
+		sub		eax,128
 		mov		ecx,eax
-		ScaleSampleByVolume8 esi		
+		ScaleSampleByVolume8 esi
 		shl		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
 		add		[ebp*8+12345678h],eax
 out_ptr_left:
@@ -1482,10 +1494,10 @@ IfSampleIsLoopingAdjustForLoop 1
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8						
-		mov   	al,byte ptr [ebx+ecx]
-		sub		al,128
-		movsx	eax,al
+		movzx   eax,byte ptr [ebx+ecx]
+		sub		eax,128
 		shl		eax,8+EXPANSION_BITS+6+2-1	; Expand to match 16+1 bits in stereo16, *64*4 (volume), /2 to be equivalent to center panning.
+		
 		add		[ebp*8+12345678h],eax
 out_ptr_left:
 		add		[ebp*8+4+12345678h],eax
@@ -1630,6 +1642,7 @@ SetVolumeTablePointersForChannel_Stereo	proc
 		add		ebx,VolumeTable
 		movzx	ecx,[TChannel ptr eax.Volume]
 		mov		ecx,[ebx+4*ecx]
+add ecx,32 ; for rounding
 		shr		ecx,6		; Values in volume table are pre-multiplied by volume dynamic range
 		shl		ecx,2+8	; volume_units * num_rows_per_volume_unit (256/64=4) * sample_values_per_row (256) * sizeof(DWORD) (4)
 		add		ecx,VolumeTable
@@ -1640,6 +1653,7 @@ SetVolumeTablePointersForChannel_Stereo	proc
 		add		ebx,VolumeTable
 		movzx	ecx,[TChannel ptr eax.Volume]
 		mov		ecx,[ebx+4*ecx]
+add ecx,32 ; for rounding
 		shr		ecx,6		; Values in volume table are pre-multiplied by volume dynamic range
 		shl		ecx,2+8	; volume_units * num_rows_per_volume_unit (256/64=4) * sample_values_per_row (256) * sizeof(DWORD) (4)
 		add		ecx,VolumeTable
@@ -1887,36 +1901,36 @@ endif
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]				; Compression factor *5
-				SignedDivByPow2	eax,4+8+EXPANSION_BITS+6+2	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
+				SignedDivByPow2	eax,4+EXPANSION_BITS+6+2	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
 				
 				; Saturate left channel
-				cmp		eax,127
+				cmp		eax,127*256
 				jg		sat_l8_pos
-				cmp		eax,-128
+				cmp		eax,-128*256
 				jl		sat_l8_neg
 				sat_l8_done:
 				
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
-				ScaleSampleByVolume8 esi,shr,eax,6+2	; (sample*volume*4)/256
+				ScaleSampleByVolume16 esi,shr,eax,8+6+2	; (sample*volume*4)/256
 
 				; Compress right channel
 				mov		esi,MixingBuffer
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]				; Compression factor *5
-				SignedDivByPow2	edx,4+8+EXPANSION_BITS+6+2	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
+				SignedDivByPow2	edx,4+EXPANSION_BITS+6+2	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
 				
 				; Saturate right channel
-				cmp		edx,127
+				cmp		edx,127*256
 				jg		sat_r8_pos
-				cmp		edx,-128
+				cmp		edx,-128*256
 				jl		sat_r8_neg
 				sat_r8_done:
 				
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
 				xchg	eax,edx
-				ScaleSampleByVolume8 esi,shr,eax,6+2	; (sample*volume*4)/256
+				ScaleSampleByVolume16 esi,shr,eax,8+6+2	; (sample*volume*4)/256
 
 				xchg	eax,edx				
 				
@@ -1933,16 +1947,16 @@ endif
 				jmp		compression_done
 
 				sat_l8_pos:
-						mov	eax,127
+						mov	eax,127*256
 						jmp	sat_l8_done
 				sat_l8_neg:
-						mov	eax,-128
+						mov	eax,-128*256
 						jmp	sat_l8_done
 				sat_r8_pos:
-						mov	edx,127
+						mov	edx,127*256
 						jmp	sat_r8_done
 				sat_r8_neg:
-						mov	edx,-128
+						mov	edx,-128*256
 						jmp	sat_r8_done
 
 		stereo16_compression:
