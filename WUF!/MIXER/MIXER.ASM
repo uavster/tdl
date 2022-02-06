@@ -795,7 +795,7 @@ endif
 	volume_done_u8:
 endm
 
-ScaleSampleByVolume16	macro	volume_table_ptr_reg, post_table_op, post_table_op_arg1, post_table_op_arg2
+ScaleSampleByVolume16	macro	volume_table_ptr_reg, div_by_pow2_bits
 	local	is_negative_s16
 	local	volume_done_s16
 	cmp		eax,7fffffffh	; 1
@@ -808,11 +808,9 @@ ScaleSampleByVolume16	macro	volume_table_ptr_reg, post_table_op, post_table_op_a
 			and		ecx,0ffh	; 1
 			add		eax,[volume_table_ptr_reg+ecx*4]	; 2	(may be better as mov+add in 386)
 
-;add eax,512/2 ; for rounding (TODO: necessary?)
-add eax,256*256/2	; for rounding - dividing later by 256*256, so add 256*256/2
-
-ifnb <post_table_op>
-			post_table_op	post_table_op_arg1, post_table_op_arg2
+ifnb <div_by_pow2_bits>
+			add		eax,1 SHL (div_by_pow2_bits-1)
+			shr		eax,div_by_pow2_bits
 endif
 			jmp 	volume_done_s16	; 3
 	is_negative_s16:
@@ -825,11 +823,9 @@ endif
 			and		ecx,0ffh	; 1
 			add		eax,[volume_table_ptr_reg+ecx*4]	; 2
 
-;add eax,512/2 ; for rounding (TODO: necessary?)
-add eax,256*256/2	; for rounding - dividing later by 256*256, so add 256*256/2
-
-ifnb <post_table_op>
-			post_table_op	post_table_op_arg1, post_table_op_arg2
+ifnb <div_by_pow2_bits>
+			add		eax,1 SHL (div_by_pow2_bits-1)
+			shr		eax,div_by_pow2_bits
 endif
 			neg		eax		; 1
 	volume_done_s16:
@@ -1900,13 +1896,13 @@ endif
 				; Compress left channel
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*8]
-				lea		eax,[eax*4+eax]				; Compression factor *5
-mov		ecx,eax
-lea		eax,[eax*8+eax]
-lea		ecx,[ecx*2+eax]
-				; The mixing is done with added bits: 8+EXPANSION_BIT+6+2
+				lea		eax,[eax*4+eax]				; Compression factor of 5/16 (divider in SignedDivPow2 argument below)
+				mov		ecx,eax
+				lea		eax,[eax*8+eax]				; Extra compression factor of 11/8 as in IT, since there's extra room in stereo.
+				lea		eax,[ecx*2+eax]
+				; Channel mixing has been previously done with added bits: 8+EXPANSION_BIT+6+2
 				; Subtract all bits minus 8 to keep precision, and scale down by global volume in 16 bits instead of 8
-				SignedDivByPow2	eax,4+EXPANSION_BITS+6+2-1+3	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
+				SignedDivByPow2	eax,4+3+EXPANSION_BITS+6+2-1	; Compression factor /16, extra compression factor /8, EXPANSION_BITS, /(64*4) (volume normalization), *2 as stereo is divided by 2 for center panning
 				
 				; Saturate left channel; limits multiplied by 256 since we left 8 extra bits.
 				cmp		eax,127*256
@@ -1917,18 +1913,18 @@ lea		ecx,[ecx*2+eax]
 				
 				; Apply global volume and take away the extra 8 bits from above and the extra 8 bits from the volume table
 				mov		esi,GlobalVolumeTablePtr
-				ScaleSampleByVolume16 esi,shr,eax,8+6+2	; (sample*volume*4)/256
+				ScaleSampleByVolume16 esi, 8+6+2	; (sample*volume*4)/256
 
 				; Compress right channel
 				mov		esi,MixingBuffer
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]				; Compression factor *5
-mov		ecx,edx
-lea		edx,[edx*8+edx]
-lea		ecx,[ecx*2+edx]
-				; The mixing is done with added bits: 8+EXPANSION_BIT+6+2
+				mov		ecx,edx
+				lea		edx,[edx*8+edx]				; Extra compression factor of 11/8 as in IT, since there's extra room in stereo.
+				lea		edx,[ecx*2+edx]
+				; Channel mixing has been previously done with added bits: 8+EXPANSION_BIT+6+2
 				; Subtract all bits minus 8 to keep precision, and scale down by global volume in 16 bits instead of 8
-				SignedDivByPow2	edx,4+EXPANSION_BITS+6+2-1+3	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
+				SignedDivByPow2	edx,4+3+EXPANSION_BITS+6+2-1	; Compression factor /16, extra compression factor /8, EXPANSION_BITS, /(64*4) (volume normalization), *2 as stereo is divided by 2 for center panning
 				
 				; Saturate right channel; limits multiplied by 256 since we left 8 extra bits.
 				cmp		edx,127*256
@@ -1940,7 +1936,7 @@ lea		ecx,[ecx*2+edx]
 				; Apply global volume and take away the extra 8 bits from above and the extra 8 bits from the volume table
 				mov		esi,GlobalVolumeTablePtr
 				xchg	eax,edx
-				ScaleSampleByVolume16 esi,shr,eax,8+6+2	; (sample*volume*4)/256
+				ScaleSampleByVolume16 esi, 8+6+2	; (sample*volume*4)/256
 
 				xchg	eax,edx				
 				
