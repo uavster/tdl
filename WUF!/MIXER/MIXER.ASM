@@ -1431,8 +1431,8 @@ sample_loop:
 		sub		al,128
 		movsx	ecx,ah	; ecx = right channel
 		movsx	eax,al	; eax = left channel
-		shl		ecx,8+EXPANSION_BITS+6+2	; *64*4 (volume)
-		shl		eax,8+EXPANSION_BITS+6+2	; *64*4 (volume)
+		shl		ecx,8+EXPANSION_BITS+6+2-1	; *64*4 (volume), /2 as it's central panning
+		shl		eax,8+EXPANSION_BITS+6+2-1	; *64*4 (volume), /2 as it's central panning
 		add		[ebp*8+12345678h],eax
 out_ptr_left:
 		add		[ebp*8+4+12345678h],ecx
