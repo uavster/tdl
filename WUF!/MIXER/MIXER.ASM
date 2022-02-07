@@ -23,7 +23,7 @@
 ; Max. number of callbacks
 MAX_NUM_CALLBACKS	EQU 4
 
-; Expansion bits for accuracy in stereo samples converted to mono
+; Expansion bits for extra internal bit depth
 EXPANSION_BITS		EQU 1
 
 ; Compression factor is ~1/3. It is a good trade-off to prevent clipping while not making volume too low.
