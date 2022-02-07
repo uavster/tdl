@@ -1969,8 +1969,12 @@ endif
 				; Compress left channel
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*8]
-				lea		eax,[eax*4+eax]				; Compression factor *5
-				sar		eax,4+EXPANSION_BITS+6+2	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
+				lea		eax,[eax*4+eax]				; Compression factor *5 (divider in SignedDivPow2 argument below)
+				mov		ecx,eax
+				lea		eax,[eax*8+eax]				; Extra compression factor of 11/8 as in IT, since there's extra room in stereo.
+				lea		eax,[ecx*2+eax]
+				; Channel mixing has been previously done with added bits: EXPANSION_BIT+6+2
+				SignedDivByPow2	eax,4+3+EXPANSION_BITS+6+2-1	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
 
 				; Saturate left channel (cycles 386,486)
 				cmp		eax,32767		; 2, 1
@@ -1985,15 +1989,18 @@ endif
 				
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
-				ScaleSampleByVolume16 esi
-				sar		eax,6+2		; ~ /(64*4)
+				ScaleSampleByVolume16 esi, 6+2		; (sample*volume*4)/256
 				
 				; Scale 
 				; Compress right channel
 				mov		esi,MixingBuffer
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]				; Compression factor *5
-				sar		edx,4+EXPANSION_BITS+6+2	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
+				mov		ecx,edx
+				lea		edx,[edx*8+edx]				; Extra compression factor of 11/8 as in IT, since there's extra room in stereo.
+				lea		edx,[ecx*2+edx]
+				; Channel mixing has been previously done with added bits: EXPANSION_BIT+6+2
+				SignedDivByPow2	edx,4+3+EXPANSION_BITS+6+2-1	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
 
 				; Saturate right channel (same timing as left channel saturation)
 				cmp		edx,32767
@@ -2005,8 +2012,7 @@ endif
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
 				xchg	eax,edx
-				ScaleSampleByVolume16 esi
-				sar		eax,6+2		; ~ /(64*4)
+				ScaleSampleByVolume16 esi, 6+2		; (sample*volume*4)/256
 				xchg	eax,edx
 				
 				; Write output
