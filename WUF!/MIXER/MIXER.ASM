@@ -1826,18 +1826,23 @@ endif
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*4]
 				lea		eax,[eax*4+eax]				; Compression factor *5
-				sar		eax,4+8+EXPANSION_BITS+6+2	; Compression factor /16, 16 bits -> 8 bits, EXPANSION_BITS, /(64*4) (volume normalization)
-				; Saturate
-				cmp		eax,127
+				mov		ecx,eax
+				lea		eax,[eax*8+eax]				; Extra compression factor of 11/8 as in IT, since there's extra room in stereo.
+				lea		eax,[ecx*2+eax]
+				; Channel mixing has been previously done with added bits: 8+EXPANSION_BIT+6+2
+				; Subtract all bits minus 8 to keep precision, and scale down by global volume in 16 bits instead of 8
+				SignedDivByPow2	eax,4+3+EXPANSION_BITS+6+2	; Compression factor /16, extra compression factor /8, EXPANSION_BITS, /(64*4) (volume normalization)
+				
+				; Saturate; limits multiplied by 256 since we left 8 extra bits.
+				cmp		eax,127*256
 				jg		sat_m8_pos
-				cmp		eax,-128
+				cmp		eax,-128*256
 				jl		sat_m8_neg
 				sat_m8_done:
 				
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
-				ScaleSampleByVolume8 esi
-				sar		eax,6+2		; ~ /(64*4)
+				ScaleSampleByVolume16 esi,8+6+2	; 16->8 bits,/(64*4)
 				
 				; Signed -> unsigned
 				add		al,128
@@ -1849,10 +1854,10 @@ endif
 				jmp		compression_done
 				
 				sat_m8_pos:
-						mov	eax,127
+						mov	eax,127*256
 						jmp	sat_m8_done
 				sat_m8_neg:
-						mov	eax,-128
+						mov	eax,-128*256
 						jmp	sat_m8_done
 
 		mono16_compression:
