@@ -885,7 +885,7 @@ sample_loop:
 		shr		eax,16
 		movsx	eax,ax
 		add     eax,ecx
-		shl		eax,EXPANSION_BITS+6+2	; *64*4 (volume)
+		shl		eax,EXPANSION_BITS+6+2-1	; *64*4 (volume), /2 as it's central panning
 		add		[ebp*4+12345678h],eax
 out_ptr:
 		inc		ebp
