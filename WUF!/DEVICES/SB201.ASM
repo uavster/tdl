@@ -382,7 +382,7 @@ SB201Device     SoundDevice <offset GetSB201DriverName, offset SBGetDevName, off
 PlayStatus      		db PLAY_OFF
 
 ; Device capabilities for playback
-PlayCaps			SoundHardwareCapabilities <1, offset PlayValidConfigs>
+PlayCaps			SoundHardwareCapabilities <2, offset PlayValidConfigs>
 ; The first capability in the list is the preferred one
 PlayValidConfigs	SoundCapability <23000, 44100, 8, 1>, <4000, 23000, 8, 1>
 

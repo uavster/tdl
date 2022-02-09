@@ -167,7 +167,7 @@ SDSetPlayProperties     proc
 				mov		edx,[ebx.SPSamplingRate]
 				cmp		edx,[eax.SCMinSamplingRate]
 				jb		next_playback_capability
-				cmp		edx,[ebx.SCMaxSamplingRate]
+				cmp		edx,[eax.SCMaxSamplingRate]
 				ja		next_playback_capability
 				mov		dl,[ebx.SPBitsPerSample]
 				cmp		dl,[eax.SCBitsPerSample]

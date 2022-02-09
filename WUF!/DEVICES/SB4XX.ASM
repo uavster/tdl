@@ -462,7 +462,7 @@ SB4xxDevice     SoundDevice <offset GetSB4xxDriverName, offset SBGetDevName, off
 PlayStatus      	db PLAY_OFF
 
 ; Device capabilities for playback
-PlayCaps			SoundHardwareCapabilities <1, offset PlayValidConfigs>
+PlayCaps			SoundHardwareCapabilities <4, offset PlayValidConfigs>
 ; The first capability in the list is the preferred one
 PlayValidConfigs	SoundCapability <5000, 44100, 16, 2>, <5000, 44100, 8, 2>, <5000, 44100, 16, 1>, <5000, 44100, 8, 1>
 

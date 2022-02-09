@@ -473,7 +473,7 @@ SB3xxDevice     SoundDevice <offset GetSB3xxDriverName, offset SBGetDevName, off
 PlayStatus      	db PLAY_OFF
 
 ; Device capabilities for playback
-PlayCaps			SoundHardwareCapabilities <1, offset PlayValidConfigs>
+PlayCaps			SoundHardwareCapabilities <3, offset PlayValidConfigs>
 ; The first capability in the list is the preferred one
 PlayValidConfigs	SoundCapability <11025, 22050, 8, 2>, <23000, 44100, 8, 1>, <4000, 23000, 8, 1>
 IsHighSpeedMode		db 1, 1, 0
