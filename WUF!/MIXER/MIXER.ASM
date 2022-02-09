@@ -1097,9 +1097,8 @@ IfSampleIsLoopingAdjustForLoop 1
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
-		mov   	al,byte ptr [ebx+ecx]
-		sub		al,128
-		movsx	eax,al
+		movzx   eax,byte ptr [ebx+ecx]
+		sub		eax,128
 		shl		eax,8+EXPANSION_BITS+6+2	; Expand to match 16+1 bits in stereo16, *64*4 (volume)
 		add		[ebp*4+12345678h],eax
 out_ptr:
@@ -1121,9 +1120,8 @@ IfSampleIsLoopingAdjustForLoop 1
 sample_loop:
 		mov		ecx,edx
 		shr		ecx,8
-		mov   	al,byte ptr [ebx+ecx]
-		sub		al,128
-		movsx	eax,al
+		movzx   eax,byte ptr [ebx+ecx]
+		sub		eax,128
 		ScaleSampleByVolume8 esi
 		shl		eax,8+EXPANSION_BITS	; Expand to match 16+1 bits in stereo16
 		add		[ebp*4+12345678h],eax
