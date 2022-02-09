@@ -1043,7 +1043,7 @@ sample_loop:
 		movsx	ecx,ah
 		movsx	eax,al
 		add		eax,ecx
-		shl		eax,8+EXPANSION_BITS+6+2	; Expand to match 16+1 bits in stereo16, *64*4 (volume)
+		shl		eax,8+EXPANSION_BITS+6+2-1	; Expand to match 16+1 bits in stereo16, *64*4 (volume), /2 as it's central panning
 		add		[ebp*4+12345678h],eax
 out_ptr:
 		inc		ebp
