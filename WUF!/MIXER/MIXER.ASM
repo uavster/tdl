@@ -1880,7 +1880,12 @@ endif
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*4]
 				lea		eax,[eax*4+eax]				; Compression factor *5
-				sar		eax,4+EXPANSION_BITS+6+2	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
+				mov		ecx,eax
+				lea		eax,[eax*8+eax]				; Extra compression factor of 11/8 as in IT, since there's extra room in stereo.
+				lea		eax,[ecx*2+eax]
+				; Channel mixing has been previously done with added bits: EXPANSION_BIT+6+2
+				SignedDivByPow2	eax,4+3+EXPANSION_BITS+6+2	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
+
 				; Saturate
 				cmp		eax,32767
 				jg		sat_m16_pos
@@ -1890,9 +1895,8 @@ endif
 				
 				; Apply global volume
 				mov		esi,GlobalVolumeTablePtr
-				ScaleSampleByVolume16 esi
-				sar		eax,6+2		; ~ /(64*4)
-				
+				ScaleSampleByVolume16 esi, 6+2	; /(64*4)
+
 				; Write output
 				mov		[edi+ebx*2],ax
 				inc		ebx
