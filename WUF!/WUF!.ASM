@@ -13,6 +13,84 @@
         INCLUDE mixer.inc
 		INCLUDE snddev.def
 		include assert.inc
+		
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Restarts the mixer with the passed output properties
+;
+; INPUT  : EAX -> SoundProperties
+; OUTPUT : CF = 0 if no error
+;			 EAX = 0
+;		     mix_rate = Mixing rate
+;			 mix_bits = Mixing bit depth
+;          CF = 1 if error
+;			 EAX = Error code
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+RestartMixer	proc
+		mov		esi,eax
+		mov		bl,[esi.SPBitsPerSample]
+		mov		bh,[esi.SPNumChannels]
+		movzx	ecx,bl
+		shr		ecx,3	; bytes per sample
+        movzx   edx,bh
+		imul	ecx,edx
+		push	esi ebx ecx
+		call	GetSDBuffers
+		mov		eax,[SoundBuffer ptr eax.NumBytes]
+		pop		ecx ebx esi
+		xor		edx,edx
+		div		ecx
+		mov		edx,eax
+		mov		eax,[esi.SPSamplingRate]
+        mov     cl,MAX_MIXER_CHANNELS
+		push	eax ebx
+        call    OpenMixer
+        ErrorCodePOP eax, ebx ecx ebp
+		pop		ebx eax
+        mov     mix_rate,eax
+        mov     mix_bits,bl
+		mov		eax,NO_ERROR
+		clc
+		ret
+endp
+
+PrintMixerConfig	proc
+        mov     esi,offset set_mixp_msg
+		push	ebx
+        call    Printf
+        pop     ebx
+        mov     esi,offset mono_msg
+        cmp    	bh,1
+        jz      num_channels_label_found
+                mov     esi,offset stereo_msg
+				cmp		bh,2
+				jz		num_channels_label_found
+						mov		mix_output_channels,bh
+						mov		esi,offset n_channels_msg						
+        num_channels_label_found:
+        call    Printf
+		ret
+endp
+
+StartDevice	proc
+        LPrintS "  ş Opening audio device driver..."
+        call    OpenSoundDevice
+        ErrorCode SDEV_OPEN_ERROR
+        call    SDPlay
+        ErrorCode eax
+
+        mov     esi,offset mix_msg
+        call    Printf
+        ; Set mix props. to the maximum available with the hardware
+        call    SDGetPlayProperties
+        ; Start mixer
+		call	RestartMixer
+		ErrorCode eax
+		call	PrintMixerConfig
+		mov		eax,NO_ERROR
+		clc
+		ret
+endp
+
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Initializes all the stuff needed by wuF!
 ;
@@ -39,53 +117,8 @@ WUFInit         proc
 		mov		esi,eax
 		call	Printf
 		LPrintS ""
-        LPrintS "  ş Opening audio device driver..."
-        call    OpenSoundDevice
-        ErrorCodePOP SDEV_OPEN_ERROR,ebp
-        call    SDPlay
-        ErrorCodePOP eax,ebp
-
-        mov     esi,offset mix_msg
-        call    Printf
-        ; Set mix props. to the maximum available with the hardware
-        call    SDGetPlayProperties
-        ; Start mixer
-		mov		esi,eax
-		mov		bl,[esi.SPBitsPerSample]
-		mov		bh,[esi.SPNumChannels]
-		movzx	ecx,bl
-		shr		ecx,3	; bytes per sample
-        movzx   edx,bh
-		imul	ecx,edx
-		push	esi ebx ecx
-		call	GetSDBuffers
-		mov		eax,[SoundBuffer ptr eax.NumBytes]
-		pop		ecx ebx esi
-		xor		edx,edx
-		div		ecx
-		mov		edx,eax
-		mov		eax,[esi.SPSamplingRate]
-        mov     cl,MAX_MIXER_CHANNELS
-		push	eax ebx
-        call    OpenMixer
-        ErrorCodePOP eax, ebx ecx ebp
-		pop		ebx eax
-        mov     mix_rate,eax
-        mov     mix_bits,bl
-        mov     esi,offset set_mixp_msg
-		push	ebx
-        call    Printf
-        pop     ebx
-        mov     esi,offset mono_msg
-        cmp    	bh,1
-        jz      num_channels_label_found
-                mov     esi,offset stereo_msg
-				cmp		bh,2
-				jz		num_channels_label_found
-						mov		mix_output_channels,bh
-						mov		esi,offset n_channels_msg						
-        num_channels_label_found:
-        call    Printf
+		call	StartDevice
+		ErrorCodePOP eax, ebp
 		pop		ebp
         ret
 WUFInit         endp
@@ -170,13 +203,28 @@ WUFGetProperties        endp
 ;               EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 WUFSetProperties        proc
-		push	eax
+		push	eax ebx
+		call	SDStopPlaying
+		pop		ebx eax
+		jc		ssp_error
+		push	eax ebx
         call    SDSetPlayProperties
-		pop		eax
+		pop		ebx eax
         jc      ssp_error
-        call    SDSetRecProperties
-        jc      ssp_error
+		push	eax ebx
+        call    SDGetPlayProperties
+		call	RestartMixer
+		ErrorCodePOP eax, ebx ebx
+		call	PrintMixerConfig
+		pop		ebx eax
+		call	SDPlay
+		jc		ssp_error
+		; TODO: Enable when recording is supported.
+		; mov		eax,ebx
+        ; call    SDSetRecProperties
+        ; jc      ssp_error
         mov     eax,NO_ERROR
+		clc
         ret
 
         ssp_error:

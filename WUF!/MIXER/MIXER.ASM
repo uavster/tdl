@@ -61,6 +61,8 @@ ClearMixingBuffer	endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Initializes mixer
 ;
+; If called when the mixer is already open, it will close and re-open it.
+;
 ; INPUT  : EAX = Mixing frequency
 ;		   BL = Bits per sample
 ;		   BH = Number of output channels
@@ -73,6 +75,15 @@ ClearMixingBuffer	endp
 ;               EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 OpenMixer       proc
+		cmp 	MixerIsOpen,0
+		je		not_open
+				push	eax ebx ecx edx
+				call	CloseMixer
+				ErrorCodePOP eax, edx ecx ebx ebx
+				movzx	eax,MixerIsOpen
+				AssertD eax,_eq,0
+				pop		edx ecx ebx eax				
+		not_open:
 		; TODO: Maker sure the audio IRQ does not call MixChannels before OpenMixer
 		push	ebx
 		movzx	ebx,bh
@@ -173,6 +184,7 @@ ifdef DEBUG_MIXER_PERFORMANCE
 		mov		ebx,offset MixerDebugPerf
 		call add_timer
 endif
+		mov 	MixerIsOpen,1
         mov     eax,NO_ERROR
         clc
         ret
@@ -226,6 +238,8 @@ endif
 ;               EAX = Error code
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 CloseMixer      proc
+		movzx	eax,MixerIsOpen
+		AssertD eax,_ne,0
 ifdef DEBUG_MIXER_PERFORMANCE
 		mov		ebx,offset MixerDebugPerf
 		call	remove_timer
@@ -250,6 +264,7 @@ endif
         mov     ebx,ChannelPoolBack
         call    free
         ErrorCode FREE_ERROR
+		mov		MixerIsOpen,0
         mov     eax,NO_ERROR
         clc
         ret
@@ -2093,6 +2108,7 @@ AvgMixerPercentCPU	dq ?
 endif
 
 .data
+MixerIsOpen		db 0
 ifdef DEBUG_MIXER_PERFORMANCE
 PerfDataMsg		db "Average mixer execution time: %dfn"
 				dd offset AvgMixerExecTime
