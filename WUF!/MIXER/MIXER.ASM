@@ -1966,7 +1966,6 @@ endif
 				mov		ah,dl
 				add		ah,128
 				add		al,128
-				xchg	ah,al
 
 				mov		[edi+ebx*2],ax
 				inc		ebx
