@@ -5,10 +5,10 @@
 	include utils.inc
 	include wuf!.inc
 	
-OUTPUT_BUFFER_LENGTH	EQU 10
+OUTPUT_BUFFER_LENGTH	EQU 8
 
-TEST_SOUND1_LENGTH		EQU 5
-TEST_SOUND2_LENGTH		EQU 10
+TEST_SOUND1_LENGTH		EQU 4
+TEST_SOUND2_LENGTH		EQU 8
 
 start:
 	InitDPMI
@@ -19,18 +19,6 @@ start:
 	mov		cl,2		; Max. mixer channels
 	mov		edx,100		; Output buffer length, in samples
 	call	OpenMixer
-	
-	; Generate test sounds
-	mov		ecx,TEST_SOUND1_LENGTH
-	mov 	edi,offset input_buffer1
-	mov		eax,0ffffh
-	cld
-	rep		stosw
-	
-	mov		ecx,TEST_SOUND2_LENGTH
-	mov		edi,offset input_buffer2
-	mov		eax,-32768
-	rep		stosw
 	
 	xor		eax,eax
 	call	WUFAllocateChannel
@@ -118,19 +106,54 @@ start:
 	loop	print_output
 	mov		esi,offset cr
 	call	printf
+	mov		esi,offset cr
+	call	printf
+
+	; Print expected buffer
+	mov		esi,offset expected_msg
+	call	printf
+	mov		ecx,OUTPUT_BUFFER_LENGTH
+	xor		eax,eax
+	print_expected:
+			mov		sample_value_msg,eax
+			add		sample_value_msg,offset expected_buffer
+			inc		eax
+			mov		esi,offset print_sample_msg
+			push	eax ecx
+			call	printf
+			pop		ecx eax
+	loop	print_expected
+	mov		esi,offset cr
+	call	printf
+	mov		esi,offset cr
+	call	printf
 	
+	; Check expected output
+	mov		esi,offset output_buffer
+	mov		edi,offset expected_buffer
+	mov		ecx,OUTPUT_BUFFER_LENGTH
+	cld
+	repe	cmpsb
+	jz		test_ok
+			LPrintS "[ERROR] The output buffer is not as expected."
+			jmp		test_end
+	test_ok:
+			LPrintS "[SUCCESS]"
+			
+	test_end:
 	call	CloseMixer
 	
 	ExitSilently
 
 .data
-.data?
 ; 8 bits, stereo
-input_buffer1	db 2*TEST_SOUND1_LENGTH dup(?)
+input_buffer1	db 2*TEST_SOUND1_LENGTH dup(0ffh)
 ; 16 bits, mono
-input_buffer2	dw TEST_SOUND2_LENGTH dup(?)
+input_buffer2	dw TEST_SOUND2_LENGTH dup(-32768)
 
-.data
+expected_buffer	db TEST_SOUND1_LENGTH dup(128)
+				db TEST_SOUND2_LENGTH dup(87)
+
 input_msg1			db "Input 1:",13,10,0
 print_input_msg1	db "%bn"
 left_sample_offset	dd ?
@@ -143,6 +166,7 @@ print_input_msg2	db "%wn"
 input_sample_offset	dd ?
 					db " ",0
 					
+expected_msg		db "Expected:",13,10,0
 output_msg			db "Output:",13,10,0
 print_sample_msg	db "%bn"
 sample_value_msg	dd ?
