@@ -1180,6 +1180,7 @@ MixChannelToMono	proc
 		mov		wave_loop_start,ecx
 		
 		; Choose inner loop depending on sample type
+		push	edi
 		test    [esi.WaveType],1
 		jz      its_8_bits
 				; 16-bit signed samples
@@ -1245,9 +1246,11 @@ MixChannelToMono	proc
 								MixMonoU8WithVolumeInMonoBuffer
 								
 		wave_mixed:
+		pop		edi
 		stc
 		ret
 		no_samp_end:
+		pop		edi
 		clc
 		ret
 MixChannelToMono	endp
