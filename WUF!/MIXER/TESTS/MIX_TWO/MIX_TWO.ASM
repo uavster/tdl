@@ -16,7 +16,7 @@ start:
 	mov		eax,22050	; Hz
 	mov		bh,1		; mono output
 	mov		bl,8		; Bits per sample
-	mov		cl,4		; Max. mixer channels
+	mov		cl,2		; Max. mixer channels
 	mov		edx,100		; Output buffer length, in samples
 	call	OpenMixer
 	
