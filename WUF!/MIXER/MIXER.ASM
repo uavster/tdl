@@ -26,6 +26,11 @@ MAX_NUM_CALLBACKS	EQU 4
 ; Expansion bits for extra internal bit depth
 EXPANSION_BITS		EQU 1
 
+PANNING_BITS		EQU 7
+PANNING_LEFT		EQU 0
+PANNING_RIGHT		EQU (1 SHL PANNING_BITS)
+PANNING_CENTER		EQU ((PANNING_LEFT + PANNING_RIGHT) / 2)
+
 ; Compression factor is ~1/3. It is a good trade-off to prevent clipping while not making volume too low.
 ; We compute as 5/16 to avoid muls and divs.
 
@@ -620,7 +625,7 @@ CopyFrontChannelPoolToBack	endp
 ;		   ESI = New wave offset (fixed point 24.8), or -1 to leave as is. 
 ;				 The sound won't loop if the offset is beyond the loop end. 
 ;				 No sound is played if the offset is beyond the sound end.
-;		   EDI = Panning, from 0 (left) to 64 (right), or -1 to leave as is.
+;		   EDI = Panning, from 0 (left) to 128 (right), or -1 to leave as is.
 ;
 ; OUTPUT : CF = 0 if no error
 ;               EAX = NO_ERROR
@@ -1190,14 +1195,14 @@ MixChannelToMono	proc
 						mov		esi,volume_table_ptr
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_s16_m
-						cmp		[TChannel ptr eax.Panning],32
+						cmp		[TChannel ptr eax.Panning],PANNING_CENTER
 						jne		mix_with_volume_s16_m
 								MixStereoS16InMonoBuffer
 								jmp		wave_mixed
 						mix_with_volume_s16_m:
-						cmp		[TChannel ptr eax.Panning],0
+						cmp		[TChannel ptr eax.Panning],PANNING_LEFT
 						je		mix_all_left_s16_m
-						cmp		[TChannel ptr eax.Panning],64
+						cmp		[TChannel ptr eax.Panning],PANNING_RIGHT
 						je		mix_all_right_s16_m
 								MixStereoS16WithVolumeInMonoBuffer
 								jmp		wave_mixed
@@ -1227,7 +1232,7 @@ MixChannelToMono	proc
 						mov		esi,volume_table_ptr
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_s8_m
-						cmp		[TChannel ptr eax.Panning],32
+						cmp		[TChannel ptr eax.Panning],PANNING_CENTER
 						jne		mix_with_volume_s8_m
 								MixStereoU8InMonoBuffer
 								jmp		wave_mixed
@@ -1566,7 +1571,7 @@ MixChannelToStereo	proc
 						mov		esi,volume_table_ptr
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_s16
-						cmp		[TChannel ptr eax.Panning],32
+						cmp		[TChannel ptr eax.Panning],PANNING_CENTER
 						jne		mix_with_volume_s16
 								MixStereoS16
 								jmp		wave_mixed_s
@@ -1578,7 +1583,7 @@ MixChannelToStereo	proc
 						mov		esi,volume_table_ptr
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_m16
-						cmp		[TChannel ptr eax.Panning],32
+						cmp		[TChannel ptr eax.Panning],PANNING_CENTER
 						jne		mix_with_volume_m16
 								MixMonoS16
 								jmp		wave_mixed_s
@@ -1593,7 +1598,7 @@ MixChannelToStereo	proc
 						mov		esi,volume_table_ptr
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_s8
-						cmp		[TChannel ptr eax.Panning],32
+						cmp		[TChannel ptr eax.Panning],PANNING_CENTER
 						jne		mix_with_volume_s8
 								MixStereoU8
 								jmp		wave_mixed_s
@@ -1604,7 +1609,7 @@ MixChannelToStereo	proc
 						mov		esi,volume_table_ptr						
 						cmp		[TChannel ptr eax.Volume],64
 						jb		mix_with_volume_m8
-						cmp		[TChannel ptr eax.Panning],32
+						cmp		[TChannel ptr eax.Panning],PANNING_CENTER
 						jne		mix_with_volume_m8
 								MixMonoU8
 								jmp		wave_mixed_s
@@ -1640,32 +1645,34 @@ SetVolumeTablePointersForChannel_Mono	endp
 ; Sets the volume table pointers to the right rows given the channel volume and panning in stereo output
 ;
 ; INPUT  : EAX -> TChannel structure
-; OUTPUT : volume_table_ptr -> volume table row for (channel_volume * (64 - channel_panning) / 64)
-; 		   volume_table_ptr_right -> volume table row for (channel_volume * channel_panning / 64)
+; OUTPUT : volume_table_ptr -> volume table row for (channel_volume * (PANNING_RIGHT - (channel_panning - PANNING_LEFT)) / (PANNING_RIGHT - PANNING_LEFT))
+; 		   volume_table_ptr_right -> volume table row for (channel_volume * (channel_panning - PANNING_LEFT) / (PANNING_RIGHT - PANNING_LEFT))
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 SetVolumeTablePointersForChannel_Stereo	proc
 		; Set volume table offsets
 		push	ebx
-		; Left channel volume: volume * (64 - panning) / 64
-		mov		ebx,64
+		; Left channel volume: volume * (PANNING_RIGHT - (channel_panning - PANNING_LEFT)) / (PANNING_RIGHT - (channel_panning - PANNING_RIGHT))
+		mov		ebx,PANNING_RIGHT
 		movzx	ecx,[TChannel ptr eax.Panning]
 		sub		ebx,ecx
-		shl		ebx,2+8+2	; volume_units * num_rows_per_volume_unit (256/64=4) * sample_values_per_row (256) * sizeof(DWORD) (4)
+		add		ebx,PANNING_LEFT
+		shl		ebx,(8-PANNING_BITS)+8+2	; volume_units * num_rows_per_volume_unit (256/(PANNING_RIGHT-PANNING_LEFT)=PANNING_BITS) * sample_values_per_row (256) * sizeof(DWORD) (4)
 		add		ebx,VolumeTable
 		movzx	ecx,[TChannel ptr eax.Volume]
 		mov		ecx,[ebx+4*ecx]
-add ecx,32 ; for rounding
+		add 	ecx,32 ; for rounding
 		shr		ecx,6		; Values in volume table are pre-multiplied by volume dynamic range
 		shl		ecx,2+8	; volume_units * num_rows_per_volume_unit (256/64=4) * sample_values_per_row (256) * sizeof(DWORD) (4)
 		add		ecx,VolumeTable
 		mov		volume_table_ptr,ecx
-		; Right channel volume: volume * panning / 64
+		; Right channel volume: volume * (channel_panning - PANNING_LEFT) / (PANNING_RIGHT - PANNING_LEFT)
 		movzx	ebx,[TChannel ptr eax.Panning]
-		shl		ebx,2+8+2	; volume_units * num_rows_per_volume_unit (256/64=4) * sample_values_per_row (256) * sizeof(DWORD) (4)
+		sub		ebx,PANNING_LEFT
+		shl		ebx,(8-PANNING_BITS)+8+2	; volume_units * num_rows_per_volume_unit (256/(PANNING_RIGHT-PANNING_LEFT)=PANNING_BITS) * sample_values_per_row (256) * sizeof(DWORD) (4)
 		add		ebx,VolumeTable
 		movzx	ecx,[TChannel ptr eax.Volume]
 		mov		ecx,[ebx+4*ecx]
-add ecx,32 ; for rounding
+		add 	ecx,32 ; for rounding
 		shr		ecx,6		; Values in volume table are pre-multiplied by volume dynamic range
 		shl		ecx,2+8	; volume_units * num_rows_per_volume_unit (256/64=4) * sample_values_per_row (256) * sizeof(DWORD) (4)
 		add		ecx,VolumeTable

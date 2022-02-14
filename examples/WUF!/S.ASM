@@ -24,7 +24,7 @@ CHANNEL_VOLUME_INCREMENT	EQU 1
 CHANNEL_VOLUME_MAX			EQU 64
 
 CHANNEL_PANNING_INCREMENT	EQU 1
-CHANNEL_PANNING_MAX			EQU 64
+CHANNEL_PANNING_MAX			EQU 128
 
 ReservedChannelKeyHandler	proc
 		sub		eax,Key_1
@@ -221,6 +221,11 @@ start:
 		
         call    WUFInit
         ErrorExit "Error initializing wuF!"
+
+		; mov		eax,offset sound_properties
+		; xor		ebx,ebx		
+		; call	WUFSetProperties
+		; ErrorExit "Unable to set new playback properties."
 		
 		xor		eax,eax
 		mov		edi,offset mixer_channels
@@ -356,6 +361,8 @@ db I,79 dup(0)
 I=I XOR -1
 ENDM
 #
+
+;sound_properties	SoundProperties<22050, 8, 2>
 
 .data?
 mixer_channels	dd ?,?,?,?

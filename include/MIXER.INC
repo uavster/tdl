@@ -16,7 +16,7 @@ TChannel        STRUC
 		Flags			db ?	; Channel flags (see above)
 						db ?
 		Volume			db ?	; Volume from 0 (silent) to 64 (original volume)
-		Panning			db ?	; Panning from 0 (left) to 64 (right)
+		Panning			db ?	; Panning from 0 (left) to 128 (right)
         ChanWave        dd ?    ; Pointer to TWave structure or NULL if not active
 		FreqMultiplier	dd ?	; Fixed point 8.24
 		SampleIncrement	dd ?	; Fixed point 24.8
@@ -135,7 +135,7 @@ global	WUFFreeChannels : NEAR
 ;		   ESI = New wave offset (fixed point 24.8), or -1 to leave as is. 
 ;				 The sound won't loop if the offset is beyond the loop end. 
 ;				 No sound is played if the offset is beyond the sound end.
-;		   EDI = Panning, from 0 (left) to 64 (right), or -1 to leave as is.
+;		   EDI = Panning, from 0 (left) to 128 (right), or -1 to leave as is.
 ;
 ; OUTPUT : CF = 0 if no error
 ;               EAX = NO_ERROR
