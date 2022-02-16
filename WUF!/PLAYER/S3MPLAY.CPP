@@ -42,7 +42,7 @@ S3MPlayable::S3MPlayable(const char *file_name)
 		}
 		song_channels_ = new SongChannel[NumMixerChannels()];
 		for (int k = 0; k < NumMixerChannels(); ++k) {
-			song_channels_[k].panning = song_->IsStereo() ? song_->Channel(SongChannelIndexForMixerChannelIndex(k))->Pan() : 32;
+			song_channels_[k].panning = song_->IsStereo() ? ((((kPanningRight - kPanningLeft) * static_cast<unsigned int>(song_->Channel(SongChannelIndexForMixerChannelIndex(k))->Pan())) / 64) + kPanningLeft) : kPanningCenter;
 		}
 	}
 	// Create TWave for each instrument.
@@ -656,6 +656,9 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						break;
 					case 'I':
 						self->TremorRow(channel);						
+						break;
+					case 'X':
+						channel.panning = (static_cast<unsigned int>(cell.EffectValue()) * (kPanningRight - kPanningLeft) + 255 / 2) / 255 + kPanningLeft;	// +255/2 for rounding.
 						break;
 				}
 			} else {

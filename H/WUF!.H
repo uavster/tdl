@@ -15,6 +15,10 @@
 
 #define kWUFChannelAutoFree		4
 
+#define kPanningLeft	0
+#define kPanningRight	128
+#define kPanningCenter	((kPanningLeft + kPanningRight) / 2)
+
 typedef struct {
         DWORD SPSamplingRate;
 		BYTE SPBitsPerSample;
