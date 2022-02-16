@@ -1651,7 +1651,7 @@ SetVolumeTablePointersForChannel_Mono	endp
 SetVolumeTablePointersForChannel_Stereo	proc
 		; Set volume table offsets
 		push	ebx
-		; Left channel volume: volume * (PANNING_RIGHT - (channel_panning - PANNING_LEFT)) / (PANNING_RIGHT - (channel_panning - PANNING_RIGHT))
+		; Left channel volume: volume * (PANNING_RIGHT - (channel_panning - PANNING_LEFT)) / (PANNING_RIGHT - PANNING_LEFT)
 		mov		ebx,PANNING_RIGHT
 		movzx	ecx,[TChannel ptr eax.Panning]
 		sub		ebx,ecx
