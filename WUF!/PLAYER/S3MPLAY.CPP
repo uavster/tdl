@@ -5,6 +5,8 @@
 #include "tinymath.h"
 #include "random.h"
 
+#define kPanningRange	(kPanningRight - kPanningLeft)
+
 S3MPlayable::S3MPlayable(const char *file_name)
 	: Playable(), song_(NULL), min_channel_index_(1), max_channel_index_(0), mixer_channels_(NULL), 
 	mixer_callback_(kHMixerCallbackInvalid), num_ticks_(0), row_index_(0), order_(0), next_order_(-1), instruments_(NULL),
@@ -42,7 +44,7 @@ S3MPlayable::S3MPlayable(const char *file_name)
 		}
 		song_channels_ = new SongChannel[NumMixerChannels()];
 		for (int k = 0; k < NumMixerChannels(); ++k) {
-			song_channels_[k].panning = song_->IsStereo() ? ((((kPanningRight - kPanningLeft) * static_cast<unsigned int>(song_->Channel(SongChannelIndexForMixerChannelIndex(k))->Pan())) / 64) + kPanningLeft) : kPanningCenter;
+			song_channels_[k].panning = song_->IsStereo() ? (((kPanningRange * static_cast<unsigned int>(song_->Channel(SongChannelIndexForMixerChannelIndex(k))->Pan())) / 64) + kPanningLeft) : kPanningCenter;
 		}
 	}
 	// Create TWave for each instrument.
@@ -658,7 +660,9 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						self->TremorRow(channel);						
 						break;
 					case 'X':
-						channel.panning = (static_cast<unsigned int>(cell.EffectValue()) * (kPanningRight - kPanningLeft) + 255 / 2) / 255 + kPanningLeft;	// +255/2 for rounding.
+						// The command value goes from 0 (left) to 0x7e (right), while the panning range of the mixer goes from 0 to 128,
+						// so that the center of the interval is the center panning. We have to map [0, 127] to [0, 128], and do it with rounding.
+						channel.panning = (static_cast<unsigned int>(cell.EffectValue()) * kPanningRange + 127 / 2) / 127 + kPanningLeft;	// +127/2 for rounding.
 						break;
 				}
 			} else {
