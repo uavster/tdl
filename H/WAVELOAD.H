@@ -12,6 +12,11 @@
   extern "C" {
 #endif
 
+#define kWaveType8Bits	0
+#define kWaveType16Bits	1
+#define kWaveTypeMono	0
+#define kWaveTypeStereo 2
+
 typedef struct {
         DWORD WaveType;	// bit 0 : 8/16 bits ,  bit 1 : Mono/Stereo
         void *WavePtr;	// -> Sound data

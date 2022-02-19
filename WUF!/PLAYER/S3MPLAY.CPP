@@ -58,8 +58,8 @@ S3MPlayable::S3MPlayable(const char *file_name)
 				continue;
 			}
 			// Check instrument type and packing
-			instruments_[j].WaveType = instrument->IsStereo() ? 1 : 0;
-			instruments_[j].WaveType |= instrument->Is16Bit() ? 2 : 0;
+			instruments_[j].WaveType = instrument->IsStereo() ? kWaveTypeStereo : kWaveTypeMono;
+			instruments_[j].WaveType |= instrument->Is16Bit() ? kWaveType16Bits : kWaveType8Bits;
 			instruments_[j].WavePtr = instrument->Samples();
 			instruments_[j].WaveLen = instrument->NumSamples();
 			instruments_[j].BaseRate = instrument->C2Frequency();
@@ -70,6 +70,14 @@ S3MPlayable::S3MPlayable(const char *file_name)
 			} else {
 				instruments_[j].LoopStart = -1;
 				instruments_[j].LoopEnd = -1;
+			}
+			if (instrument->Is16Bit()) {
+				// Convert samples to signed.
+				const int len = instruments_[j].WaveLen;
+				WORD *const ptr = static_cast<WORD *>(instruments_[j].WavePtr);
+				for (int k = 0; k < len; ++k) {
+					ptr[k] -= static_cast<WORD>(0x8000);
+				}
 			}
 		}
 	}
