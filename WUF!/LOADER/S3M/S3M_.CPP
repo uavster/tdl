@@ -35,7 +35,16 @@ static bool LoadS3MInstrument(int instrument_offset, TS3MInstrument &instrument,
 	if (instrument.header.magic != S3M_INSTRUMENT_MAGIC_VALUE) {
 		return false;
 	}
-	instrument.data = new BYTE[instrument.header.spec.sampled.length];
+	int length = instrument.header.spec.sampled.length;
+	if (instrument.header.spec.sampled.flags & 4) {
+		// 16 bits per sample.
+		length *= 2;
+	}
+	if (instrument.header.spec.sampled.flags & 2) {
+		// Stereo.
+		length *= 2;
+	}
+	instrument.data = new BYTE[length];
 	if (instrument.data == NULL) {
 		return false;
 	}
@@ -43,7 +52,7 @@ static bool LoadS3MInstrument(int instrument_offset, TS3MInstrument &instrument,
 	if (ttl_seek(f, data_offset, SEEK_SET) != data_offset) {
 		return false;
 	}
-	if (!read_field(instrument.data, instrument.header.spec.sampled.length, f)) {
+	if (!read_field(instrument.data, length, f)) {
 		return false;
 	}
 	return true;
