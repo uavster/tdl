@@ -26,7 +26,7 @@ S3MPlayable::S3MPlayable(const char *file_name)
 		for (int row_index = 0; row_index < song_->Pattern(pattern_index)->NumRows(); ++row_index) {
 			const S3MRow *row = song_->Pattern(pattern_index)->Row(row_index);
 			for (S3MCellIterator it = row->begin(); it != row->end(); it++) {
-				int channel_number = it.Cell().ChannelNumber();
+				int channel_number = static_cast<unsigned int>(it.Cell().ChannelNumber());
 				if (channel_number < min_channel_index_) {
 					min_channel_index_ = channel_number;
 				}
@@ -44,7 +44,8 @@ S3MPlayable::S3MPlayable(const char *file_name)
 		}
 		song_channels_ = new SongChannel[NumMixerChannels()];
 		for (int k = 0; k < NumMixerChannels(); ++k) {
-			song_channels_[k].panning = song_->IsStereo() ? (((kPanningRange * static_cast<unsigned int>(song_->Channel(SongChannelIndexForMixerChannelIndex(k))->Pan())) / 64) + kPanningLeft) : kPanningCenter;
+			song_channels_[k].panning = song_->IsStereo() ? (((kPanningRange * static_cast<unsigned int>(song_->Channel(SongChannelIndexForMixerChannelIndex(k))->Pan()) + 64/2) / 64) + kPanningLeft) : kPanningCenter;
+			printf("%dn\n", song_channels_[k].panning);
 		}
 	}
 	// Create TWave for each instrument.
