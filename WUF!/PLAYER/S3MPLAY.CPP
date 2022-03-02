@@ -632,6 +632,10 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 							case 3:
 								channel.vibrato_waveform = cell.EffectValue() & 0xf;
 								break;
+							case 8:
+								// Set panning; 0=left, 0xf=right.
+								channel.panning = (static_cast<unsigned int>(cell.EffectValue() & 0xf) * kPanningRange + 15 / 2) / 15 + kPanningLeft;	// +15/2 for rounding.								
+								break;
 							case 0xd:
 								channel.delayed_cell = cell;
 								channel.remaining_delay_ticks = cell.EffectValue() & 0xf;
@@ -668,6 +672,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						self->TremorRow(channel);						
 						break;
 					case 'X':
+						// Set panning.
 						// The command value goes from 0 (left) to 0x7e (right), while the panning range of the mixer goes from 0 to 128,
 						// so that the center of the interval is the center panning. We have to map [0, 127] to [0, 128], and do it with rounding.
 						channel.panning = (static_cast<unsigned int>(cell.EffectValue()) * kPanningRange + 127 / 2) / 127 + kPanningLeft;	// +127/2 for rounding.
