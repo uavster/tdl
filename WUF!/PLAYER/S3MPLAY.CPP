@@ -632,6 +632,11 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 							case 3:
 								channel.vibrato_waveform = cell.EffectValue() & 0xf;
 								break;
+							case 6:
+								// Fine pattern delay.
+							    // All delays from multiple S6x commands in the row are summed.
+								self->num_ticks_ -= (cell.EffectValue() & 0xf);
+								break;
 							case 8:
 								// Set panning; 0=left, 0xf=right.
 								channel.panning = (static_cast<unsigned int>(cell.EffectValue() & 0xf) * kPanningRange + 15 / 2) / 15 + kPanningLeft;	// +15/2 for rounding.								
@@ -704,7 +709,9 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 			}
 		}
 		
-		self->num_ticks_ = 0;
+		// Subtract the ticks per row to set ticks to zero. This gives an opportunity to 
+		// commands like S6x to affect the number of ticks during which this row will play.
+		self->num_ticks_ -= self->ticks_per_row_;
 		if (self->repeat_row_times_ == 0xff) {
 			self->AdvanceRow(next_row);
 		} else {
