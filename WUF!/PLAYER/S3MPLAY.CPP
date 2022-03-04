@@ -45,7 +45,6 @@ S3MPlayable::S3MPlayable(const char *file_name)
 		song_channels_ = new SongChannel[NumMixerChannels()];
 		for (int k = 0; k < NumMixerChannels(); ++k) {
 			song_channels_[k].panning = song_->IsStereo() ? (((kPanningRange * static_cast<unsigned int>(song_->Channel(SongChannelIndexForMixerChannelIndex(k))->Pan()) + 64/2) / 64) + kPanningLeft) : kPanningCenter;
-			printf("%dn\n", song_channels_[k].panning);
 		}
 	}
 	// Create TWave for each instrument.
@@ -503,12 +502,22 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					self->VibratoTick(channel);
 					break;
 				case 'S':
-					if ((channel.effect_value >> 4) == 0xd) {
-						if (channel.remaining_delay_ticks > 0) {
-							if (--channel.remaining_delay_ticks == 0) {
-								self->HandleNewNote(channel.delayed_cell, channel, &instrument, &sample_offset);
+					switch (channel.effect_value >> 4) {
+						case 0xd:
+							if (channel.remaining_delay_ticks > 0) {
+								if (--channel.remaining_delay_ticks == 0) {
+									self->HandleNewNote(channel.delayed_cell, channel, &instrument, &sample_offset);
+								}
 							}
-						}
+							break;
+						case 0xc:
+							if (channel.remaining_delay_ticks > 0) {
+								if (--channel.remaining_delay_ticks == 0) {
+									channel.is_playing = false;
+									WUFPauseSound(WUFChannelInCallback(self->mixer_channels_[i]));
+								}
+							}
+							break;
 					}
 					break;
 				case 'Q':
@@ -642,7 +651,14 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 								// Set panning; 0=left, 0xf=right.
 								channel.panning = (static_cast<unsigned int>(cell.EffectValue() & 0xf) * kPanningRange + 15 / 2) / 15 + kPanningLeft;	// +15/2 for rounding.								
 								break;
+							case 0xc:
+								// Note cut after x ticks. Shares remaining_delay_ticks with SDx because they are both constrained
+								// the duration of the row, and cannot therefore coexist.
+								channel.remaining_delay_ticks = cell.EffectValue() & 0xf;
+								break;
 							case 0xd:
+								// Note delay for x ticks. Shares remaining_delay_ticks with SCx because they are both constrained
+								// the duration of the row, and cannot therefore coexist.
 								channel.delayed_cell = cell;
 								channel.remaining_delay_ticks = cell.EffectValue() & 0xf;
 								break;
