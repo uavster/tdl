@@ -26,6 +26,17 @@ MAX_NUM_CALLBACKS	EQU 4
 ; Expansion bits for extra internal bit depth
 EXPANSION_BITS		EQU 1
 
+; If set, this flag enables the 11/8 volume factor that makes the mixer output 
+; sound at the same volume level as on Impulse Tracker. It is applied during
+; compression, on the result of adding all channel signals, and before saturation.
+; Use with care, as it increases the probability of distortion, especially when
+; channel signals are correlated. Specifically, it introduces noticeable distortion
+; in some parts of 2nd_pm.s3m (Second Reality soundtrack by Purple Motion).
+; Leaving it disabled solves the distortion problem, and the volume difference is
+; hardly noticeable (mostly, on patterns with isolated strings when compared 
+; side-by-side with IT).
+ENABLE_IMPULSE_TRACKER_AMPLIFICATION	EQU 0
+
 PANNING_BITS		EQU 7
 PANNING_LEFT		EQU 0
 PANNING_RIGHT		EQU (1 SHL PANNING_BITS)
@@ -1851,13 +1862,16 @@ endif
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*4]
 				lea		eax,[eax*4+eax]				; Compression factor *5
+if ENABLE_IMPULSE_TRACKER_AMPLIFICATION
 				mov		ecx,eax
 				lea		eax,[eax*8+eax]				; Extra compression factor of 11/8 as in IT, since there's extra room in stereo.
 				lea		eax,[ecx*2+eax]
 				; Channel mixing has been previously done with added bits: 8+EXPANSION_BIT+6+2
 				; Subtract all bits minus 8 to keep precision, and scale down by global volume in 16 bits instead of 8
 				SignedDivByPow2	eax,4+3+EXPANSION_BITS+6+2	; Compression factor /16, extra compression factor /8, EXPANSION_BITS, /(64*4) (volume normalization)
-				
+else
+				SignedDivByPow2	eax,4+EXPANSION_BITS+6+2	; Compression factor /16, extra compression factor /8, EXPANSION_BITS, /(64*4) (volume normalization)
+endif				
 				; Saturate; limits multiplied by 256 since we left 8 extra bits.
 				cmp		eax,127*256
 				jg		sat_m8_pos
@@ -1890,12 +1904,15 @@ endif
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*4]
 				lea		eax,[eax*4+eax]				; Compression factor *5
+if ENABLE_IMPULSE_TRACKER_AMPLIFICATION
 				mov		ecx,eax
 				lea		eax,[eax*8+eax]				; Extra compression factor of 11/8 as in IT, since there's extra room in stereo.
 				lea		eax,[ecx*2+eax]
 				; Channel mixing has been previously done with added bits: EXPANSION_BIT+6+2
 				SignedDivByPow2	eax,4+3+EXPANSION_BITS+6+2	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
-
+else
+				SignedDivByPow2	eax,4+EXPANSION_BITS+6+2	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
+endif
 				; Saturate
 				cmp		eax,32767
 				jg		sat_m16_pos
@@ -1929,13 +1946,16 @@ endif
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]				; Compression factor of 5/16 (divider in SignedDivPow2 argument below)
+if ENABLE_IMPULSE_TRACKER_AMPLIFICATION
 				mov		ecx,eax
 				lea		eax,[eax*8+eax]				; Extra compression factor of 11/8 as in IT, since there's extra room in stereo.
 				lea		eax,[ecx*2+eax]
 				; Channel mixing has been previously done with added bits: 8+EXPANSION_BIT+6+2
 				; Subtract all bits minus 8 to keep precision, and scale down by global volume in 16 bits instead of 8
 				SignedDivByPow2	eax,4+3+EXPANSION_BITS+6+2-1	; Compression factor /16, extra compression factor /8, EXPANSION_BITS, /(64*4) (volume normalization), *2 as stereo is divided by 2 for center panning
-				
+else
+				SignedDivByPow2	eax,4+EXPANSION_BITS+6+2-1	; Compression factor /16, extra compression factor /8, EXPANSION_BITS, /(64*4) (volume normalization), *2 as stereo is divided by 2 for center panning
+endif				
 				; Saturate left channel; limits multiplied by 256 since we left 8 extra bits.
 				cmp		eax,127*256
 				jg		sat_l8_pos
@@ -2001,11 +2021,15 @@ endif
 				mov		esi,MixingBuffer
 				mov		eax,[esi+ebx*8]
 				lea		eax,[eax*4+eax]				; Compression factor *5 (divider in SignedDivPow2 argument below)
+if ENABLE_IMPULSE_TRACKER_AMPLIFICATION
 				mov		ecx,eax
 				lea		eax,[eax*8+eax]				; Extra compression factor of 11/8 as in IT, since there's extra room in stereo.
 				lea		eax,[ecx*2+eax]
 				; Channel mixing has been previously done with added bits: EXPANSION_BIT+6+2
 				SignedDivByPow2	eax,4+3+EXPANSION_BITS+6+2-1	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
+else
+				SignedDivByPow2	eax,4+EXPANSION_BITS+6+2-1	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
+endif
 
 				; Saturate left channel (cycles 386,486)
 				cmp		eax,32767		; 2, 1
@@ -2027,11 +2051,11 @@ endif
 				mov		esi,MixingBuffer
 				mov		edx,[esi+ebx*8+4]
 				lea		edx,[edx*4+edx]				; Compression factor *5
-				mov		ecx,edx
-				lea		edx,[edx*8+edx]				; Extra compression factor of 11/8 as in IT, since there's extra room in stereo.
-				lea		edx,[ecx*2+edx]
+				; mov		ecx,edx
+				; lea		edx,[edx*8+edx]				; Extra compression factor of 11/8 as in IT, since there's extra room in stereo.
+				; lea		edx,[ecx*2+edx]
 				; Channel mixing has been previously done with added bits: EXPANSION_BIT+6+2
-				SignedDivByPow2	edx,4+3+EXPANSION_BITS+6+2-1	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
+				SignedDivByPow2	edx,4+EXPANSION_BITS+6+2-1	; Compression factor /16, EXPANSION_BITS, /(64*4) (volume normalization)
 
 				; Saturate right channel (same timing as left channel saturation)
 				cmp		edx,32767
