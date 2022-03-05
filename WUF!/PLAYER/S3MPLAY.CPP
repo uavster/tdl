@@ -651,6 +651,22 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 								// Set panning; 0=left, 0xf=right.
 								channel.panning = (static_cast<unsigned int>(cell.EffectValue() & 0xf) * kPanningRange + 15 / 2) / 15 + kPanningLeft;	// +15/2 for rounding.								
 								break;
+							case 0xb:
+								BYTE low_byte = cell.EffectValue() & 0xf;
+								if (low_byte == 0) {
+									channel.pattern_loop_start = self->row_index_;
+								} else {
+									if (self->row_index_ != channel.pattern_loop_start && channel.pattern_loop_counter < low_byte) {
+										self->row_index_ = channel.pattern_loop_start - 1;
+										++channel.pattern_loop_counter;
+									} else {
+										if (self->row_index_ != channel.pattern_loop_start) {
+											channel.pattern_loop_counter = 0;
+											channel.pattern_loop_start = self->row_index_ + 1;
+										}
+									}
+								}
+								break;
 							case 0xc:
 								// Note cut after x ticks. Shares remaining_delay_ticks with SDx because they are both constrained
 								// the duration of the row, and cannot therefore coexist.
@@ -789,6 +805,9 @@ void S3MPlayable::SongChannel::Reset() {
 	remaining_retrigger_ticks = 0xff;	
 	
 	tremor_remaining_ticks = 0xff;
+	
+	pattern_loop_start = 0;
+	pattern_loop_counter = 0;
 }
 
 DWORD S3MPlayable::PlayVolume(const SongChannel &channel) const {

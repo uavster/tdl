@@ -86,6 +86,9 @@ private:
 		BYTE tremor_remaining_ticks;
 		
 		BYTE panning;	// 0 = left, 64 = right
+		
+		BYTE pattern_loop_start;
+		BYTE pattern_loop_counter;
 	};
 	// One-to-one correspondence with mixer_channels_
 	SongChannel *song_channels_;
