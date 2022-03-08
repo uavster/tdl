@@ -520,6 +520,13 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 							break;
 					}
 					break;
+				case 'T':
+					if ((channel.ticks_per_second_increment > 0 && self->ticks_per_second_ < 255) || 
+						(channel.ticks_per_second_increment < 0 && self->ticks_per_second_ > 32)) {
+						self->ticks_per_second_ += channel.ticks_per_second_increment;
+						WUFSetMixerCallbackPeriod(self->mixer_callback_, MixerCallbackPeriod(self->ticks_per_second_));
+					}
+					break;
 				case 'Q':
 					if (self->NeedsRetrigger(channel)) {
 						instrument = &self->instruments_[channel.instrument];
@@ -601,8 +608,19 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						}
 						break;
 					case 'T':
-						self->ticks_per_second_ = cell.EffectValue();
-						WUFSetMixerCallbackPeriod(self->mixer_callback_, MixerCallbackPeriod(self->ticks_per_second_));
+						if (cell.EffectValue() >= 0x20) {
+							self->ticks_per_second_ = cell.EffectValue();
+							channel.ticks_per_second_increment = 0;
+							WUFSetMixerCallbackPeriod(self->mixer_callback_, MixerCallbackPeriod(self->ticks_per_second_));
+						} else {
+							if (cell.EffectValue() != 0) {
+								if (cell.EffectValue() >= 0x10) {
+									channel.ticks_per_second_increment = cell.EffectValue() & 0xf;
+								} else {
+									channel.ticks_per_second_increment = -(cell.EffectValue() & 0xf);
+								}
+							}
+						}
 						break;
 					case 'F':
 						if (channel.effect_value >= 0xE0) {
@@ -808,6 +826,8 @@ void S3MPlayable::SongChannel::Reset() {
 	
 	pattern_loop_start = 0;
 	pattern_loop_counter = 0;
+	
+	ticks_per_second_increment = 0;
 }
 
 DWORD S3MPlayable::PlayVolume(const SongChannel &channel) const {

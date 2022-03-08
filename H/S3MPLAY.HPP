@@ -89,6 +89,8 @@ private:
 		
 		BYTE pattern_loop_start;
 		BYTE pattern_loop_counter;
+		
+		int ticks_per_second_increment;
 	};
 	// One-to-one correspondence with mixer_channels_
 	SongChannel *song_channels_;
