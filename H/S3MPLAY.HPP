@@ -69,6 +69,8 @@ private:
 		BYTE last_octave;
 		bool is_playing;
 		
+		BYTE tone_portamento_speed;
+		
 		WaveformType tremolo_waveform;
 		BYTE tremolo_index;
 		int tremolo_volume;

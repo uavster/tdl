@@ -269,7 +269,7 @@ void S3MPlayable::TonePortamento(SongChannel &channel) {
 	if (new_freq_mult > channel.freq_multiplier) {
 		channel.freq_multiplier = FreqMultiplierForNote(channel.last_note, channel.last_octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);		
 		if (new_freq_mult >= channel.freq_multiplier) {
-			channel.period_increment -= 4 * channel.effect_value;
+			channel.period_increment -= 4 * channel.tone_portamento_speed;
 		} else {
 			channel.last_note = channel.note;
 			channel.last_octave = channel.octave;
@@ -279,7 +279,7 @@ void S3MPlayable::TonePortamento(SongChannel &channel) {
 	} else if (new_freq_mult < channel.freq_multiplier) {
 		channel.freq_multiplier = FreqMultiplierForNote(channel.last_note, channel.last_octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
 		if (new_freq_mult <= channel.freq_multiplier) {
-			channel.period_increment += 4 * channel.effect_value;
+			channel.period_increment += 4 * channel.tone_portamento_speed;
 		} else {
 			channel.last_note = channel.note;
 			channel.last_octave = channel.octave;
@@ -366,7 +366,7 @@ void S3MPlayable::HandleNewNote(const S3MCell &cell, SongChannel &channel, TWave
 		// channel.instrument = 0xff;
 	}
 	if (cell.HasNote()) {
-		if (channel.note == 0xff || !cell.HasEffect() || cell.Effect() != 'G') {
+		if (channel.note == 0xff || !cell.HasEffect() || (cell.Effect() != 'G' && cell.Effect() != 'L')) {
 			*instrument = &instruments_[channel.instrument];
 			channel.period_increment = 0;
 			*sample_offset = 0;
@@ -387,7 +387,7 @@ void S3MPlayable::HandleNewNote(const S3MCell &cell, SongChannel &channel, TWave
 	}
 	if (channel.note != 0xff && channel.octave != 0xff) {
 		// Update frequency multiplier if the current note and octave are valid for the channel.
-		if (!cell.HasEffect() || cell.Effect() != 'G') {	// Tone Portamento adjusts the multiplier progressively to the current note.
+		if (!cell.HasEffect() || (cell.Effect() != 'G' && cell.Effect() != 'L')) {	// Tone Portamento adjusts the multiplier progressively to the current note.
 			channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
 		}
 	}
@@ -487,6 +487,10 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 				case 'G':
 					self->TonePortamento(channel);
 					break;
+				case 'L':
+					self->VolumeSlideTick(channel);
+					self->TonePortamento(channel);
+					break;					
 				case 'R':
 					channel.tremolo_volume = self->Tremolo(channel);
 					break;
@@ -581,7 +585,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 					// If the effect did not change and the value is 0, leave value as is. Otherwise, update.
 					channel.effect_value = cell.EffectValue();
 				}
-				if (channel.effect == 'G' && cell.Effect() != 'G' && !cell.HasNote()) {
+				if (((channel.effect == 'G' || channel.effect == 'L') && (cell.Effect() != 'G' && cell.Effect() != 'L')) && !cell.HasNote()) {
 					channel.note = channel.last_note;
 					channel.octave = channel.last_octave;
 					channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
@@ -639,6 +643,13 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						self->VolumeSlideRow(channel);
 						break;
 					case 'G':
+						if (cell.EffectValue() > 0) {
+							channel.tone_portamento_speed = cell.EffectValue();
+						}
+						self->TonePortamento(channel);
+						break;
+					case 'L':
+						self->VolumeSlideRow(channel);
 						self->TonePortamento(channel);
 						break;
 					case 'O':
@@ -735,7 +746,7 @@ void S3MPlayable::Tick(HMixerCallback mixer_callback, void *user_pointer) {
 						break;
 				}
 			} else {
-				if (channel.effect == 'G' && !cell.HasNote()) {
+				if ((channel.effect == 'G' || channel.effect == 'L') && !cell.HasNote()) {
 					channel.note = channel.last_note;
 					channel.octave = channel.last_octave;
 					channel.freq_multiplier = FreqMultiplierForNote(channel.note, channel.octave, channel.period_increment, channel.instrument_freq, channel.vibrato_depth);
@@ -810,6 +821,8 @@ void S3MPlayable::SongChannel::Reset() {
 	last_octave = 0xff;
 	is_playing = false;
 
+	tone_portamento_speed = 0;
+	
 	tremolo_waveform = SINE;
 	tremolo_index = 0;
 	tremolo_volume = 0;
