@@ -96,11 +96,12 @@ void SetCameraPos(float,float,float,RENDERCAMERA *);
 ;
 ; INPUT : EAX = float ALPHA
 ;         EBX = float BETA
+;         ECX = float GAMMA
 ;         EDX -> RENDERCAMERA or NULL if Current Camera
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 */
-void SetCameraOrientation(float,float,RENDERCAMERA *);
-#pragma aux SetCamerOrientation "*" parm   [eax] [ebx] [edx] \
+void SetCameraOrientation(float alpha, float beta, float gamma, RENDERCAMERA *camera);
+#pragma aux SetCamerOrientation "*" parm   [eax] [ebx] [ecx] [edx] \
                              modify [eax ebx ecx edx esi edi ebp];
 
 /*

@@ -1040,11 +1040,6 @@ DefaultCamera   dd 0.0,0.0,DEFAULT_CAMERA_Z
 
 LineColor       dd 0ffffffh     ; White
 
-mylight         dd -256.0,256.0,0.0
-                dd 0.57,-0.57,0.57
-                dd ?
-                db "Mi lucecitar..."
-
 .data?
 MiddleX         dd ?
 MiddleY         dd ?
