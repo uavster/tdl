@@ -9,8 +9,8 @@
 #include <tdl.h>
 #include <tinymath.h>
 
-#define SX  640
-#define SY  480
+#define SX  320
+#define SY  200
 
 void changedir(float *x, int minx, int maxx, int *dir)
 {
@@ -59,43 +59,43 @@ void main(void)
   k1.Type=3;
 
 
-  p4.X=0;
-  p4.Y=SY-1;
-  p4.k[0]=10;
-  p4.k[1]=55.0;
-  p4.k[2]=123.0;
-  p4.k[3]=0.0;
+  p4.ImageProjection.x=0;
+  p4.ImageProjection.y=SY-1;
+  p4.SpanVars.k[0]=10;
+  p4.SpanVars.k[1]=55.0;
+  p4.SpanVars.k[2]=123.0;
+  p4.SpanVars.k[3]=0.0;
 
-  p5.X=SX-1;
-  p5.Y=0;
-  p5.k[0]=20;
-  p5.k[1]=255.0;
-  p5.k[2]=255.0;
-  p5.k[3]=25.0;
+  p5.ImageProjection.x=SX-1;
+  p5.ImageProjection.y=0;
+  p5.SpanVars.k[0]=20;
+  p5.SpanVars.k[1]=255.0;
+  p5.SpanVars.k[2]=255.0;
+  p5.SpanVars.k[3]=25.0;
 
-  p1.X=40;
-  p1.Y=50;
-  p1.k[0]=2;
-  p1.k[1]=255.0;
-  p1.k[2]=0.0;
-  p1.k[3]=128.0;
-  p1.k[4]=0.0;
+  p1.ImageProjection.x=40;
+  p1.ImageProjection.y=50;
+  p1.SpanVars.k[0]=2;
+  p1.SpanVars.k[1]=255.0;
+  p1.SpanVars.k[2]=0.0;
+  p1.SpanVars.k[3]=128.0;
+  p1.SpanVars.k[4]=0.0;
 
-  p2.X=SX-71;
-  p2.Y=70;
-  p2.k[0]=2;
-  p2.k[1]=0.0;
-  p2.k[2]=255.0;
-  p2.k[3]=64.0;
-  p2.k[4]=255.0;
+  p2.ImageProjection.x=SX-71;
+  p2.ImageProjection.y=70;
+  p2.SpanVars.k[0]=2;
+  p2.SpanVars.k[1]=0.0;
+  p2.SpanVars.k[2]=255.0;
+  p2.SpanVars.k[3]=64.0;
+  p2.SpanVars.k[4]=255.0;
 
-  p3.X=20;
-  p3.Y=SY-71;
-  p3.k[0]=50;
-  p3.k[1]=0.0;
-  p3.k[2]=0.0;
-  p3.k[3]=192.0;
-  p3.k[4]=255.0;
+  p3.ImageProjection.x=20;
+  p3.ImageProjection.y=SY-71;
+  p3.SpanVars.k[0]=50;
+  p3.SpanVars.k[1]=0.0;
+  p3.SpanVars.k[2]=0.0;
+  p3.SpanVars.k[3]=192.0;
+  p3.SpanVars.k[4]=255.0;
 
 
   Textura=LoadGFX("ca.pcx", 8);
@@ -144,44 +144,44 @@ void main(void)
 
     //for(i=0; i<500; i++)
     {
-    //p1.k[3]=(float)((int)((int)p1.X)&127u);
-    //p2.k[3]=(float)((int)((int)p2.Y)&127u);
-    //p3.k[3]=127.0*sqrt(p3.X*p3.X+p3.Y*p3.Y)/sqrt((SX*SX+SY*SY));
-    //p2.k[3]=127.0*sqrt(p2.X*p2.X+p2.Y*p2.Y)/sqrt((SX*SX+SY*SY));
-    //p1.k[3]=127.0*sqrt(p1.X*p1.X+p1.Y*p1.Y)/sqrt((SX*SX+SY*SY));
-    //p.Texture1=(SLI *)((int)(p1.X+p1.Y-p2.X*256*256+p2.Y*256-p3.X-p3.Y*256));
+    //p1.SpanVars.k[3]=(float)((int)((int)p1.ImageProjection.x)&127u);
+    //p2.SpanVars.k[3]=(float)((int)((int)p2.ImageProjection.y)&127u);
+    //p3.SpanVars.k[3]=127.0*sqrt(p3.ImageProjection.x*p3.ImageProjection.x+p3.ImageProjection.y*p3.ImageProjection.y)/sqrt((SX*SX+SY*SY));
+    //p2.SpanVars.k[3]=127.0*sqrt(p2.ImageProjection.x*p2.ImageProjection.x+p2.ImageProjection.y*p2.ImageProjection.y)/sqrt((SX*SX+SY*SY));
+    //p1.SpanVars.k[3]=127.0*sqrt(p1.ImageProjection.x*p1.ImageProjection.x+p1.ImageProjection.y*p1.ImageProjection.y)/sqrt((SX*SX+SY*SY));
+    //p.Texture1=(SLI *)((int)(p1.ImageProjection.x+p1.ImageProjection.y-p2.ImageProjection.x*256*256+p2.ImageProjection.y*256-p3.ImageProjection.x-p3.ImageProjection.y*256));
 
 
     GenericTriangleMapper(Imagen,&p);
 //    GenericTriangleMapper(GetVideoSLI(),&k);
 //    GenericTriangleMapper(GetVideoSLI(),&k1);
 
-    if(dir1) p1.X+=3.8768532*cos(p2.Y/800.0*M_PI); else p1.X-=4.8768532*sin(p3.Y/800.0*M_PI);
-    changedir(&p1.X, 1, SX-1, &dir1);
-    if(dir2) p1.Y+=4.4567452*sin(p3.X/800.0*M_PI); else p1.Y-=3.4567452*cos(p2.X/800.0*M_PI);
-    changedir(&p1.Y, 1, SY-1, &dir2);
+    if(dir1) p1.ImageProjection.x+=3.8768532*cos(p2.ImageProjection.y/800.0*M_PI); else p1.ImageProjection.x-=4.8768532*sin(p3.ImageProjection.y/800.0*M_PI);
+    changedir(&p1.ImageProjection.x, 1, SX-1, &dir1);
+    if(dir2) p1.ImageProjection.y+=4.4567452*sin(p3.ImageProjection.x/800.0*M_PI); else p1.ImageProjection.y-=3.4567452*cos(p2.ImageProjection.x/800.0*M_PI);
+    changedir(&p1.ImageProjection.y, 1, SY-1, &dir2);
 
-    if(dir3) p2.X+=3.7654762*cos(p3.Y/800.0*M_PI); else p2.X-=2.7654762*sin(p1.Y/800.0*M_PI);
-    changedir(&p2.X, 1, SX-1, &dir3);
-    if(dir4) p2.Y+=2.5463542*sin(p1.X/800.0*M_PI); else p2.Y-=4.5463542*cos(p3.X/800.0*M_PI);
-    changedir(&p2.Y, 1, SY-1, &dir4);
+    if(dir3) p2.ImageProjection.x+=3.7654762*cos(p3.ImageProjection.y/800.0*M_PI); else p2.ImageProjection.x-=2.7654762*sin(p1.ImageProjection.y/800.0*M_PI);
+    changedir(&p2.ImageProjection.x, 1, SX-1, &dir3);
+    if(dir4) p2.ImageProjection.y+=2.5463542*sin(p1.ImageProjection.x/800.0*M_PI); else p2.ImageProjection.y-=4.5463542*cos(p3.ImageProjection.x/800.0*M_PI);
+    changedir(&p2.ImageProjection.y, 1, SY-1, &dir4);
 
-    if(dir5) p3.X+=3.3545252; else p3.X-=3.3545252;
-    changedir(&p3.X, 1, SX-1, &dir5);
-    if(dir6) p3.Y+=4.1231232; else p3.Y-=2.1231232;
-    changedir(&p3.Y, 1, SY-1, &dir6);
+    if(dir5) p3.ImageProjection.x+=3.3545252; else p3.ImageProjection.x-=3.3545252;
+    changedir(&p3.ImageProjection.x, 1, SX-1, &dir5);
+    if(dir6) p3.ImageProjection.y+=4.1231232; else p3.ImageProjection.y-=2.1231232;
+    changedir(&p3.ImageProjection.y, 1, SY-1, &dir6);
     }
     RenderSBufferSLI(Imagen);
     Blit(GetVideoSLI(),Imagen);
     ShowPage();
     if(bandera)
     {
-      p1.k[3]=p1.X*256.0/SX;
-      p1.k[4]=p1.Y*256.0/SY;
-      p2.k[3]=p2.X*256.0/SX;
-      p2.k[4]=p2.Y*256.0/SY;
-      p3.k[3]=p3.X*256.0/SX;
-      p3.k[4]=p3.Y*256.0/SY;
+      p1.SpanVars.k[3]=p1.ImageProjection.x*256.0/SX;
+      p1.SpanVars.k[4]=p1.ImageProjection.y*256.0/SY;
+      p2.SpanVars.k[3]=p2.ImageProjection.x*256.0/SX;
+      p2.SpanVars.k[4]=p2.ImageProjection.y*256.0/SY;
+      p3.SpanVars.k[3]=p3.ImageProjection.x*256.0/SX;
+      p3.SpanVars.k[4]=p3.ImageProjection.y*256.0/SY;
     }
 
     if(kbhit()!=0)

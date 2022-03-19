@@ -18,34 +18,47 @@
 
 typedef struct
 {
-        float   x;
-		float	y;
-		float	z;
+	float x;
+	float y;
+} POINT2D;
+
+typedef struct
+{	
+	float x;
+	float y;
+	float z;
 } POINT3D;
 
 typedef struct
 {
-  float X;
-  float Y;
-  float k[SPAN_MAX_INTERPOLATE_VARS+1];
-  POINT3D       PointPos;
-  int           PointFlags;
-  POINT3D       OrigPointPos;
-  POINT3D		OrigNormal;
-  POINT3D		Normal;
+	POINT2D ImageProjection;
+	union {
+		struct {
+			float InverseZ;
+			POINT2D TextureCoordinates;
+			float Light1;
+			float Light2;
+		} named;
+		float k[SPAN_MAX_INTERPOLATE_VARS+1];
+	} SpanVars;
+	POINT3D PointPos;
+	int PointFlags;
+	POINT3D OrigPointPos;
+	POINT3D OrigNormal;
+	POINT3D Normal;
 } RENDERPOINT;
 
 typedef struct
 {
-  DWORD Type;
-  DWORD N;
-  RENDERPOINT *P1;
-  RENDERPOINT *P2;
-  RENDERPOINT *P3;
-  SLI *Texture1;
-  SLI *Texture2;
-  int   PolyFlags;
-  POINT3D PNormal;
+	DWORD Type;
+	DWORD N;
+	RENDERPOINT *P1;
+	RENDERPOINT *P2;
+	RENDERPOINT *P3;
+	SLI *Texture1;
+	SLI *Texture2;
+	int PolyFlags;
+	POINT3D PNormal;
 } RENDERPOLY;
 
 typedef struct
