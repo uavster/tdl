@@ -13,6 +13,9 @@
   extern "C" {
 #endif
 
+#define kBackFaceCulled		1
+#define kFrontFaceCulled	2
+
 typedef struct
 {
         float   x;
