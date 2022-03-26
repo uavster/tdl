@@ -1007,6 +1007,8 @@ RenderUniverse  proc
 		mov		eax,our_world
         mov     ebx,our_sli
         mov     ecx,[eax.NumMeshes]
+		test	ecx,ecx
+		jz		no_meshes
         mov     eax,[eax.MeshArray]
         render_meshes:
                 push    eax ecx
@@ -1017,6 +1019,7 @@ RenderUniverse  proc
                 add     eax,size RENDERMESH
         loop    render_meshes
 
+		no_meshes:
         cmp     RenderMethode,RENDER_SOLID
         jnz     dont_render_sb
                 mov     eax,our_sli
