@@ -182,8 +182,9 @@ start:
                         fdivp
                         fldf 6.2831
                         fmulp
-                        fstp trash
-                        mov eax,trash
+						sub esp,4						
+                        fstp dword ptr ss:[esp]
+                        mov eax,esp
 
                         mov trash,ebx
                         fld trash
@@ -191,11 +192,13 @@ start:
                         fdivp
                         fldf 6.2831
                         fmulp
-                        fstp trash
-                        mov ebx,trash
+						sub esp,4
+                        fstp dword ptr ss:[esp]
+                        mov ebx,esp
 
                         mov     edx,mesh_ptr
                         call    RotateMesh
+						add		esp,4*2
                 lights_ok:                        
         mov     ah,1
         int     16h
