@@ -173,12 +173,12 @@ void SetLinedRenderColor(int);
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Rotates a RENDERMESH
 ;
-; INPUT : EAX = Float ALPHA
-;         EBX = Float BETA
+; INPUT : EAX -> Float ALPHA
+;         EBX -> Float BETA
 ;         EDX -> RENDERMESH structure
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 */
-void RotateMesh(float,float,RENDERMESH *);
+void RotateMesh(float *, float *, RENDERMESH *);
 #pragma aux RotateMesh "*" parm   [eax] [ebx] [edx] \
                              modify [eax ebx ecx edx esi edi ebp];
 
