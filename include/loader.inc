@@ -49,5 +49,6 @@ ENDS
 ;               EBX -> Memory SLI
 ;          CF = 1 if error
 ;               EAX = Error code
+;               EBX = NULL
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 global  LoadGFX: NEAR

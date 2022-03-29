@@ -237,6 +237,7 @@ void Blit(SLI *destino, SLI *fuente);
 ;               EBX -> Memory SLI
 ;          CF = 1 if error
 ;               EAX = Error code
+;               EBX = NULL
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 */
 SLI *LoadGFX(char *name, int colorbits);
