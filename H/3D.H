@@ -75,14 +75,14 @@ typedef struct
 {
         POINT3D         CamPos;
 		POINT3D			CamOrientation;
-        int             CamFocus;
+        float           CamFocus;
         // Useful precalculated values
-        int             sin_alpha;
-		int				cos_alpha;
-		int				sin_beta;
-		int				cos_beta;
-		int				sin_gamma;
-		int				cos_gamma;
+        float           sin_alpha;
+		float			cos_alpha;
+		float			sin_beta;
+		float			cos_beta;
+		float			sin_gamma;
+		float			cos_gamma;
         // The useful name
         char            CamName[128];
 } RENDERCAMERA;
