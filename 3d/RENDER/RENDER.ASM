@@ -695,6 +695,8 @@ HandleVisibility        endp
 ;         ECX = Number of RENDERLIGHTS
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 Iluminate       proc
+		test	ecx,ecx
+		jz		no_more_lights
         mov     edi,eax
                 mov     edx,[edi.points]
                 mov     esi,[edi.pointdata]
@@ -767,19 +769,17 @@ Iluminate       endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Rotates a RENDERMESH
 ;
-; INPUT : EAX = Float ALPHA
-;         EBX = Float BETA
+; INPUT : EAX -> Float ALPHA
+;         EBX -> Float BETA
 ;         EDX -> RENDERMESH structure
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 RotateMesh      proc
-        mov     trash,eax
-        fld     trash
+        fld     dword ptr [eax]
         fsincos
         fstp    m_cos_alpha
         fstp    m_sin_alpha
 
-        mov     trash,ebx
-        fld     trash
+        fld     dword ptr [ebx]
         fsincos
         fstp    m_cos_beta
         fstp    m_sin_beta
