@@ -449,7 +449,7 @@ found_vertex_list       proc
                                 fadd    PivotZ
                                 fstp    PivotZ
                                 fldf    20.0   ; Iluminaci¢n inicial
-                                fstp    [edi.Light1]
+                                fstp    [edi.Properties.Light1]
                                 add     esi,3*size FLOAT
                                 add     edi,size RENDERPOINT
                         loop    copy_points
@@ -533,11 +533,11 @@ found_tex_vert_list     proc
                                 fld     dword ptr [esi]
                                 fldf    255.0
                                 fmulp
-                                fstp    [edi.TextPos.u]
+                                fstp    [edi.Properties.TextPos.u]
                                 fld     dword ptr [esi+size FLOAT]
                                 fldf    -255.0
                                 fmulp
-                                fstp    [edi.TextPos.v]
+                                fstp    [edi.Properties.TextPos.v]
                                 add     esi,2*size FLOAT
                                 add     edi,size RENDERPOINT
                         loop    copy_tex_verts

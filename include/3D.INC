@@ -7,13 +7,16 @@
 
         INCLUDE euclides.inc
 
+RENDERVERTEXPROPERTIES	STRUC
+        TextPos         POINT2D <>		; (u, v) in the texture
+        Light1          dd ?            ; If Goraud, this is the light intensity; if pseudo-Phong, it's the u coordinate in the light map
+        Light2          dd ?            ; If pseudo-Phong, this is the v coordinate in the light map
+ENDS
+		
 RENDERPOINT     STRUC
         ScreenPos       POINT2D <>      ; Transformed coords.
         InverseZ        dd ?            ; SBuffer data
-        TextPos         POINT2D <>
-        Light1          dd ?            ; SBuffer data
-        Light2          dd ?            ; SBuffer data
-
+		Properties		RENDERVERTEXPROPERTIES <>
         PointPos        POINT3D <>
         PointFlags      dd ?            ; bit 0: behind camera plane
 
@@ -26,6 +29,9 @@ ENDS
 
 BACK_FACE_CULLED        EQU 1
 FRONT_FACE_CULLED       EQU 2
+VERTEX1_HAS_PROPS		EQU 4
+VERTEX2_HAS_PROPS		EQU 8
+VERTEX3_HAS_PROPS		EQU 16
 
 RENDERPOLY      STRUC
         PolyType        dd ?    ; SBuffer data
@@ -33,6 +39,9 @@ RENDERPOLY      STRUC
         point1          dd ?    ; Pointers to vertex RENDERPOINTs
         point2          dd ?
         point3          dd ?
+		vertex1_props	RENDERVERTEXPROPERTIES <>
+		vertex2_props	RENDERVERTEXPROPERTIES <>
+		vertex3_props	RENDERVERTEXPROPERTIES <>
         texture1        dd ?    ; -> 256x256 texture SLI
         texture2        dd ?    ; -> Phong and light texture
         PolyFlags       dd ?

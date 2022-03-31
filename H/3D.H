@@ -15,6 +15,9 @@
 
 #define kBackFaceCulled		1
 #define kFrontFaceCulled	2
+#define kVertex1HasProps	4
+#define kVertex2HasProps	8
+#define kVertex3HasProps	16
 
 typedef struct
 {
@@ -29,18 +32,17 @@ typedef struct
 	float z;
 } POINT3D;
 
+typedef struct {
+	POINT2D TextureCoordinates;		// (u, v) in the texture
+	float Light1;		            // If Goraud, this is the light intensity; if pseudo-Phong, it's the u coordinate in the light map
+	float Light2;					// If pseudo-Phong, this is the v coordinate in the light map
+} RENDERVERTEXPROPERTIES;
+
 typedef struct
 {
 	POINT2D ImageProjection;
-	union {
-		struct {
-			float InverseZ;
-			POINT2D TextureCoordinates;
-			float Light1;
-			float Light2;
-		} named;
-		float k[SPAN_MAX_INTERPOLATE_VARS+1];
-	} SpanVars;
+	float InverseZ;
+	RENDERVERTEXPROPERTIES Properties;
 	POINT3D PointPos;
 	int PointFlags;
 	POINT3D OrigPointPos;
@@ -55,6 +57,9 @@ typedef struct
 	RENDERPOINT *P1;
 	RENDERPOINT *P2;
 	RENDERPOINT *P3;
+	RENDERVERTEXPROPERTIES Vertex1Props;
+	RENDERVERTEXPROPERTIES Vertex2Props;
+	RENDERVERTEXPROPERTIES Vertex3Props;
 	SLI *Texture1;
 	SLI *Texture2;
 	int PolyFlags;

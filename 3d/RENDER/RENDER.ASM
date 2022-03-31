@@ -717,7 +717,7 @@ Iluminate       proc
                                 fldz
                         with_light:
                         fmul    light_constant
-                        fstp    [esi.Light1]
+                        fstp    [esi.Properties.Light1]
                         add     esi,size RENDERPOINT                        
                 dec     edx
                 jnz     ilum_points
@@ -745,7 +745,7 @@ Iluminate       proc
                                 fldz
                         with_light1:
                         fmul    light_constant
-                        fadd    [esi.Light1]
+                        fadd    [esi.Properties.Light1]
                         fcom    light_constant
                         fnstsw  ax
                         sahf
@@ -753,7 +753,7 @@ Iluminate       proc
                                 fstp    trash
                                 fld     light_constant
                         more_lights:
-                        fstp    [esi.Light1]
+                        fstp    [esi.Properties.Light1]
                         add     esi,size RENDERPOINT                        
                 dec     edx
                 jnz     ilum_points1
