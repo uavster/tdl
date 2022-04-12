@@ -18,29 +18,42 @@ extern void GenericTriangleMapper(SLI *sbuffer, RENDERPOLY *p)
   int i, y, y2;
   int p1y, p2y, p3y;
   int p1x, p2x, p3x;
+  RENDERVERTEXPROPERTIES *vp1, *vp2, *vp3, *vp_tmp;
+  RENDERVERTEXPROPERTIES *v1_props, *v2_props, *v3_props;
 
   // Ordenamos los puntos en altura
   p3=p->P3;
+  vp3 = &p->Vertex3Props;
   if(p->P1->ImageProjection.y >= p->P2->ImageProjection.y)
   {
     p1=p->P2;
     p2=p->P1;
+    vp1 = &p->Vertex2Props;
+    vp2 = &p->Vertex1Props;
   } else
   {
     p1=p->P1;
     p2=p->P2;
+    vp1 = &p->Vertex1Props;
+    vp2 = &p->Vertex2Props;
   }
   if(p2->ImageProjection.y >= p3->ImageProjection.y)
   {
     tmp=p3;
     p3=p2;
     p2=tmp;
+	vp_tmp = vp3;
+	vp3 = vp2;
+	vp2 = vp_tmp;
   }
   if(p1->ImageProjection.y >= p2->ImageProjection.y)
   {
     tmp=p2;
     p2=p1;
     p1=tmp;
+	vp_tmp = vp2;
+	vp2 = vp1;
+	vp1 = vp_tmp;
   }
   p1y=ceil(p1->ImageProjection.y);
   p3y=ceil(p3->ImageProjection.y);
@@ -64,30 +77,44 @@ extern void GenericTriangleMapper(SLI *sbuffer, RENDERPOLY *p)
   ancho=65536.0/ancho1;
 
   // Extract interpolating variables
-  if (p->N >= 0) {
-	p1_vars[0] = p1->InverseZ;
-	p2_vars[0] = p2->InverseZ;
-	p3_vars[0] = p3->InverseZ;
+  if (p->PolyFlags & kVertex1HasProps) {
+	v1_props = vp1;
+  } else {
+	v1_props = &p1->Properties;
   }
+  if (p->PolyFlags & kVertex2HasProps) {
+	v2_props = vp2;
+  } else {
+	v2_props = &p2->Properties;
+  }
+  if (p->PolyFlags & kVertex3HasProps) {
+	v3_props = vp3;
+  } else {
+	v3_props = &p3->Properties;
+  }
+  
+  p1_vars[0] = p1->InverseZ;
+  p2_vars[0] = p2->InverseZ;
+  p3_vars[0] = p3->InverseZ;
   if (p->N >= 1) {
-	p1_vars[1] = p1->Properties.TextureCoordinates.x;
-	p2_vars[1] = p2->Properties.TextureCoordinates.x;
-	p3_vars[1] = p3->Properties.TextureCoordinates.x;
+	p1_vars[1] = v1_props->TextureCoordinates.x;
+	p2_vars[1] = v2_props->TextureCoordinates.x;
+	p3_vars[1] = v3_props->TextureCoordinates.x;
   }
   if (p->N >= 2) {
-	p1_vars[2] = p1->Properties.TextureCoordinates.y;
-	p2_vars[2] = p2->Properties.TextureCoordinates.y;
-	p3_vars[2] = p3->Properties.TextureCoordinates.y;
+	p1_vars[2] = v1_props->TextureCoordinates.y;
+	p2_vars[2] = v2_props->TextureCoordinates.y;
+	p3_vars[2] = v3_props->TextureCoordinates.y;
   }
   if (p->N >= 3) {
-	p1_vars[3] = p1->Properties.Light1;
-	p2_vars[3] = p2->Properties.Light1;
-	p3_vars[3] = p3->Properties.Light1;  
+	p1_vars[3] = v1_props->Light1;
+	p2_vars[3] = v2_props->Light1;
+	p3_vars[3] = v3_props->Light1;  
   }
   if (p->N >= 4) {
-	p1_vars[4] = p1->Properties.Light2;
-	p2_vars[4] = p2->Properties.Light2;
-	p3_vars[4] = p3->Properties.Light2;  
+	p1_vars[4] = v1_props->Light2;
+	p2_vars[4] = v2_props->Light2;
+	p3_vars[4] = v3_props->Light2;  
   }
 
     // Calculamos las deltas de todas la variables
