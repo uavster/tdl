@@ -540,15 +540,30 @@ RSB002:
 
         push    offset RSB004
 
-        cmp     ds:[SPAN ptr ebp.SPType], 1
+		test	ds:[SPAN ptr ebp.SPType],SPT_PERSPECTIVE_CORRECTED
+		jnz		perspective_corrected_loops
+		
+        cmp     byte ptr ds:[SPAN ptr ebp.SPType], 1
         je      RenderFlatScanline
-        cmp     ds:[SPAN ptr ebp.SPType], 2
+        cmp     byte ptr ds:[SPAN ptr ebp.SPType], 2
         je      RenderTexmapScanline
-        cmp     ds:[SPAN ptr ebp.SPType], 3
+        cmp     byte ptr ds:[SPAN ptr ebp.SPType], 3
         je      RenderTexmapGouraudScanLine
-        cmp     ds:[SPAN ptr ebp.SPType], 12
+        cmp     byte ptr ds:[SPAN ptr ebp.SPType], 12
         je      RenderGouraudColorScanLine
-        cmp     ds:[SPAN ptr ebp.SPType], 4
+        cmp     byte ptr ds:[SPAN ptr ebp.SPType], 4
+        je      RenderTexmapFakePhongScanLine
+		
+		perspective_corrected_loops:
+        cmp     byte ptr ds:[SPAN ptr ebp.SPType], 1
+        je      RenderFlatScanline
+        cmp     byte ptr ds:[SPAN ptr ebp.SPType], 2
+        je      RenderTexmapScanline_PerspectiveCorrected
+        cmp     byte ptr ds:[SPAN ptr ebp.SPType], 3
+        je      RenderTexmapGouraudScanLine
+        cmp     byte ptr ds:[SPAN ptr ebp.SPType], 12
+        je      RenderGouraudColorScanLine
+        cmp     byte ptr ds:[SPAN ptr ebp.SPType], 4
         je      RenderTexmapFakePhongScanLine
 
         ret
@@ -599,6 +614,11 @@ tempdu  dd  ?
         dw  0
 tempu   dd  ?
         dw  0
+tempiz	dd	?
+tempdiz	dd	?
+
+persp_num_loops	dd ?
+
 RenderTexmapScanLine    proc
         push    edi ebp
         fld     ds:[SPAN ptr ebp.SPVars]
@@ -631,7 +651,6 @@ RenderTexmapScanLine    proc
         mov     dword ptr [RTS_AMC005-4], eax
         mov     dword ptr [RTS_AMC006-4], ebx
 
-
         xor     ebx, ebx
         xor     edx, edx
         mov     bl, byte ptr [tempu+2]
@@ -659,6 +678,86 @@ RTS_AMC004:
         ret
         endp
 
+RenderTexmapScanLine_PerspectiveCorrected    proc
+        push    edi ebp
+        fld     ds:[SPAN ptr ebp.SPVars]
+        fld     ds:[SPAN ptr ebp.SPVars+4]
+        fld     ds:[SPAN ptr ebp.SPVars+8]
+        fld     ds:[SPAN ptr ebp.SPVars+12]
+        fistp   [tempdv]
+        fistp   [tempv]
+        fistp   [tempdu]
+        fistp   [tempu]
+        mov     ecx, ds:[SPAN ptr ebp.SPx2]
+        mov     eax, ds:[SPAN PTR ebp.SPx1]
+        sub     ecx, eax
+        lea     edi, [edi+eax*4]
+        inc     ecx
+		mov		persp_num_loops,ecx
+        mov     eax, dword ptr [tempdu-2]
+        mov     ebx, dword ptr [tempdv-2]
+        mov     dword ptr [RTSP_AMC001-4], eax
+        mov     dword ptr [RTSP_AMC002-4], ebx
+        mov     al, byte ptr [tempdu+2]
+        mov     bl, byte ptr [tempdv+2]
+        mov     byte ptr [RTSP_AMC003-1], al
+        mov     byte ptr [RTSP_AMC004-1], bl
+
+        mov     eax, ds:[SPAN ptr ebp.SPTexture]
+        mov     ebx, ds:[SPAN ptr ebp.SPLightMap]
+        mov     dword ptr [RTSP_AMC005-4], eax
+        mov     dword ptr [RTSP_AMC006-4], ebx
+
+        xor     ebx, ebx
+        xor     edx, edx
+        mov     bl, byte ptr [tempu+2]
+        mov     bh, byte ptr [tempv+2]
+        mov     ebp, dword ptr [tempu-2]
+        mov     esi, dword ptr [tempv-2]
+		
+		; Perspective correction every 16 pixels
+		push	ecx
+		shr		persp_num_loops,4
+		jz		RTSP_span_remainder
+
+		RTSP_outer_loop:		
+		mov		cl,16
+		RTSP_outer_loop_last:
+RTSP_mainbucle:
+        mov     dl, [ebx+1234000h] ; textura         ;u
+RTSP_AMC005:
+        add     ebp, 1234000h ; incu                 ;v
+RTSP_AMC001:
+        adc     bl, 129       ; incu                 ;u <-solo u
+RTSP_AMC003:
+        mov     eax, [edx*4+1234000h] ; paleta       ;v
+RTSP_AMC006:
+        add     esi, 1234000h ; incv                 ;u
+RTSP_AMC002:
+        mov     dword ptr [edi], eax ; poner en pantalla ;v
+        adc     bh, 129       ; incv                 ;u <-solo u
+RTSP_AMC004:
+		add		edi,4
+        dec     cl 	                                  ;v
+        jnz     RTSP_mainbucle                        ;v
+        ; total cycles = 5 per pixel (32 bits)
+		
+		cmp		persp_num_loops,0
+		jz		RTSP_leave
+		dec		persp_num_loops
+		jnz		RTSP_outer_loop
+		
+		; Draw remaining pixels
+		RTSP_span_remainder:
+		pop		ecx
+		and		cl,0fh
+		jnz		RTSP_outer_loop_last
+		
+		RTSP_leave:
+        pop     ebp edi
+        ret
+        endp
+		
         align   32
         dw  0
 tempdl  dd  ?

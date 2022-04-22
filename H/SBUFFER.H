@@ -18,6 +18,8 @@
   extern "C" {
 #endif
 
+#define kSptPerspectiveCorrected	0x100
+
 /*
 ;ีออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออธ
 ;ณ  Estructura de los SPAN's                                            ณ
@@ -44,7 +46,7 @@ typedef struct
                             ; 9 - Textured poly con canal alpha UV AU AV en 32 bits textura y alpha 8 bits
                             ; 10 - Textured poly con mascara color UV en 32 bits textura en 8 bits
                             ; 11 - Gouraud poly con mascara color UVL en 32 bits textura en 8 bits
-                            ; SPT_PERS_CORRECTED Bandera para el calculo con correcion de perspectiva
+                            ; SPT_PERSPECTIVE_CORRECTED Bandera para el calculo con correcion de perspectiva
                             ; SPT_ANTIALIASED    Bandera para bordes antialiaseados
                             ; SPT_BILINEAR_FILTERING Bandera para el filtro bilineal
                             ; SPT_TRANS_OR_MASK  Bandera para indicar algun tipo de transparencia

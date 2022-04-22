@@ -11,6 +11,8 @@
 ;읕컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴켸
 SPAN_MAX_INTERPOLATE_VARS equ 4
 
+	SPT_PERSPECTIVE_CORRECTED	EQU 100h
+	
     SPAN    struc
        SPNext       dd  ?   ; Puntero al siguiente span en la cadena
        SPBack       dd  ?   ; Puntero al span anterior en la cadena
@@ -30,7 +32,7 @@ SPAN_MAX_INTERPOLATE_VARS equ 4
                             ; 10 - Textured poly con mascara color UV en 32 bits textura en 8 bits
                             ; 11 - Gouraud poly con mascara color UVL en 32 bits textura en 8 bits
                             ; 12 - Color RGB 
-                            ; SPT_PERS_CORRECTED Bandera para el calculo con correcion de perspectiva
+                            ; SPT_PERSPECTIVE_CORRECTED Bandera para el calculo con correcion de perspectiva
                             ; SPT_ANTIALIASED    Bandera para bordes antialiaseados
                             ; SPT_BILINEAR_FILTERING Bandera para el filtro bilineal
                             ; SPT_TRANS_OR_MASK  Bandera para indicar algun tipo de transparencia
