@@ -614,10 +614,12 @@ tempdu  dd  ?
         dw  0
 tempu   dd  ?
         dw  0
+
 tempiz	dd	?
 tempdiz	dd	?
 
 persp_num_loops	dd ?
+persp_num_loops_last	db ?
 
 RenderTexmapScanLine    proc
         push    edi ebp
@@ -688,6 +690,10 @@ RenderTexmapScanLine_PerspectiveCorrected    proc
         fistp   [tempv]
         fistp   [tempdu]
         fistp   [tempu]
+		fld		ds:[SPAN ptr ebp.SPiZ]
+		fistp	tempiz	; 65536 / z
+		fld		ds:[SPAN ptr ebp.SPdiZ]
+		fistp	tempdiz
         mov     ecx, ds:[SPAN ptr ebp.SPx2]
         mov     eax, ds:[SPAN PTR ebp.SPx1]
         sub     ecx, eax
@@ -716,13 +722,166 @@ RenderTexmapScanLine_PerspectiveCorrected    proc
         mov     esi, dword ptr [tempv-2]
 		
 		; Perspective correction every 16 pixels
-		push	ecx
-		shr		persp_num_loops,4
-		jz		RTSP_span_remainder
+		and		ecx,0fh
+		mov		persp_num_loops_last,cl
 
-		RTSP_outer_loop:		
+PREDIV_SCALE_DIVS	EQU 16
+
+		shr		persp_num_loops,4
+		
+		RTSP_outer_loop:
+		
+		; ebp = (u/z) / (1/z) = u [16.16]
+		mov		eax,tempu
+		mov		edx,eax
+		sar		edx,32-PREDIV_SCALE_DIVS
+		sal		eax,PREDIV_SCALE_DIVS
+mov ebx,tempiz
+		idiv	tempiz
+if PREDIV_SCALE_DIVS GT 16
+		sal		eax,16-PREDIV_SCALE_DIVS
+endif
+		mov		ebp,eax
+		
+		; esi = (v/z) / (1/z) = v [16.16]
+		mov		eax,tempv
+		mov		edx,eax
+		sar		edx,32-PREDIV_SCALE_DIVS
+		sal		eax,PREDIV_SCALE_DIVS
+mov ebx,tempiz
+		idiv	tempiz
+if PREDIV_SCALE_DIVS GT 16
+		sal		eax,16-PREDIV_SCALE_DIVS
+endif
+		mov		esi,eax
+		
+		cmp		persp_num_loops,0
+		jz		RTSP_outer_loop_last
+		
 		mov		cl,16
+		
+		; 1/z += 16*d(1/z) [16.16]
+		mov		eax,tempdiz
+		sal		eax,4	; *16
+		add		tempiz,eax
+		
+		; u/z += 16*d(u/z) [16.16]
+		mov		eax,tempdu
+		sal		eax,4
+		add		tempu,eax
+		
+		; v/z += 16*d(v/z) [16.16]
+		mov		eax,tempdv
+		sal		eax,4
+		add		tempv,eax
+
+		; u = (u/z) / (1/z) [16.16]
+		mov		eax,tempu
+		mov		edx,eax
+		sar		edx,32-PREDIV_SCALE_DIVS
+		sal		eax,PREDIV_SCALE_DIVS
+mov ebx,tempiz
+		idiv	tempiz
+if PREDIV_SCALE_DIVS GT 16
+		sal		eax,16-PREDIV_SCALE_DIVS
+endif
+		sub		eax,ebp	; eax = du [16.16]
+		sar		eax,4
+		mov		ebx,eax
+		shl		eax,16
+		mov		dword ptr [RTSP_AMC001-4],eax
+		shr		ebx,16		
+		mov		byte ptr [RTSP_AMC003-1],bl
+		
+		; v = (v/z) / (1/z) [16.16]
+		mov		eax,tempv
+		mov		edx,eax
+		sar		edx,32-PREDIV_SCALE_DIVS
+		sal		eax,PREDIV_SCALE_DIVS
+mov ebx,tempiz
+		idiv	tempiz
+if PREDIV_SCALE_DIVS GT 16
+		sal		eax,16-PREDIV_SCALE_DIVS
+endif
+		sub		eax,esi	; eax = dv [16.16]
+		sar		eax,4
+		mov		ebx,eax
+		shl		eax,16
+		mov		dword ptr [RTSP_AMC002-4],eax
+		shr		ebx,16		
+		mov		byte ptr [RTSP_AMC004-1],bl
+				
+		jmp		RTSP_cont
+		
 		RTSP_outer_loop_last:
+		movzx	ecx,persp_num_loops_last
+		test	ecx,ecx
+		jz		RTSP_leave
+		
+		mov		eax,tempdiz
+		imul	ecx
+		add		tempiz,eax
+		
+		mov		eax,tempdu
+		imul	ecx
+		add		tempu,eax
+		
+		mov		eax,tempdv
+		imul	ecx
+		add		tempv,eax
+
+		; u = (u/z) / (1/z) [16.16]
+		mov		eax,tempu
+		mov		edx,eax
+		sar		edx,32-PREDIV_SCALE_DIVS
+		sal		eax,PREDIV_SCALE_DIVS
+mov ebx,tempiz
+		idiv	tempiz
+if PREDIV_SCALE_DIVS GT 16
+		sal		eax,16-PREDIV_SCALE_DIVS
+endif
+		sub		eax,ebp	; eax = du [16.16]
+		mov		edx,eax
+		sar		edx,31
+		idiv	ecx
+		mov		ebx,eax
+		sal		eax,16
+		mov		dword ptr [RTSP_AMC001-4],eax
+		sar		ebx,16		
+		mov		byte ptr [RTSP_AMC003-1],bl
+		
+		; v = (v/z) / (1/z) [16.16]
+		mov		eax,tempv
+		mov		edx,eax
+		sar		edx,32-PREDIV_SCALE_DIVS
+		sal		eax,PREDIV_SCALE_DIVS
+mov ebx,tempiz
+		idiv	tempiz
+if PREDIV_SCALE_DIVS GT 16
+		sal		eax,16-PREDIV_SCALE_DIVS
+endif
+		sub		eax,esi	; eax = dv [16.16]
+		mov		edx,eax
+		sar		edx,31
+		idiv	ecx
+		mov		ebx,eax
+		sal		eax,16
+		mov		dword ptr [RTSP_AMC002-4],eax
+		sar		ebx,16		
+		mov		byte ptr [RTSP_AMC004-1],bl
+				
+		RTSP_cont:
+		; Set loop registers to interpolate u and v
+		mov		ebx,ebp
+		sal		ebp,16
+		sar		ebx,16
+		mov		eax,esi
+		sal		esi,16
+		sar		eax,16
+		mov		bh,al
+		
+		xor		edx,edx
+
 RTSP_mainbucle:
         mov     dl, [ebx+1234000h] ; textura         ;u
 RTSP_AMC005:
@@ -745,13 +904,7 @@ RTSP_AMC004:
 		cmp		persp_num_loops,0
 		jz		RTSP_leave
 		dec		persp_num_loops
-		jnz		RTSP_outer_loop
-		
-		; Draw remaining pixels
-		RTSP_span_remainder:
-		pop		ecx
-		and		cl,0fh
-		jnz		RTSP_outer_loop_last
+		jmp		RTSP_outer_loop
 		
 		RTSP_leave:
         pop     ebp edi
