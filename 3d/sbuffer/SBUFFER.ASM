@@ -615,12 +615,6 @@ tempdu  dd  ?
 tempu   dd  ?
         dw  0
 
-tempiz	dd	?
-tempdiz	dd	?
-
-persp_num_loops	dd ?
-persp_num_loops_last	db ?
-
 RenderTexmapScanLine    proc
         push    edi ebp
         fld     ds:[SPAN ptr ebp.SPVars]
@@ -680,6 +674,18 @@ RTS_AMC004:
         ret
         endp
 
+
+		align	32
+		
+tempiz	dd	?
+tempdiz	dd	?
+
+persp_corr_u	dd ?
+persp_corr_v	dd ?
+
+persp_num_loops			db ?
+persp_num_loops_last	db ?
+
 RenderTexmapScanLine_PerspectiveCorrected    proc
         push    edi ebp
         fld     ds:[SPAN ptr ebp.SPVars]
@@ -699,7 +705,11 @@ RenderTexmapScanLine_PerspectiveCorrected    proc
         sub     ecx, eax
         lea     edi, [edi+eax*4]
         inc     ecx
-		mov		persp_num_loops,ecx
+		mov		eax,ecx
+		shr		eax,4
+		mov		persp_num_loops,al
+		and		cl,0fh
+		mov		persp_num_loops_last,cl
         mov     eax, dword ptr [tempdu-2]
         mov     ebx, dword ptr [tempdv-2]
         mov     dword ptr [RTSP_AMC001-4], eax
@@ -721,16 +731,11 @@ RenderTexmapScanLine_PerspectiveCorrected    proc
         mov     ebp, dword ptr [tempu-2]
         mov     esi, dword ptr [tempv-2]
 		
-		; Perspective correction every 16 pixels
-		and		ecx,0fh
-		mov		persp_num_loops_last,cl
+		; tempu and tempv are u and v divided by z
+		; Perspective correction is done every 16 pixels
 
 PREDIV_SCALE_DIVS	EQU 16
 
-		shr		persp_num_loops,4
-		
-		RTSP_outer_loop:
-		
 		; ebp = (u/z) / (1/z) = u [16.16]
 		mov		eax,tempu
 		mov		edx,eax
@@ -754,10 +759,79 @@ if PREDIV_SCALE_DIVS GT 16
 		sal		eax,16-PREDIV_SCALE_DIVS
 endif
 		mov		esi,eax
+
 		
 		cmp		persp_num_loops,0
-		jz		RTSP_outer_loop_last
+		jnz 	RTSP_outer_loop
 		
+		; Linear interpolation in the last piece of span of fewer than 16 pixels
+		RTSP_outer_loop_last:
+		xor		ecx,ecx
+		mov		cl,persp_num_loops_last
+		test	cl,cl
+		jz		RTSP_leave
+		
+		mov		eax,tempdiz
+		imul	ecx
+		add		tempiz,eax
+		
+		mov		eax,tempdu
+		imul	ecx
+		add		tempu,eax
+		
+		mov		eax,tempdv
+		imul	ecx
+		add		tempv,eax
+
+		; u = (u/z) / (1/z) [16.16]
+		mov		eax,tempu
+		mov		edx,eax
+		sar		edx,32-PREDIV_SCALE_DIVS
+		sal		eax,PREDIV_SCALE_DIVS
+mov ebx,tempiz
+		idiv	tempiz
+if PREDIV_SCALE_DIVS GT 16
+		sal		eax,16-PREDIV_SCALE_DIVS
+endif
+
+		; du = u1 - u0
+		sub		eax,ebp	; eax = du [16.16]
+		mov		edx,eax
+		sar		edx,31
+		idiv	ecx
+		mov		ebx,eax
+		sal		eax,16
+		mov		dword ptr [RTSP_AMC001-4],eax
+		sar		ebx,16		
+		mov		byte ptr [RTSP_AMC003-1],bl
+		
+		; v = (v/z) / (1/z) [16.16]
+		mov		eax,tempv
+		mov		edx,eax
+		sar		edx,32-PREDIV_SCALE_DIVS
+		sal		eax,PREDIV_SCALE_DIVS
+mov ebx,tempiz
+		idiv	tempiz
+if PREDIV_SCALE_DIVS GT 16
+		sal		eax,16-PREDIV_SCALE_DIVS
+endif
+
+		; dv = v1 - v0
+		sub		eax,esi	; eax = dv [16.16]
+		mov		edx,eax
+		sar		edx,31
+		idiv	ecx
+		mov		ebx,eax
+		sal		eax,16
+		mov		dword ptr [RTSP_AMC002-4],eax
+		sar		ebx,16		
+		mov		byte ptr [RTSP_AMC004-1],bl
+		
+		jmp		RTSP_cont
+		
+		
+		; Linear interpolation in the first N pieces of span of 16 pixels each
+		RTSP_outer_loop:				
 		mov		cl,16
 		
 		; 1/z += 16*d(1/z) [16.16]
@@ -785,69 +859,15 @@ mov ebx,tempiz
 if PREDIV_SCALE_DIVS GT 16
 		sal		eax,16-PREDIV_SCALE_DIVS
 endif
-		sub		eax,ebp	; eax = du [16.16]
-		sar		eax,4
-		mov		ebx,eax
-		shl		eax,16
-		mov		dword ptr [RTSP_AMC001-4],eax
-		shr		ebx,16		
-		mov		byte ptr [RTSP_AMC003-1],bl
-		
-		; v = (v/z) / (1/z) [16.16]
-		mov		eax,tempv
-		mov		edx,eax
-		sar		edx,32-PREDIV_SCALE_DIVS
-		sal		eax,PREDIV_SCALE_DIVS
-mov ebx,tempiz
-		idiv	tempiz
-if PREDIV_SCALE_DIVS GT 16
-		sal		eax,16-PREDIV_SCALE_DIVS
-endif
-		sub		eax,esi	; eax = dv [16.16]
-		sar		eax,4
-		mov		ebx,eax
-		shl		eax,16
-		mov		dword ptr [RTSP_AMC002-4],eax
-		shr		ebx,16		
-		mov		byte ptr [RTSP_AMC004-1],bl
-				
-		jmp		RTSP_cont
-		
-		RTSP_outer_loop_last:
-		movzx	ecx,persp_num_loops_last
-		test	ecx,ecx
-		jz		RTSP_leave
-		
-		mov		eax,tempdiz
-		imul	ecx
-		add		tempiz,eax
-		
-		mov		eax,tempdu
-		imul	ecx
-		add		tempu,eax
-		
-		mov		eax,tempdv
-		imul	ecx
-		add		tempv,eax
+		mov		persp_corr_u,eax		; save u1 as starting point for next outer loop 
 
-		; u = (u/z) / (1/z) [16.16]
-		mov		eax,tempu
-		mov		edx,eax
-		sar		edx,32-PREDIV_SCALE_DIVS
-		sal		eax,PREDIV_SCALE_DIVS
-mov ebx,tempiz
-		idiv	tempiz
-if PREDIV_SCALE_DIVS GT 16
-		sal		eax,16-PREDIV_SCALE_DIVS
-endif
+		; du = u1 - u0
 		sub		eax,ebp	; eax = du [16.16]
-		mov		edx,eax
-		sar		edx,31
-		idiv	ecx
+		sar		eax,4
 		mov		ebx,eax
-		sal		eax,16
+		shl		eax,16
 		mov		dword ptr [RTSP_AMC001-4],eax
-		sar		ebx,16		
+		shr		ebx,16		
 		mov		byte ptr [RTSP_AMC003-1],bl
 		
 		; v = (v/z) / (1/z) [16.16]
@@ -860,15 +880,17 @@ mov ebx,tempiz
 if PREDIV_SCALE_DIVS GT 16
 		sal		eax,16-PREDIV_SCALE_DIVS
 endif
+		mov		persp_corr_v,eax		; save v1 as starting point for next outer loop 
+		
+		; dv = v1 - v0
 		sub		eax,esi	; eax = dv [16.16]
-		mov		edx,eax
-		sar		edx,31
-		idiv	ecx
+		sar		eax,4
 		mov		ebx,eax
-		sal		eax,16
+		shl		eax,16
 		mov		dword ptr [RTSP_AMC002-4],eax
-		sar		ebx,16		
-		mov		byte ptr [RTSP_AMC004-1],bl
+		shr		ebx,16		
+		mov		byte ptr [RTSP_AMC004-1],bl				
+		
 				
 		RTSP_cont:
 		; Set loop registers to interpolate u and v
@@ -901,9 +923,15 @@ RTSP_AMC004:
         jnz     RTSP_mainbucle                        ;v
         ; total cycles = 5 per pixel (32 bits)
 		
-		cmp		persp_num_loops,0
+		mov		al,persp_num_loops
+		test	al,al
 		jz		RTSP_leave
-		dec		persp_num_loops
+		; Restore v1 and u1 as v0 and u0 for the next outer loop
+		mov		ebp,persp_corr_u
+		mov		esi,persp_corr_v	
+		dec		al
+		mov		persp_num_loops,al
+		jz		RTSP_outer_loop_last
 		jmp		RTSP_outer_loop
 		
 		RTSP_leave:
