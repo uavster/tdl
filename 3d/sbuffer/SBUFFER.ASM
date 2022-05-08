@@ -734,13 +734,14 @@ RenderTexmapScanLine_PerspectiveCorrected    proc
 		; tempu and tempv are u and v divided by z
 		; Perspective correction is done every 16 pixels
 
+		mov ebx,tempiz	; divisor
+		
 		; ebp = (u/z) / (1/z) = u [16.16]
 		mov		eax,tempu
 		mov		edx,eax
 		sar		edx,16
 		sal		eax,16
-mov ebx,tempiz
-		idiv	tempiz
+		idiv	ebx
 		mov		ebp,eax
 		
 		; esi = (v/z) / (1/z) = v [16.16]
@@ -748,8 +749,7 @@ mov ebx,tempiz
 		mov		edx,eax
 		sar		edx,16
 		sal		eax,16
-mov ebx,tempiz
-		idiv	tempiz
+		idiv	ebx
 		mov		esi,eax
 
 		
@@ -767,6 +767,8 @@ mov ebx,tempiz
 		imul	ecx
 		add		tempiz,eax
 		
+		mov		ebx,tempiz
+		
 		mov		eax,tempdu
 		imul	ecx
 		add		tempu,eax
@@ -780,38 +782,36 @@ mov ebx,tempiz
 		mov		edx,eax
 		sar		edx,16
 		sal		eax,16
-mov ebx,tempiz
-		idiv	tempiz
+		idiv	ebx
 
 		; du = u1 - u0
 		sub		eax,ebp	; eax = du [16.16]
 		mov		edx,eax
 		sar		edx,31
 		idiv	ecx
-		mov		ebx,eax
+		mov		edx,eax
 		sal		eax,16
 		mov		dword ptr [RTSP_AMC001-4],eax
-		sar		ebx,16		
-		mov		byte ptr [RTSP_AMC003-1],bl
+		sar		edx,16		
+		mov		byte ptr [RTSP_AMC003-1],dl
 		
 		; v = (v/z) / (1/z) [16.16]
 		mov		eax,tempv
 		mov		edx,eax
 		sar		edx,16
 		sal		eax,16
-mov ebx,tempiz
-		idiv	tempiz
+		idiv	ebx
 
 		; dv = v1 - v0
 		sub		eax,esi	; eax = dv [16.16]
 		mov		edx,eax
 		sar		edx,31
 		idiv	ecx
-		mov		ebx,eax
+		mov		edx,eax
 		sal		eax,16
 		mov		dword ptr [RTSP_AMC002-4],eax
-		sar		ebx,16		
-		mov		byte ptr [RTSP_AMC004-1],bl
+		sar		edx,16		
+		mov		byte ptr [RTSP_AMC004-1],dl
 		
 		jmp		RTSP_cont
 		
@@ -824,6 +824,8 @@ mov ebx,tempiz
 		mov		eax,tempdiz
 		sal		eax,4	; *16
 		add		tempiz,eax
+		
+		mov		ebx,tempiz
 		
 		; u/z += 16*d(u/z) [16.16]
 		mov		eax,tempdu
@@ -840,36 +842,34 @@ mov ebx,tempiz
 		mov		edx,eax
 		sar		edx,16
 		sal		eax,16
-mov ebx,tempiz
-		idiv	tempiz
+		idiv	ebx
 		mov		persp_corr_u,eax		; save u1 as starting point for next outer loop 
 
 		; du = u1 - u0
 		sub		eax,ebp	; eax = du [16.16]
 		sar		eax,4
-		mov		ebx,eax
+		mov		edx,eax
 		shl		eax,16
 		mov		dword ptr [RTSP_AMC001-4],eax
-		shr		ebx,16		
-		mov		byte ptr [RTSP_AMC003-1],bl
+		shr		edx,16		
+		mov		byte ptr [RTSP_AMC003-1],dl
 		
 		; v = (v/z) / (1/z) [16.16]
 		mov		eax,tempv
 		mov		edx,eax
 		sar		edx,16
 		sal		eax,16
-mov ebx,tempiz
-		idiv	tempiz
+		idiv	ebx
 		mov		persp_corr_v,eax		; save v1 as starting point for next outer loop 
 		
 		; dv = v1 - v0
 		sub		eax,esi	; eax = dv [16.16]
 		sar		eax,4
-		mov		ebx,eax
+		mov		edx,eax
 		shl		eax,16
 		mov		dword ptr [RTSP_AMC002-4],eax
-		shr		ebx,16		
-		mov		byte ptr [RTSP_AMC004-1],bl				
+		shr		edx,16		
+		mov		byte ptr [RTSP_AMC004-1],dl
 		
 				
 		RTSP_cont:
