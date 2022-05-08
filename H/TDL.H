@@ -78,6 +78,8 @@
 
 #include <memcpy.h>
 
+#include <framerat.h>
+
 #ifdef __cplusplus
   };
 #endif
