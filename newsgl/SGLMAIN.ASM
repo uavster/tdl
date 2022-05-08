@@ -430,7 +430,12 @@ UnSetVideoMode_Inmode:
             and     eax, 0ffh
             int     10h
 dontunsetvideom:
-            jmp     [UnSetVideoMode_]
+            call    [UnSetVideoMode_]
+			jc		unset_video_mode_error
+					; Mode unset successfully
+					mov		insideMode, 0
+			unset_video_mode_error:
+			ret
             endp
 ;旼컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ;� GetAvailPage:        Obtiene la direccion de la pagina actual
