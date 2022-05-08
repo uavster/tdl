@@ -669,7 +669,7 @@ RTS_AMC002:
 RTS_AMC004:
         inc     ecx                                  ;v
         jnz     RTS_mainbucle                        ;v
-        ; total cycles = 5 per pixel (32 bits)
+        ; total cycles on Pentium = 5 per pixel (32 bits)
         pop     ebp edi
         ret
         endp
@@ -734,30 +734,22 @@ RenderTexmapScanLine_PerspectiveCorrected    proc
 		; tempu and tempv are u and v divided by z
 		; Perspective correction is done every 16 pixels
 
-PREDIV_SCALE_DIVS	EQU 16
-
 		; ebp = (u/z) / (1/z) = u [16.16]
 		mov		eax,tempu
 		mov		edx,eax
-		sar		edx,32-PREDIV_SCALE_DIVS
-		sal		eax,PREDIV_SCALE_DIVS
+		sar		edx,16
+		sal		eax,16
 mov ebx,tempiz
 		idiv	tempiz
-if PREDIV_SCALE_DIVS GT 16
-		sal		eax,16-PREDIV_SCALE_DIVS
-endif
 		mov		ebp,eax
 		
 		; esi = (v/z) / (1/z) = v [16.16]
 		mov		eax,tempv
 		mov		edx,eax
-		sar		edx,32-PREDIV_SCALE_DIVS
-		sal		eax,PREDIV_SCALE_DIVS
+		sar		edx,16
+		sal		eax,16
 mov ebx,tempiz
 		idiv	tempiz
-if PREDIV_SCALE_DIVS GT 16
-		sal		eax,16-PREDIV_SCALE_DIVS
-endif
 		mov		esi,eax
 
 		
@@ -786,13 +778,10 @@ endif
 		; u = (u/z) / (1/z) [16.16]
 		mov		eax,tempu
 		mov		edx,eax
-		sar		edx,32-PREDIV_SCALE_DIVS
-		sal		eax,PREDIV_SCALE_DIVS
+		sar		edx,16
+		sal		eax,16
 mov ebx,tempiz
 		idiv	tempiz
-if PREDIV_SCALE_DIVS GT 16
-		sal		eax,16-PREDIV_SCALE_DIVS
-endif
 
 		; du = u1 - u0
 		sub		eax,ebp	; eax = du [16.16]
@@ -808,13 +797,10 @@ endif
 		; v = (v/z) / (1/z) [16.16]
 		mov		eax,tempv
 		mov		edx,eax
-		sar		edx,32-PREDIV_SCALE_DIVS
-		sal		eax,PREDIV_SCALE_DIVS
+		sar		edx,16
+		sal		eax,16
 mov ebx,tempiz
 		idiv	tempiz
-if PREDIV_SCALE_DIVS GT 16
-		sal		eax,16-PREDIV_SCALE_DIVS
-endif
 
 		; dv = v1 - v0
 		sub		eax,esi	; eax = dv [16.16]
@@ -852,13 +838,10 @@ endif
 		; u = (u/z) / (1/z) [16.16]
 		mov		eax,tempu
 		mov		edx,eax
-		sar		edx,32-PREDIV_SCALE_DIVS
-		sal		eax,PREDIV_SCALE_DIVS
+		sar		edx,16
+		sal		eax,16
 mov ebx,tempiz
 		idiv	tempiz
-if PREDIV_SCALE_DIVS GT 16
-		sal		eax,16-PREDIV_SCALE_DIVS
-endif
 		mov		persp_corr_u,eax		; save u1 as starting point for next outer loop 
 
 		; du = u1 - u0
@@ -873,13 +856,10 @@ endif
 		; v = (v/z) / (1/z) [16.16]
 		mov		eax,tempv
 		mov		edx,eax
-		sar		edx,32-PREDIV_SCALE_DIVS
-		sal		eax,PREDIV_SCALE_DIVS
+		sar		edx,16
+		sal		eax,16
 mov ebx,tempiz
 		idiv	tempiz
-if PREDIV_SCALE_DIVS GT 16
-		sal		eax,16-PREDIV_SCALE_DIVS
-endif
 		mov		persp_corr_v,eax		; save v1 as starting point for next outer loop 
 		
 		; dv = v1 - v0
@@ -918,10 +898,10 @@ RTSP_AMC002:
         mov     dword ptr [edi], eax ; poner en pantalla ;v
         adc     bh, 129       ; incv                 ;u <-solo u
 RTSP_AMC004:
-		add		edi,4
-        dec     cl 	                                  ;v
-        jnz     RTSP_mainbucle                        ;v
-        ; total cycles = 5 per pixel (32 bits)
+		add		edi,4								 ;v
+        dec     cl 	                                 ;u
+        jnz     RTSP_mainbucle                       ;u
+        ; total cycles on Pentium = 6 per pixel (32 bits)
 		
 		mov		al,persp_num_loops
 		test	al,al
