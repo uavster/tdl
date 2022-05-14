@@ -63,6 +63,7 @@ typedef struct
 	SLI *Texture1;
 	SLI *Texture2;
 	int PolyFlags;
+	POINT3D OrigPNormal;
 	POINT3D PNormal;
 } RENDERPOLY;
 

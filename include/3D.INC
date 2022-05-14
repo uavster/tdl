@@ -46,6 +46,7 @@ RENDERPOLY      STRUC
         texture2        dd ?    ; -> Phong and light texture
         PolyFlags       dd ?
         ; Useful internal data
+		OrigPNormal		POINT3D <>		; Original polygon normal
         PNormal         POINT3D <>      ; Polygon normal vector
 ENDS
 

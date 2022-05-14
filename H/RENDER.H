@@ -134,29 +134,29 @@ void SetCameraTarget(float,float,float,RENDERCAMERA *);
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets a light position
 ;
-; INPUT : EAX = Float X
-;         EBX = Float Y
-;         ECX = Float Z
-;         EDX -> RENDERLIGHT
+; INPUT : EAX -> RENDERLIGHT
+;         st0 = Float X
+;         st1 = Float Y
+;         st2 = Float Z
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 */
 void SetLightPos(float,float,float,RENDERLIGHT *);
-#pragma aux SetLightPos "*" parm   [eax] [ebx] [ecx] [edx] \
-                             modify [eax ebx ecx edx esi edi ebp];
+#pragma aux SetLightPos "*" parm   [8087] [8087] [8087] [eax] \
+                             modify [eax];
 
 /*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets a light target vector
 ;
-; INPUT : EAX = Float target X
-;         EBX = Float target Y
-;         ECX = Float target Z
-;         EDX -> RENDERLIGHT
+; INPUT : EAX -> RENDERLIGHT
+;         st0 = Float target X
+;         st1 = Float target Y
+;         st2 = Float target Z
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 */
 void SetLightTarget(float,float,float,RENDERLIGHT *);
-#pragma aux SetLightTarget "*" parm   [eax] [ebx] [ecx] [edx] \
-                             modify [eax ebx ecx edx esi edi ebp];
+#pragma aux SetLightTarget "*" parm		[8087] [8087] [8087] [eax] \
+										modify [eax];
 
 /*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ

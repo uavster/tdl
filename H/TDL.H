@@ -80,6 +80,8 @@
 
 #include <framerat.h>
 
+#include <littable.h>
+
 #ifdef __cplusplus
   };
 #endif

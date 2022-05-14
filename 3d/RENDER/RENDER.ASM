@@ -156,40 +156,34 @@ SetActiveCamera endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets a light position
 ;
-; INPUT : EAX = Float X
-;         EBX = Float Y
-;         ECX = Float Z
-;         EDX -> RENDERLIGHT
+; INPUT : EAX -> RENDERLIGHT
+;         st0 = Float X
+;         st1 = Float Y
+;         st2 = Float Z
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetLightPos     proc
-        mov     [edx.LightPos.x],eax
-        mov     [edx.LightPos.y],ebx
-        mov     [edx.LightPos.z],ecx
+        fstp	[eax.LightPos.x]
+        fstp	[eax.LightPos.y]
+        fstp	[eax.LightPos.z]
         ret
 SetLightPos     endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets a light target vector
 ;
-; INPUT : EAX = Float target X
-;         EBX = Float target Y
-;         ECX = Float target Z
-;         EDX -> RENDERLIGHT
+; INPUT : EAX -> RENDERLIGHT
+;         st0 = Float target X
+;         st1 = Float target Y
+;         st2 = Float target Z
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetLightTarget  proc
-        mov     trash,eax
-        fld     trash
-        fsub    [edx.LightPos.x]
-        fstp    [edx.LightVector.x]
-        mov     trash,ebx
-        fld     trash
-        fsub    [edx.LightPos.y]
-        fstp    [edx.LightVector.y]
-        mov     trash,ecx
-        fld     trash
-        fsub    [edx.LightPos.z]
-        fstp    [edx.LightVector.z]
-        lea     eax,[edx.LightVector]
+        fsub    [eax.LightPos.x]
+        fstp    [eax.LightVector.x]
+        fsub    [eax.LightPos.y]
+        fstp    [eax.LightVector.y]
+        fsub    [eax.LightPos.z]
+        fstp    [eax.LightVector.z]
+        lea     eax,[eax.LightVector]
         call    NormalizeVector
         ret
 SetLightTarget  endp
@@ -697,6 +691,7 @@ HandleVisibility        endp
 Iluminate       proc
 		test	ecx,ecx
 		jz		no_more_lights
+		push	eax ebx ecx
         mov     edi,eax
                 mov     edx,[edi.points]
                 mov     esi,[edi.pointdata]
@@ -724,7 +719,7 @@ Iluminate       proc
 
                 add     ebx,size RENDERLIGHT
         dec     ecx
-        jz      no_more_lights
+        jz      illuminate_poly_faces
         walk_renderlights:
                 mov     edx,[edi.points]
                 mov     esi,[edi.pointdata]
@@ -761,6 +756,60 @@ Iluminate       proc
                 add     ebx,size RENDERLIGHT
         dec     ecx
         jnz     walk_renderlights
+		
+		illuminate_poly_faces:
+		pop		ecx ebx eax
+		
+		; Illuminate face normals
+        mov     edi,eax
+		mov     edx,[edi.polygons]
+		mov     esi,[edi.polydata]
+		zero_poly_lights:
+				fldz
+				fstp	[esi.vertex1_props.Light1]
+				add     esi,size RENDERPOLY
+		dec		edx
+		jnz		zero_poly_lights
+		
+		illuminate_poly_faces_loop:
+				mov     edx,[edi.polygons]
+				mov     esi,[edi.polydata]
+				ilum_faces:
+						fld     [ebx.LightVector.x]
+						fmul    [esi.PNormal.x]
+						fld     [ebx.LightVector.y]
+						fmul    [esi.PNormal.y]
+						faddp
+						fld     [ebx.LightVector.z]
+						fmul    [esi.PNormal.z]
+						faddp
+						ftst
+						fnstsw  ax
+						sahf
+						jae     vertex_with_light
+								fstp    trash
+								fldz
+						vertex_with_light:
+                        fmul    light_constant
+                        fadd    [esi.vertex1_props.Light1]
+                        fcom    light_constant
+                        fnstsw  ax
+                        sahf
+                        jb      vertex_more_lights
+                                fstp    trash
+                                fld     light_constant
+                        vertex_more_lights:
+						fst 	[esi.vertex1_props.Light1]
+						fst	    [esi.vertex2_props.Light1]
+						fstp    [esi.vertex3_props.Light1]
+						add     esi,size RENDERPOLY
+				dec     edx
+				jnz     ilum_faces
+
+				add     ebx,size RENDERLIGHT
+        dec     ecx
+        jnz		illuminate_poly_faces_loop
+		
         no_more_lights:
         ret
 light_constant  dd 255.0
@@ -902,6 +951,47 @@ RotateMesh      proc
                 add     ebx,size RENDERPOINT
         dec     ecx
         jnz     rotate_points
+
+        mov     ecx,[edx.polygons]
+        mov     ebx,[edx.polydata]
+        rotate_face_normals:
+                ; Z1 = Z0*cos(alpha)+X0*sin(alpha)
+                fld     [ebx.OrigPNormal.z]          ; Z0
+                fmul    m_cos_alpha         ; *cos(alpha)
+                fld     [ebx.OrigPNormal.x]          ; X0
+                fmul    m_sin_alpha         ; *sin(alpha)
+                faddp                           ; +
+                ; Xc = X0*cos(alpha)-Z0*sin(alpha)
+                fld     [ebx.OrigPNormal.x]          ; X0
+                fmul    m_cos_alpha         ; *cos(alpha)
+                fld     [ebx.OrigPNormal.z]         ; Z0
+                fmul    m_sin_alpha         ; *sin(alpha)
+                fsubp                           ; -
+                fstp    xn0
+                ; Yc = Y0*cos(beta)-Z0*sin(beta)
+                fld     [ebx.OrigPNormal.y]     ; Y0
+                fmul    m_cos_beta          ; *cos(beta)
+                fld     st(1)                   ; Z1
+                fmul    m_sin_beta          ; *sin(beta)
+                fsubp                           ; -
+                fstp    yn0
+                ; Zc = Z1*cos(beta)+Y0*sin(beta)
+                fld     st(0)
+                fmul    m_cos_beta         ; *cos(beta)
+                fld     [ebx.OrigPNormal.y]          ; Y0
+                fmul    m_sin_beta          ; *sin(beta)
+                faddp                           ; +
+                fstp    [ebx.PNormal.z]
+                fstp    trash
+                fld     xn0
+                fstp    [ebx.PNormal.x]
+                fld     yn0
+                fstp    [ebx.PNormal.y]
+
+                add     ebx,size RENDERPOLY
+        dec     ecx
+        jnz     rotate_face_normals
+		
         ret
 m_sin_alpha     dd ?
 m_cos_alpha     dd ?

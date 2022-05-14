@@ -102,20 +102,20 @@ global  SetCameraTarget : NEAR
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets a light position
 ;
-; INPUT : EAX = Float X
-;         EBX = Float Y
-;         ECX = Float Z
-;         EDX -> RENDERLIGHT
+; INPUT : EAX -> RENDERLIGHT
+;         st0 = Float X
+;         st1 = Float Y
+;         st2 = Float Z
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global  SetLightPos : NEAR
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets a light target vector
 ;
-; INPUT : EAX = Float target X
-;         EBX = Float target Y
-;         ECX = Float target Z
-;         EDX -> RENDERLIGHT
+; INPUT : EAX -> RENDERLIGHT
+;         st0 = Float target X
+;         st1 = Float target Y
+;         st2 = Float target Z
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global  SetLightTarget : NEAR
 
