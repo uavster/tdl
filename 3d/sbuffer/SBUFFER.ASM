@@ -686,6 +686,48 @@ persp_corr_v	dd ?
 persp_num_loops			db ?
 persp_num_loops_last	db ?
 
+DivInvZ macro var,inv_z
+		mov		eax,var
+		mov		edx,eax
+		sar		edx,16
+		sal		eax,16
+		idiv	inv_z
+endm
+
+SetVarAtEnd macro var,var_inc,num_pixels
+		mov		eax,var_inc
+		imul	num_pixels
+		add		var,eax
+endm
+
+SetVarAtEnd16 macro var,var_inc
+		mov		eax,var_inc
+		sal		eax,4	; *16
+		add		var,eax
+endm
+
+UpdateVarIncrement macro var1,var0,num_pixels,inc_low_label,inc_high_label
+		sub		var1,var0
+		mov		edx,var1
+		sar		edx,31
+		idiv	num_pixels
+		mov		edx,eax
+		sal		eax,16
+		mov		dword ptr [inc_low_label-4],eax
+		sar		edx,16		
+		mov		byte ptr [inc_high_label-1],dl
+endm
+
+UpdateVarIncrement16 macro var1,var0,inc_low_label,inc_high_label
+		sub		var1,var0
+		sar		var1,4
+		mov		edx,var1
+		shl		var1,16
+		mov		dword ptr [inc_low_label-4],var1
+		shr		edx,16		
+		mov		byte ptr [inc_high_label-1],dl
+endm
+
 RenderTexmapScanLine_PerspectiveCorrected    proc
         push    edi ebp
         fld     ds:[SPAN ptr ebp.SPVars]
@@ -729,21 +771,11 @@ RenderTexmapScanLine_PerspectiveCorrected    proc
 		mov ebx,tempiz	; divisor
 		
 		; ebp = (u/z) / (1/z) = u [16.16]
-		mov		eax,tempu
-		mov		edx,eax
-		sar		edx,16
-		sal		eax,16
-		idiv	ebx
-		mov		ebp,eax
-		
+		DivInvZ	tempu,ebx
+		mov		ebp,eax		
 		; esi = (v/z) / (1/z) = v [16.16]
-		mov		eax,tempv
-		mov		edx,eax
-		sar		edx,16
-		sal		eax,16
-		idiv	ebx
+		DivInvZ	tempv,ebx
 		mov		esi,eax
-
 		
 		cmp		persp_num_loops,0
 		jnz 	RTSP_outer_loop
@@ -755,55 +787,24 @@ RenderTexmapScanLine_PerspectiveCorrected    proc
 		test	cl,cl
 		jz		RTSP_leave
 		
-		mov		eax,tempdiz
-		imul	ecx
-		add		tempiz,eax
+		; 1/z += num_remaining_pixels*d(1/z) [16.16]
+		SetVarAtEnd tempiz,tempdiz,ecx
+		; u/z += num_remaining_pixels*d(u/z) [16.16]
+		SetVarAtEnd tempu,tempdu,ecx
+		; v/z += num_remaining_pixels*d(v/z) [16.16]
+		SetVarAtEnd tempv,tempdv,ecx
 		
 		mov		ebx,tempiz
-		
-		mov		eax,tempdu
-		imul	ecx
-		add		tempu,eax
-		
-		mov		eax,tempdv
-		imul	ecx
-		add		tempv,eax
 
 		; u = (u/z) / (1/z) [16.16]
-		mov		eax,tempu
-		mov		edx,eax
-		sar		edx,16
-		sal		eax,16
-		idiv	ebx
-
+		DivInvZ	tempu,ebx
 		; du = u1 - u0
-		sub		eax,ebp	; eax = du [16.16]
-		mov		edx,eax
-		sar		edx,31
-		idiv	ecx
-		mov		edx,eax
-		sal		eax,16
-		mov		dword ptr [RTSP_AMC001-4],eax
-		sar		edx,16		
-		mov		byte ptr [RTSP_AMC003-1],dl
+		UpdateVarIncrement eax,ebp,ecx,RTSP_AMC001,RTSP_AMC003
 		
 		; v = (v/z) / (1/z) [16.16]
-		mov		eax,tempv
-		mov		edx,eax
-		sar		edx,16
-		sal		eax,16
-		idiv	ebx
-
+		DivInvZ	tempv,ebx
 		; dv = v1 - v0
-		sub		eax,esi	; eax = dv [16.16]
-		mov		edx,eax
-		sar		edx,31
-		idiv	ecx
-		mov		edx,eax
-		sal		eax,16
-		mov		dword ptr [RTSP_AMC002-4],eax
-		sar		edx,16		
-		mov		byte ptr [RTSP_AMC004-1],dl
+		UpdateVarIncrement eax,esi,ecx,RTSP_AMC002,RTSP_AMC004
 		
 		jmp		RTSP_cont
 		
@@ -813,55 +814,25 @@ RenderTexmapScanLine_PerspectiveCorrected    proc
 		mov		cl,16
 		
 		; 1/z += 16*d(1/z) [16.16]
-		mov		eax,tempdiz
-		sal		eax,4	; *16
-		add		tempiz,eax
-		
+		SetVarAtEnd16 tempiz,tempdiz
+		; u/z += 16*d(u/z) [16.16]
+		SetVarAtEnd16 tempu,tempdu
+		; v/z += 16*d(v/z) [16.16]
+		SetVarAtEnd16 tempv,tempdv
+
 		mov		ebx,tempiz
 		
-		; u/z += 16*d(u/z) [16.16]
-		mov		eax,tempdu
-		sal		eax,4
-		add		tempu,eax
-		
-		; v/z += 16*d(v/z) [16.16]
-		mov		eax,tempdv
-		sal		eax,4
-		add		tempv,eax
-
 		; u = (u/z) / (1/z) [16.16]
-		mov		eax,tempu
-		mov		edx,eax
-		sar		edx,16
-		sal		eax,16
-		idiv	ebx
+		DivInvZ	tempu,ebx
 		mov		persp_corr_u,eax		; save u1 as starting point for next outer loop 
-
 		; du = u1 - u0
-		sub		eax,ebp	; eax = du [16.16]
-		sar		eax,4
-		mov		edx,eax
-		shl		eax,16
-		mov		dword ptr [RTSP_AMC001-4],eax
-		shr		edx,16		
-		mov		byte ptr [RTSP_AMC003-1],dl
+		UpdateVarIncrement16 eax,ebp,RTSP_AMC001,RTSP_AMC003
 		
 		; v = (v/z) / (1/z) [16.16]
-		mov		eax,tempv
-		mov		edx,eax
-		sar		edx,16
-		sal		eax,16
-		idiv	ebx
-		mov		persp_corr_v,eax		; save v1 as starting point for next outer loop 
-		
+		DivInvZ	tempv,ebx
+		mov		persp_corr_v,eax		; save v1 as starting point for next outer loop 		
 		; dv = v1 - v0
-		sub		eax,esi	; eax = dv [16.16]
-		sar		eax,4
-		mov		edx,eax
-		shl		eax,16
-		mov		dword ptr [RTSP_AMC002-4],eax
-		shr		edx,16		
-		mov		byte ptr [RTSP_AMC004-1],dl
+		UpdateVarIncrement16 eax,esi,RTSP_AMC002,RTSP_AMC004
 		
 				
 		RTSP_cont:
