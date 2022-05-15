@@ -747,6 +747,12 @@ UpdatePerspectiveCorrectVarLinearIncrement16 macro var,var_reg,var_inc,inv_z_at_
 		; dvar = var1 - var0
 		UpdateVarIncrement16 eax,var_reg,inc_low_label,inc_high_label
 endm
+
+PrepareRegsForInterpolation macro var_and_mantisa_reg,base_reg
+		mov		base_reg,var_and_mantisa_reg
+		sal		var_and_mantisa_reg,16
+		sar		base_reg,16
+endm
 		
 RenderTexmapScanLine_PerspectiveCorrected    proc
         push    edi ebp
@@ -827,12 +833,8 @@ RenderTexmapScanLine_PerspectiveCorrected    proc
 
 		RTSP_cont:
 		; Set loop registers to interpolate u and v
-		mov		ebx,ebp
-		sal		ebp,16
-		sar		ebx,16
-		mov		eax,esi
-		sal		esi,16
-		sar		eax,16
+		PrepareRegsForInterpolation ebp,ebx
+		PrepareRegsForInterpolation esi,eax
 		mov		bh,al
 		
 		xor		edx,edx
