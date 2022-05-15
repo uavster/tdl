@@ -710,14 +710,6 @@ RenderTexmapScanLine_PerspectiveCorrected    proc
 		mov		persp_num_loops,al
 		and		cl,0fh
 		mov		persp_num_loops_last,cl
-        mov     eax, dword ptr [tempdu-2]
-        mov     ebx, dword ptr [tempdv-2]
-        mov     dword ptr [RTSP_AMC001-4], eax
-        mov     dword ptr [RTSP_AMC002-4], ebx
-        mov     al, byte ptr [tempdu+2]
-        mov     bl, byte ptr [tempdv+2]
-        mov     byte ptr [RTSP_AMC003-1], al
-        mov     byte ptr [RTSP_AMC004-1], bl
 
         mov     eax, ds:[SPAN ptr ebp.SPTexture]
         mov     ebx, ds:[SPAN ptr ebp.SPLightMap]
