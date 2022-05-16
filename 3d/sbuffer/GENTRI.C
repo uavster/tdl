@@ -119,7 +119,7 @@ extern void GenericTriangleMapper(SLI *sbuffer, RENDERPOLY *p)
   
   // If perspective correction is enabled, interpolate variables divided by z.
   if (p->Type & kSptPerspectiveCorrected) {
-	for (i = 1; i < p->N; ++i) {
+	for (i = 1; i <= p->N; ++i) {
 		p1_vars[i] *= p1->InverseZ;
 		p2_vars[i] *= p2->InverseZ;
 		p3_vars[i] *= p3->InverseZ;
