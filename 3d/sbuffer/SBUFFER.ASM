@@ -560,7 +560,7 @@ RSB002:
         cmp     byte ptr ds:[SPAN ptr ebp.SPType], 2
         je      RenderTexmapScanline_PerspectiveCorrected
         cmp     byte ptr ds:[SPAN ptr ebp.SPType], 3
-        je      RenderTexmapGouraudScanLine
+        je      RenderTexmapGouraudScanLine_PerspectiveCorrected
         cmp     byte ptr ds:[SPAN ptr ebp.SPType], 12
         je      RenderGouraudColorScanLine
         cmp     byte ptr ds:[SPAN ptr ebp.SPType], 4
@@ -682,6 +682,7 @@ tempdiz	dd	?
 
 persp_corr_u	dd ?
 persp_corr_v	dd ?
+persp_corr_l	dd ?
 
 persp_num_loops			db ?
 persp_num_loops_last	db ?
@@ -733,7 +734,7 @@ UpdatePerspectiveCorrectVarLinearIncrement macro var,var_reg,var_inc,inv_z_at_en
 		SetVarAtEnd var,var_inc,num_pixels
 		; var = (var/z) / (1/z) [16.16]
 		DivInvZ	var,inv_z_at_end
-		mov		persp_correct_var,eax		; save u1 as starting point for next outer loop 
+		mov		persp_correct_var,eax		; save var1 as starting point for next outer loop 
 		; dvar = var1 - var0
 		UpdateVarIncrement eax,var_reg,num_pixels,inc_low_label,inc_high_label
 endm
@@ -743,7 +744,7 @@ UpdatePerspectiveCorrectVarLinearIncrement16 macro var,var_reg,var_inc,inv_z_at_
 		SetVarAtEnd16 var,var_inc
 		; var = (var/z) / (1/z) [16.16]
 		DivInvZ	var,inv_z_at_end
-		mov		persp_correct_var,eax		; save u1 as starting point for next outer loop 
+		mov		persp_correct_var,eax		; save var1 as starting point for next outer loop 
 		; dvar = var1 - var0
 		UpdateVarIncrement16 eax,var_reg,inc_low_label,inc_high_label
 endm
@@ -784,6 +785,7 @@ RenderTexmapScanLine_PerspectiveCorrected    proc
         mov     dword ptr [RTSP_AMC005-4], eax
         mov     dword ptr [RTSP_AMC006-4], ebx
 
+		; TODO: these lines may be removed (check)
         xor     ebx, ebx
         xor     edx, edx
         mov     bl, byte ptr [tempu+2]
@@ -976,6 +978,148 @@ RTG_AMC004:
         ret
         endp
 
+tempedi	dd ?
+
+RenderTexmapGouraudScanLine_PerspectiveCorrected    proc
+        push    edi ebp
+        fld     ds:[SPAN ptr ebp.SPVars]
+        fld     ds:[SPAN ptr ebp.SPVars+4]
+        fld     ds:[SPAN ptr ebp.SPVars+8]
+        fld     ds:[SPAN ptr ebp.SPVars+12]
+        fld     ds:[SPAN ptr ebp.SPVars+16]
+        fld     ds:[SPAN ptr ebp.SPVars+20]
+        fistp   [tempdl]
+        fistp   [templ]
+        fistp   [tempdv]
+        fistp   [tempv]
+        fistp   [tempdu]
+        fistp   [tempu]
+		fld		ds:[SPAN ptr ebp.SPiZ]
+		fistp	tempiz	; 65536 / z
+		fld		ds:[SPAN ptr ebp.SPdiZ]
+		fistp	tempdiz
+		
+        mov     ecx, ds:[SPAN ptr ebp.SPx2]
+        mov     eax, ds:[SPAN PTR ebp.SPx1]
+        sub     ecx, eax
+        lea     edi, [edi+eax*4]
+        inc     ecx
+		mov		eax,ecx
+		shr		eax,4
+		mov		persp_num_loops,al
+		and		cl,0fh
+		mov		persp_num_loops_last,cl
+
+        mov     eax, ds:[SPAN ptr ebp.SPTexture]
+        mov     ebx, ds:[SPAN ptr ebp.SPLightMap]
+        mov     dword ptr [RTGP_AMC005-4], eax
+        mov     dword ptr [RTGP_AMC006-4], ebx
+
+		mov		tempedi,edi
+		
+		; tempu, tempv and templ are u, v and l divided by z
+		; Perspective correction is done every 16 pixels
+
+		mov 	ebx,tempiz	; divisor
+		
+		; ebp = (u/z) / (1/z) = u [16.16]
+		DivInvZ	tempu,ebx
+		mov		ebp,eax		
+		; esi = (v/z) / (1/z) = v [16.16]
+		DivInvZ	tempv,ebx
+		mov		esi,eax
+		; edi = (l/z) / (1/z) = l [16.16]
+		DivInvZ templ,ebx
+		mov		edi,eax
+		
+		cmp		persp_num_loops,0
+		jnz 	RTGP_outer_loop
+		
+		; Linear interpolation in the last piece of span of fewer than 16 pixels
+		RTGP_outer_loop_last:
+		xor		ecx,ecx
+		mov		cl,persp_num_loops_last
+		test	cl,cl
+		jz		RTGP_leave
+		
+		; 1/z += num_remaining_pixels*d(1/z) [16.16]
+		SetVarAtEnd tempiz,tempdiz,ecx
+		mov		ebx,tempiz
+		UpdatePerspectiveCorrectVarLinearIncrement tempu,ebp,tempdu,ebx,persp_corr_u,RTGP_AMC001,RTGP_AMC003,ecx
+		UpdatePerspectiveCorrectVarLinearIncrement tempv,esi,tempdv,ebx,persp_corr_v,RTGP_AMC002,RTGP_AMC004,ecx
+		UpdatePerspectiveCorrectVarLinearIncrement templ,edi,tempdl,ebx,persp_corr_l,RTGP_AMC007,RTGP_AMC008,ecx
+		jmp		RTGP_cont
+		
+		
+		; Linear interpolation in the first N pieces of span of 16 pixels each
+		RTGP_outer_loop:
+		mov		cl,16
+		
+		; 1/z += 16*d(1/z) [16.16]
+		SetVarAtEnd16 tempiz,tempdiz
+		mov		ebx,tempiz
+		UpdatePerspectiveCorrectVarLinearIncrement16 tempu,ebp,tempdu,ebx,persp_corr_u,RTGP_AMC001,RTGP_AMC003
+		UpdatePerspectiveCorrectVarLinearIncrement16 tempv,esi,tempdv,ebx,persp_corr_v,RTGP_AMC002,RTGP_AMC004
+		UpdatePerspectiveCorrectVarLinearIncrement16 templ,edi,tempdl,ebx,persp_corr_l,RTGP_AMC007,RTGP_AMC008
+
+		RTGP_cont:
+		; Set loop registers to interpolate u and v
+		PrepareRegsForInterpolation ebp,ebx
+		PrepareRegsForInterpolation esi,eax
+		mov		bh,al
+		PrepareRegsForInterpolation edi,eax
+		mov		edx,edi
+		mov		dl,al
+		
+		mov		edi,tempedi
+		add		tempedi,16*4		; edi won't be used after the last segment, so we don't care about its length
+		
+RTGP_mainbucle:
+        xor     eax, eax                             ;u
+        mov     ah, dl                               ;v
+        shr     ah, 1
+
+        mov     al, [ebx+1234000h] ; textura         ;v
+RTGP_AMC005:
+        add     ebp, 1234000h ; incu                 ;u
+RTGP_AMC001:
+        mov     eax, [eax*4+1234000h] ; paleta       ;v
+RTGP_AMC006:
+        adc     bl, 129       ; incu                 ;u <-solo u
+RTGP_AMC003:
+        add     edx, 1234000h                        ;v
+RTGP_AMC007:
+        adc     dl, 129                              ;u <-solo u
+RTGP_AMC008:
+        add     esi, 1234000h ; incv                 ;v
+RTGP_AMC002:
+        adc     bh, 129       ; incv                 ;u <-solo u
+RTGP_AMC004:
+
+        mov     [edi], eax ; poner en pantalla ;v
+
+		add		edi,4								 ;v
+        dec     cl 	                                 ;u
+        jnz     RTGP_mainbucle                        ;v
+        ; total cycles = 7 per pixel (32 bits)
+		
+		mov		al,persp_num_loops
+		test	al,al
+		jz		RTGP_leave
+		; Restore v1 and u1 as v0 and u0 for the next outer loop
+		mov		ebp,persp_corr_u
+		mov		esi,persp_corr_v
+		mov		edi,persp_corr_l
+		dec		al
+		mov		persp_num_loops,al
+		jz		RTGP_outer_loop_last
+		jmp		RTGP_outer_loop
+		
+		RTGP_leave:
+        pop     ebp edi
+        ret
+        endp
+		
         align   32
         dw  0
 tempdl1 dd  ?
