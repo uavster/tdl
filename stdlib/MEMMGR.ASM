@@ -317,7 +317,7 @@ m_next: cmp     byte ptr [ebx.more], 'M'
         mov     ebx, [ebx.next]
         jmp     short m_lp
 
-m_end:  xor     ebx, ebx                ; not enought memory
+m_end:  xor     ebx, ebx                ; not enough memory
 
         stc                             ; -------B52-------
 
@@ -415,12 +415,12 @@ free    endp
 ; Resizes a memory block.
 ;
 ;  parameters:
-;    eax - ptr to heap info (needen for possible mallocs)
+;    eax - ptr to heap info (needed for possible mallocs)
 ;    ebx - ptr to data area of block
 ;    ecx - new block size
 ;
 ;  returns:
-;    ebx - new block ptr, zero if not enought memory
+;    ebx - new ptr to data area, zero if not enough memory
 ;    ecx - new block size, rounded up to a multiple of four
 ;
 ;  modifies:
@@ -480,6 +480,7 @@ r_newf: mov     edx, [ebx.blen]         ; calc the difference
         sub     edx, ecx
         sub     edx, 16                 ; we can't resize the block 'cos free
         jc      r_s_end                 ;  space is less than 16 bytes...
+
         mov     [16 + ebx + ecx.blen], edx      ; make a new block
         mov     eax, dword ptr [ebx.status]
         mov     dword ptr [16 + ebx + ecx.status], eax
@@ -509,7 +510,7 @@ r_s_end:
 
 r_big:  push    eax                     ; save ptr to heap info
         mov     eax, [ebx.next]         ; check next block to see if is a free
-        cmp     [eax.status], 'F'       ;  one and if it's big enought
+        cmp     [eax.status], 'F'       ;  one and if it's big enough
         jne     r_malloc
 
         mov     edx, ecx
@@ -521,7 +522,7 @@ r_big:  push    eax                     ; save ptr to heap info
         add     esp, 4                  ; discard ptr to heap info
 
         ; we have a free block just after the resized block and it's big
-        ;  enought, so we use it
+        ;  enough, so we use it
 
         add     edx, 16                 ; use all the block or only a little
         cmp     [eax.blen], edx
@@ -543,6 +544,7 @@ r_big:  push    eax                     ; save ptr to heap info
         mov     edx, [eax.next]
         mov     [ecx.next], edx
         mov     ecx, [ebx.blen]         ; restore size
+		add		ebx, 16					; point at data area
         or      edx, edx
         jz      r_end
         mov     [edx.prev], eax
@@ -559,26 +561,27 @@ r_kill: mov     edx, [eax.blen]         ; use all the block
 r_nonext:
         mov     dl, [eax.more]
         mov     [ebx.more], dl
+		add		ebx, 16					; point at data area
 
         jmp     short r_end
 
         ; we haven't a free block after the resized block, or it's not big
-        ;  enought, so we call malloc to get memory if we can, copy old
+        ;  enough, so we call malloc to get memory if we can, copy old
         ;  block to new block and free old block
 
 r_malloc:
         pop     eax                     ; restore ptr to heap info
         push    ebx                     ; we have to allocate another block
         call    malloc                  ;  and copy data to it
-        or      ebx, ebx                ; not enought memory, return zero ptr
-        jz      r_notenought
+        or      ebx, ebx                ; not enough memory, return zero ptr
+        jz      r_notenough
         mov     edi, ebx                ; copy block
         pop     edx                     ; don't destroy ebx -> ptr to new block
         add     edx, 16                 ; edx must point to data area
         mov     esi, edx
         cld
         push    ecx
-        shr     ecx, 2                  ; ecx is allways a multiple of four
+        shr     ecx, 2                  ; ecx is always a multiple of four
         rep     movsd
         xchg    edx, ebx                ; free old block
         call    free
@@ -589,7 +592,7 @@ r_malloc:
 
         jmp     short r_end
 
-r_notenought:
+r_notenough:
         add     esp, 4                  ; just exit with ebx = 0
 
         stc                             ; -------B52-------
