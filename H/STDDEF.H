@@ -16,8 +16,9 @@ typedef double          QWORD;
 #ifndef __cplusplus
 typedef int             bool;
 #endif
+typedef DWORD			size_t;
 
-#define NULL        0
+#define NULL        	0
 
 void puts(char *sz);
 #pragma aux puts =        \
