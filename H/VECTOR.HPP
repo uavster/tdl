@@ -68,7 +68,7 @@ public:
 	bool operator>=(const random_access_iterator<T> it) const {
 		return p_ >= it.p_;
 	}
-	size_t operator-(const random_access_iterator<T> it) const {
+	int operator-(const random_access_iterator<T> it) const {
 		return p_ - it.p_;
 	}
 	T &operator[](size_t i) const {
@@ -109,6 +109,65 @@ template<class T> T operator-(const T it, const size_t n) {
 	cit -= n;
 	return cit;
 }
+
+template<class T> class random_access_reverse_iterator : public random_access_iterator<T> {
+public:
+	random_access_reverse_iterator<T> operator++(int) {
+		return random_access_iterator<T>::operator--(0);
+	}
+	random_access_reverse_iterator<T> &operator++() {
+		random_access_iterator<T>::operator--();
+		return *this;
+	}
+	random_access_reverse_iterator<T> operator--(int) {
+		return random_access_iterator<T>::operator++(0);
+	}
+	random_access_reverse_iterator<T> &operator--() {
+		random_access_iterator<T>::operator++();
+		return *this;
+	}
+	random_access_reverse_iterator<T> &operator+=(size_t n) {
+		random_access_iterator<T>::operator-=(n);
+		return *this;
+	}
+	random_access_reverse_iterator<T> &operator-=(size_t n) {
+		random_access_iterator<T>::operator+=(n);
+		return *this;		
+	}
+	random_access_reverse_iterator<T> &operator+=(int n) {
+		random_access_iterator<T>::operator-=(n);
+		return *this;
+	}
+	random_access_reverse_iterator<T> &operator-=(int n) {
+		random_access_iterator<T>::operator+=(n);
+		return *this;
+	}
+	bool operator<(const random_access_reverse_iterator<T> it) const {
+		return random_access_iterator<T>::operator>(it);
+	}
+	bool operator<=(const random_access_reverse_iterator<T> it) const {
+		return random_access_iterator<T>::operator>=(it);
+	}
+	bool operator>(const random_access_reverse_iterator<T> it) const {
+		return random_access_iterator<T>::operator<(it);
+	}
+	bool operator>=(const random_access_reverse_iterator<T> it) const {
+		return random_access_iterator<T>::operator<=(it);
+	}
+	int operator-(const random_access_reverse_iterator<T> it) const {
+		return static_cast<random_access_iterator>(it) - static_cast<random_access_iterator>(*this);
+	}
+	T &operator[](size_t i) const {
+		return *((*this) + i);
+	}
+	T &operator[](int i) const {
+		return random_access_iterator<T>::operator[](-i);
+	}
+protected:
+	random_access_reverse_iterator(T *p) : random_access_iterator<T>(p) {}
+private:
+	random_access_reverse_iterator(random_access_iterator<T> it) : random_access_iterator(&*it) {}
+};
 
 template<class T> class vector {
 public:
@@ -161,7 +220,7 @@ public:
 	inline T &front() const { return *data_; }
 	inline T &back() const { return data_[size_ - 1]; }
 	
-	typedef random_access_iterator<T>	iterator;
+	typedef random_access_iterator<T> iterator;
 	class const_iterator : public random_access_iterator<const T> {
 	public:
 		const_iterator(iterator it) : random_access_iterator<const T>(&*it) {}
@@ -172,6 +231,17 @@ public:
 	
 	inline iterator begin() const { return iterator(data_); }
 	inline iterator end() const { return iterator(&data_[size_]); }
+	
+	typedef random_access_reverse_iterator<T> reverse_iterator;
+	class const_reverse_iterator : public random_access_reverse_iterator<const T> {
+	public:
+		const_reverse_iterator(reverse_iterator it) : random_access_reverse_iterator<const T>(&*it) {}
+	};
+
+	inline const_reverse_iterator crbegin() const { return const_reverse_iterator(&data_[size_ - 1]); }
+	inline const_reverse_iterator crend() const { return const_reverse_iterator(data_ - 1); }
+	inline reverse_iterator rbegin() const { return reverse_iterator(&data_[size_ - 1]); }
+	inline reverse_iterator rend() const { return reverse_iterator(data_ - 1); }
 
 	iterator erase(iterator first, iterator last) {
 		if (last <= first) { return last; }
