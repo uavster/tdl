@@ -215,6 +215,7 @@ public:
 		}
 	}
 	inline size_t size() const { return size_; }
+	inline bool empty() const { return size_ == 0; }
 	inline T *data() const { return data_; }
 	inline T &operator[](size_t i) const { return data_[i]; }
 	inline T &front() const { return *data_; }
@@ -251,6 +252,29 @@ public:
 		}
 		size_ -= (last - first);
 		return first;
+	}
+	
+	iterator insert(iterator pos, size_t count, const T &value) {
+		size_ += count;
+		reserve(size_);
+		size_t num_elems_to_move = end() - pos;
+		if (num_elems_to_move) {
+			T *src = &*(end() - 1);
+			T *dst = src + count;
+			for (size_t i = 0; i < num_elems_to_move; ++i, --src, --dst) {
+				*dst = *src;
+			}
+		}
+		iterator it = pos;
+		while(count--) {
+			*it = value;
+			++it;
+		}
+		return pos;
+	}
+	
+	iterator insert(iterator pos, const T &value) {
+		return insert(pos, 1, value);
 	}
 	
 protected:
