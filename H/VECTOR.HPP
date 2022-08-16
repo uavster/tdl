@@ -172,10 +172,10 @@ private:
 template<class T> class vector {
 public:
 	vector() : capacity_(0), size_(0), data_(NULL) {}
-	vector(const size_t num_elems) : size_(num_elems), data_(NULL) {
+	vector(const size_t num_elems) : capacity_(0), size_(num_elems), data_(NULL) {
 		reserve(num_elems);
 	}
-	vector(const size_t num_elems, const T &value) : size_(num_elems), data_(NULL) {
+	vector(const size_t num_elems, const T &value) : capacity_(0), size_(num_elems), data_(NULL) {
 		reserve(num_elems);
 		for (size_t i = 0; i < num_elems; ++i) {
 			data_[i] = value;
@@ -183,10 +183,8 @@ public:
 	}
 	virtual ~vector() { if (data_ != NULL) { free(data_); data_ = NULL; } }
 	
-	void clear() {
-		size_ = 0;
-		if (data_ != NULL) { free(data_); data_ = NULL; }
-	}
+	void clear() { size_ = 0; }
+	
 	void reserve(size_t capacity) {
 		if (capacity <= capacity_) {
 			return;
@@ -215,6 +213,7 @@ public:
 		}
 	}
 	inline size_t size() const { return size_; }
+	inline size_t capacity() const { return capacity_; }
 	inline bool empty() const { return size_ == 0; }
 	inline T *data() const { return data_; }
 	inline T &operator[](size_t i) const { return data_[i]; }
@@ -255,26 +254,43 @@ public:
 	}
 	
 	iterator insert(iterator pos, size_t count, const T &value) {
-		size_ += count;
-		reserve(size_);
+		if (count == 0) {
+			return pos;
+		}
+		// Save the insertion index, as pos will be invalidated by the next reserve().
+		int insertion_index = pos - begin();
 		size_t num_elems_to_move = end() - pos;
+		reserve(size_ + count);
 		if (num_elems_to_move) {
 			T *src = &*(end() - 1);
 			T *dst = src + count;
-			for (size_t i = 0; i < num_elems_to_move; ++i, --src, --dst) {
+			T *dst_end = dst - num_elems_to_move;
+			for (; dst != dst_end; --src, --dst) {
 				*dst = *src;
 			}
 		}
-		iterator it = pos;
+		size_ += count;
+		iterator it = begin() + insertion_index;
 		while(count--) {
 			*it = value;
 			++it;
 		}
-		return pos;
+		return begin() + insertion_index;
 	}
 	
 	iterator insert(iterator pos, const T &value) {
 		return insert(pos, 1, value);
+	}
+	
+	void resize(size_t count, T value = T()) {
+		if (count == size_) {
+			return;
+		}
+		if (count < size_) {
+			size_ = count;
+			return;
+		}
+		insert(end(), count, value);
 	}
 	
 protected:
