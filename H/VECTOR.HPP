@@ -303,7 +303,8 @@ protected:
 	}
 	void check_data() {
 		if (data_ == NULL) {
-			throw Exception("Not enough memory.");
+			printf("Unable to reserve vector capacity.");
+			exit(1);
 		}
 	}
 	
