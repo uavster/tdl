@@ -10,10 +10,10 @@ namespace std {
 
 template<class T> class random_access_iterator {
 public:
-	T *operator->() {
+	T *operator->() const {
 		return p_;
 	}
-	T &operator*() {
+	T &operator*() const {
 		return *p_;
 	}
 	random_access_iterator<T> operator++(int) {
