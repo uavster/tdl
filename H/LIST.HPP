@@ -99,6 +99,8 @@ template<class T> class list_iterator : public base_list_iterator<T> {
 public:	
 	friend class list<T>;
 	
+	list_iterator(const base_list_iterator<T> &it) : base_list_iterator<T>(it) {}
+	
 	T &operator*() const {
 		return nodes_[index_].value;
 	}
@@ -114,6 +116,7 @@ template<class T> class const_list_iterator : public base_list_iterator<T> {
 public:
 	friend class list<T>;
 
+	const_list_iterator(const base_list_iterator<T> &it) : base_list_iterator<T>(it) {}
 	const_list_iterator(const list_iterator<T> &it) : base_list_iterator<T>(it) {}
 
 	const T &operator*() const {
@@ -165,20 +168,6 @@ public:
 	T &front() const { return nodes_[head_].value; }
 	T &back() const { return nodes_[tail_].value; }
 	
-	void push_back(const T &value) {
-		nodes_.push_back(value);
-		if (tail_ != list_kTerminalNode) {
-			nodes_[tail_].next = nodes_.size() - 1;
-		}
-		nodes_.back().prev = tail_;
-		nodes_.back().next = list_kTerminalNode;
-		tail_ = nodes_.size() - 1;
-		if (head_ == list_kTerminalNode) {
-			head_ = tail_;
-		}
-		++size_;
-	}
-	
 	typedef list_iterator<T> iterator;
 	
 	iterator begin() const { return iterator(&nodes_, head_); }
@@ -192,6 +181,55 @@ public:
 	const_iterator cend() const { return const_iterator(end()); }
 	const_iterator crbegin() const { return const_iterator(rbegin()); }
 	const_iterator crend() const { return const_iterator(rend()); }
+
+	iterator insert(iterator position, const T &value) {
+		nodes_.push_back(value);
+		size_t new_index = nodes_.size() - 1;
+		size_t new_prev;
+		if (position.index_ != list_kTerminalNode) {
+			// The list is not empty, and not inserting at end.
+			new_prev = nodes_[position.index_].prev;
+			nodes_[position.index_].prev = new_index;
+			if (new_prev != list_kTerminalNode) {
+				nodes_[new_prev].next = new_index;
+			} else {
+				// Inserting at front.
+				head_ = new_index;
+			}
+		} else {
+			new_prev = tail_;
+			if (new_prev != list_kTerminalNode) {
+				// The list is empty.
+				nodes_[tail_].next = new_index;
+			} else {
+				// Inserting at end.
+				head_ = new_index;
+			}
+			tail_ = new_index;
+		}
+		nodes_[new_index].prev = new_prev;
+		nodes_[new_index].next = position.index_;		
+		++size_;
+		return iterator(&nodes_, new_index);
+	}
+	
+	void push_front(const T &value) {
+		insert(begin(), value);
+	}	
+	void pop_front() {
+		head_ = nodes_[head_].next;
+		nodes_[head_].prev = list_kTerminalNode;
+		--size_;
+	}
+	
+	void push_back(const T &value) {
+		insert(end(), value);
+	}
+	void pop_back() {
+		tail_ = nodes_[tail_].prev;
+		nodes_[tail_].next = list_kTerminalNode;
+		--size_;
+	}
 	
 private:
 	size_t head_;
