@@ -73,6 +73,15 @@ public:
 		index_ = nodes_[index_].next;
 		return it;
 	}
+	base_list_iterator &operator--() {
+		index_ = nodes_[index_].prev;
+		return *this;
+	}
+	base_list_iterator operator--(int) {
+		base_list_iterator it(&nodes_, index_);
+		index_ = nodes_[index_].prev;
+		return it;
+	}	
 	bool operator==(const base_list_iterator &it) const {
 		return index_ == it.index_;
 	}
@@ -150,6 +159,12 @@ public:
 		nodes_.rbegin()->next = list_kTerminalNode;
 	}
 	
+	size_t size() const { return size_; }
+	bool empty() const { return size_ == 0; }
+	
+	T &front() const { return nodes_[head_].value; }
+	T &back() const { return nodes_[tail_].value; }
+	
 	void push_back(const T &value) {
 		nodes_.push_back(value);
 		if (tail_ != list_kTerminalNode) {
@@ -161,17 +176,22 @@ public:
 		if (head_ == list_kTerminalNode) {
 			head_ = tail_;
 		}
+		++size_;
 	}
 	
 	typedef list_iterator<T> iterator;
 	
 	iterator begin() const { return iterator(&nodes_, head_); }
 	iterator end() const { return iterator(&nodes_, list_kTerminalNode); }
+	iterator rbegin() const { return iterator(&nodes_, tail_); }
+	iterator rend() const { return iterator(&nodes_, list_kTerminalNode); }
 
 	typedef const_list_iterator<T> const_iterator;
 	
 	const_iterator cbegin() const { return const_iterator(begin()); }
 	const_iterator cend() const { return const_iterator(end()); }
+	const_iterator crbegin() const { return const_iterator(rbegin()); }
+	const_iterator crend() const { return const_iterator(rend()); }
 	
 private:
 	size_t head_;
