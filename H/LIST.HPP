@@ -69,7 +69,7 @@ public:
 		return *this;
 	}
 	base_list_iterator operator++(int) {
-		base_list_iterator it(&nodes_, index_);
+		base_list_iterator it(*this);
 		index_ = nodes_[index_].next;
 		return it;
 	}
@@ -78,7 +78,7 @@ public:
 		return *this;
 	}
 	base_list_iterator operator--(int) {
-		base_list_iterator it(&nodes_, index_);
+		base_list_iterator it(*this);
 		index_ = nodes_[index_].prev;
 		return it;
 	}	
@@ -315,6 +315,48 @@ public:
 	}
 	void pop_back() {
 		erase(rbegin());
+	}
+	
+	void sort() {
+		// STL sort must be stable (preserver existing order of equivalent elements).
+		// We use buble sort to respect that and for simplicity.
+		bool swapped_any;
+		do {
+			swapped_any = false;
+			for (iterator it = begin(); it != rbegin();) {
+				iterator next_it = it;
+				++next_it;
+				if (*it > *next_it) {
+					swap_consecutive_nodes(it, next_it);
+					swapped_any = true;
+				} else {
+					++it;
+				}
+			}
+		} while(swapped_any);
+	}
+
+protected:
+	void swap_consecutive_nodes(iterator first, iterator second) {
+		list_node<T> &node1 = nodes_[first.index_];
+		list_node<T> &node2 = nodes_[second.index_];
+		// node1.prev <-> node2
+		if (node1.prev == list_kTerminalNode) {
+			head_ = second.index_;
+		} else {
+			nodes_[node1.prev].next = second.index_;
+		}
+		node2.prev = node1.prev;
+		// node1 <-> node2.next
+		node1.next = node2.next;
+		if (node2.next == list_kTerminalNode) {
+			tail_ = first.index_;
+		} else {
+			nodes_[node2.next].prev = first.index_;
+		}
+		// node2 <-> node1
+		node2.next = first.index_;
+		node1.prev = second.index_;
 	}
 	
 private:
