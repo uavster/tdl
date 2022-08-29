@@ -89,7 +89,7 @@ public:
 		return index_ != it.index_;
 	}
 
-public:
+protected:
 	base_list_iterator(const vector<list_node<T> > *nodes, size_t index) : nodes_(*nodes), index_(index) {}
 	const vector<list_node<T> > &nodes_;
 	size_t index_;
@@ -128,6 +128,71 @@ public:
 	
 protected:
 	const_list_iterator(const vector<list_node<T> > *nodes, size_t index) : base_list_iterator<T>(nodes, index) {}
+};
+
+template<class T> class base_reverse_list_iterator : public base_list_iterator<T> {
+public:
+	friend class list<T>;
+
+	base_reverse_list_iterator(const base_reverse_list_iterator<T> &other) : base_list_iterator<T>(other) {}
+	base_reverse_list_iterator(const base_list_iterator<T> &other) : base_list_iterator<T>(other) {}
+
+	base_reverse_list_iterator &operator++() {
+		index_ = nodes_[index_].prev;
+		return *this;
+	}
+	base_reverse_list_iterator operator++(int) {
+		base_reverse_list_iterator it(*this);
+		index_ = nodes_[index_].prev;
+		return it;
+	}
+	base_reverse_list_iterator &operator--() {
+		index_ = nodes_[index_].next;
+		return *this;
+	}
+	base_reverse_list_iterator operator--(int) {
+		base_reverse_list_iterator it(*this);
+		index_ = nodes_[index_].next;
+		return it;
+	}	
+	
+protected:
+	base_reverse_list_iterator(const vector<list_node<T> > *nodes, size_t index) : base_list_iterator<T>(nodes, index) {}
+};
+
+template<class T> class reverse_list_iterator : public base_reverse_list_iterator<T> {
+public:	
+	friend class list<T>;
+	
+	reverse_list_iterator(const base_reverse_list_iterator<T> &it) : base_reverse_list_iterator<T>(it) {}
+	
+	T &operator*() const {
+		return nodes_[index_].value;
+	}
+	T *operator->() const {
+		return &nodes_[index_].value;
+	}
+
+protected:
+	reverse_list_iterator(const vector<list_node<T> > *nodes, size_t index) : base_reverse_list_iterator<T>(nodes, index) {}
+};
+
+template<class T> class const_reverse_list_iterator : public base_reverse_list_iterator<T> {
+public:
+	friend class list<T>;
+
+	const_reverse_list_iterator(const base_reverse_list_iterator<T> &it) : base_reverse_list_iterator<T>(it) {}
+	const_reverse_list_iterator(const reverse_list_iterator<T> &it) : base_reverse_list_iterator<T>(it) {}
+
+	const T &operator*() const {
+		return nodes_[index_].value;
+	}
+	const T *operator->() const {
+		return &nodes_[index_].value;
+	}
+	
+protected:
+	const_reverse_list_iterator(const vector<list_node<T> > *nodes, size_t index) : base_reverse_list_iterator<T>(nodes, index) {}
 };
 
 // STL-style list that owns the elements and allows for multiple iterators.
@@ -172,15 +237,21 @@ public:
 	
 	iterator begin() const { return iterator(&nodes_, head_); }
 	iterator end() const { return iterator(&nodes_, list_kTerminalNode); }
-	iterator rbegin() const { return iterator(&nodes_, tail_); }
-	iterator rend() const { return iterator(&nodes_, list_kTerminalNode); }
 
 	typedef const_list_iterator<T> const_iterator;
 	
 	const_iterator cbegin() const { return const_iterator(begin()); }
 	const_iterator cend() const { return const_iterator(end()); }
-	const_iterator crbegin() const { return const_iterator(rbegin()); }
-	const_iterator crend() const { return const_iterator(rend()); }
+
+	typedef reverse_list_iterator<T> reverse_iterator;
+	
+	reverse_iterator rbegin() const { return reverse_iterator(&nodes_, tail_); }
+	reverse_iterator rend() const { return reverse_iterator(&nodes_, list_kTerminalNode); }
+
+	typedef const_reverse_list_iterator<T> const_reverse_iterator;
+
+	const_reverse_iterator crbegin() const { return const_reverse_iterator(rbegin()); }
+	const_reverse_iterator crend() const { return const_reverse_iterator(rend()); }
 
 	iterator insert(iterator position, const T &value) {
 		nodes_.push_back(value);
@@ -213,22 +284,37 @@ public:
 		return iterator(&nodes_, new_index);
 	}
 	
+	void erase(iterator position) {
+		if (position.index_ == list_kTerminalNode) {
+			return;
+		}
+		size_t prev_index = nodes_[position.index_].prev;
+		size_t next_index = nodes_[position.index_].next;
+		if (prev_index != list_kTerminalNode) {
+			nodes_[prev_index].next = next_index;
+		} else {
+			head_ = next_index;
+		}
+		if (next_index != list_kTerminalNode) {
+			nodes_[next_index].prev = prev_index;
+		} else {
+			tail_ = prev_index;
+		}
+		--size_;
+	}
+	
 	void push_front(const T &value) {
 		insert(begin(), value);
 	}	
 	void pop_front() {
-		head_ = nodes_[head_].next;
-		nodes_[head_].prev = list_kTerminalNode;
-		--size_;
+		erase(begin());
 	}
 	
 	void push_back(const T &value) {
 		insert(end(), value);
 	}
 	void pop_back() {
-		tail_ = nodes_[tail_].prev;
-		nodes_[tail_].next = list_kTerminalNode;
-		--size_;
+		erase(rbegin());
 	}
 	
 private:
