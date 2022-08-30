@@ -29,11 +29,11 @@ void CheckResult(const BYTE *expected, const BYTE *actual, DWORD len) {
 	if (are_equal) {
 		printf("[OK]\n");
 	} else {
-		printf("[ERROR]\nExpected: ", len);
+		printf("[ERROR]\nExpected: ");
 		for (i = 0; i < len; ++i) {
 			printf("%dn ", expected[i]);
 		}
-		printf("\nActual: ", len);
+		printf("\nActual: ");
 		for (i = 0; i < len; ++i) {
 			printf("%dn ", actual[i]);
 		}
