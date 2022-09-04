@@ -47,22 +47,64 @@ void CheckResult(const vector<int> &actual, const int *expected, size_t expected
 	}
 }
 
+void CheckEmpty(const vector<int> &actual) {
+	if (actual.empty()) {
+		printf(" [OK]\n");
+	} else {
+		printf(" [ERROR]\nExpected: empty\n");
+		printf("Actual:   ");
+		PrintIntVector(actual);
+		exit(1);
+	}
+}
+
 #define EXPECT_EQ(actual, expected) { \
 	CheckResult(actual, expected, sizeof(expected) / sizeof(int)); \
 }
 
+#define EXPECT_EMPTY(actual) { \
+	CheckEmpty(actual); \
+}
+
 int main() {
-	vector<int> v(6, 52);
+	vector<int> v(3, 52);
 	{
 		NewTest("vector<int>(6, 52)");
-		const int expected[] = {52, 52, 52, 52, 52, 52};
+		const int expected[] = {52, 52, 52};
 		EXPECT_EQ(v, expected);
 	}
 	{
 		NewTest("push_back(42)");
 		v.push_back(42);
-		const int expected[] = {52, 52, 52, 52, 52, 52, 42};
+		const int expected[] = {52, 52, 52, 42};
 		EXPECT_EQ(v, expected);
+	}
+	{
+		NewTest("pop_back()");
+		v.pop_back();
+		const int expected[] = {52, 52, 52};
+		EXPECT_EQ(v, expected);
+	}
+	{
+		NewTest("clear()");
+		v.clear();
+		EXPECT_EMPTY(v);
+	}
+	{
+		NewTest("vector<Structure>(2, element)");
+		struct Structure {
+			int a;
+			char b;
+		};
+		Structure element = { 52, 53 };
+		vector<Structure> s(2, element);
+		vector<int> actual;
+		for (vector<Structure>::const_iterator it = s.cbegin(); it != s.cend(); ++it) {
+			actual.push_back(it->a);
+			actual.push_back(it->b);
+		}	
+		const int expected[] = {52, 53, 52, 53};
+		EXPECT_EQ(actual, expected);
 	}
 	
 	// printf("v[0] = %dn\n", v[0]);
