@@ -97,4 +97,8 @@ public __wcpp_4_undefined_member_function__
 __wcpp_4_undefined_member_function__:
 		retn
 
+public __wcpp_4_destruct__
+__wcpp_4_destruct__:
+		retn
+		
 end
