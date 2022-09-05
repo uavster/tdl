@@ -326,7 +326,7 @@ public:
 			for (iterator it = begin(); it != rbegin();) {
 				iterator next_it = it;
 				++next_it;
-				if (*it > *next_it) {
+				if (*next_it < *it) {
 					swap_consecutive_nodes(it, next_it);
 					swapped_any = true;
 				} else {
