@@ -317,6 +317,13 @@ public:
 		erase(rbegin());
 	}
 	
+	void clear() {
+		head_ = list_kTerminalNode;
+		tail_ = list_kTerminalNode;
+		size_ = 0;
+		nodes_.clear();
+	}
+	
 	void sort() {
 		// STL sort must be stable (preserver existing order of equivalent elements).
 		// We use buble sort to respect that and for simplicity.
