@@ -100,5 +100,9 @@ __wcpp_4_undefined_member_function__:
 public __wcpp_4_destruct__
 __wcpp_4_destruct__:
 		retn
-		
+
+public __wint_thread_data
+__wint_thread_data:
+		retn
+
 end
