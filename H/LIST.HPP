@@ -65,21 +65,21 @@ public:
 	base_list_iterator(const base_list_iterator<T> &other) : nodes_(other.nodes_), index_(other.index_) {}
 
 	base_list_iterator &operator++() {
-		index_ = nodes_[index_].next;
+		index_ = (*nodes_)[index_].next;
 		return *this;
 	}
 	base_list_iterator operator++(int) {
 		base_list_iterator it(*this);
-		index_ = nodes_[index_].next;
+		index_ = (*nodes_)[index_].next;
 		return it;
 	}
 	base_list_iterator &operator--() {
-		index_ = nodes_[index_].prev;
+		index_ = (*nodes_)[index_].prev;
 		return *this;
 	}
 	base_list_iterator operator--(int) {
 		base_list_iterator it(*this);
-		index_ = nodes_[index_].prev;
+		index_ = (*nodes_)[index_].prev;
 		return it;
 	}	
 	bool operator==(const base_list_iterator &it) const {
@@ -88,10 +88,15 @@ public:
 	bool operator!=(const base_list_iterator &it) const {
 		return index_ != it.index_;
 	}
+	base_list_iterator &operator=(const base_list_iterator &other) {
+		nodes_ = other.nodes_;
+		index_ = other.index_;
+		return *this;
+	}
 
 protected:
-	base_list_iterator(const vector<list_node<T> > *nodes, size_t index) : nodes_(*nodes), index_(index) {}
-	const vector<list_node<T> > &nodes_;
+	base_list_iterator(const vector<list_node<T> > *nodes, size_t index) : nodes_(nodes), index_(index) {}
+	const vector<list_node<T> > *nodes_;
 	size_t index_;
 };
 
@@ -102,10 +107,14 @@ public:
 	list_iterator(const base_list_iterator<T> &it) : base_list_iterator<T>(it) {}
 	
 	T &operator*() const {
-		return nodes_[index_].value;
+		return (*nodes_)[index_].value;
 	}
 	T *operator->() const {
-		return &nodes_[index_].value;
+		return &(*nodes_)[index_].value;
+	}
+	list_iterator &operator=(const list_iterator &other) {
+		base_list_iterator::operator=(other);
+		return *this;
 	}
 
 protected:
@@ -120,10 +129,14 @@ public:
 	const_list_iterator(const list_iterator<T> &it) : base_list_iterator<T>(it) {}
 
 	const T &operator*() const {
-		return nodes_[index_].value;
+		return (*nodes_)[index_].value;
 	}
 	const T *operator->() const {
-		return &nodes_[index_].value;
+		return &(*nodes_)[index_].value;
+	}
+	const_list_iterator operator=(const const_list_iterator &other) {
+		base_list_iterator::operator=(other);
+		return *this;
 	}
 	
 protected:
@@ -138,23 +151,27 @@ public:
 	base_reverse_list_iterator(const base_list_iterator<T> &other) : base_list_iterator<T>(other) {}
 
 	base_reverse_list_iterator &operator++() {
-		index_ = nodes_[index_].prev;
+		index_ = (*nodes_)[index_].prev;
 		return *this;
 	}
 	base_reverse_list_iterator operator++(int) {
 		base_reverse_list_iterator it(*this);
-		index_ = nodes_[index_].prev;
+		index_ = (*nodes_)[index_].prev;
 		return it;
 	}
 	base_reverse_list_iterator &operator--() {
-		index_ = nodes_[index_].next;
+		index_ = (*nodes_)[index_].next;
 		return *this;
 	}
 	base_reverse_list_iterator operator--(int) {
 		base_reverse_list_iterator it(*this);
-		index_ = nodes_[index_].next;
+		index_ = (*nodes_)[index_].next;
 		return it;
 	}	
+	base_reverse_list_iterator &operator=(const base_reverse_list_iterator &other) {
+		base_list_iterator::operator=(other);
+		return *this;
+	}
 	
 protected:
 	base_reverse_list_iterator(const vector<list_node<T> > *nodes, size_t index) : base_list_iterator<T>(nodes, index) {}
@@ -167,10 +184,14 @@ public:
 	reverse_list_iterator(const base_reverse_list_iterator<T> &it) : base_reverse_list_iterator<T>(it) {}
 	
 	T &operator*() const {
-		return nodes_[index_].value;
+		return (*nodes_)[index_].value;
 	}
 	T *operator->() const {
-		return &nodes_[index_].value;
+		return &(*nodes_)[index_].value;
+	}
+	reverse_list_iterator &operator=(const reverse_list_iterator &other) {
+		base_reverse_list_iterator::operator=(other);
+		return *this;
 	}
 
 protected:
@@ -185,10 +206,14 @@ public:
 	const_reverse_list_iterator(const reverse_list_iterator<T> &it) : base_reverse_list_iterator<T>(it) {}
 
 	const T &operator*() const {
-		return nodes_[index_].value;
+		return (*nodes_)[index_].value;
 	}
 	const T *operator->() const {
-		return &nodes_[index_].value;
+		return &(*nodes_)[index_].value;
+	}
+	const_reverse_list_iterator &operator=(const const_reverse_list_iterator &other) {
+		base_reverse_list_iterator::operator=(other);
+		return *this;
 	}
 	
 protected:
