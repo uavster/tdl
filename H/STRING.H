@@ -22,8 +22,8 @@ int StringLength(const char *);
 void PushToString(char *,char);
 #pragma aux PushToString "*" parm   [esi] [dl];
 
-void strcpy(const char *src, char *dst);
-#pragma aux CopyString "*" parm	[esi] [edi];
+char *strcpy(const char *src, char *dst);
+#pragma aux strcpy_ "*" parm	[esi] [edi] value [edi];
 
 #ifdef __cplusplus
   };
