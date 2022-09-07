@@ -105,4 +105,9 @@ public __wint_thread_data
 __wint_thread_data:
 		retn
 
+public __wcpp_4_ctor_array__
+align 16
+__wcpp_4_ctor_array__:
+		retn
+
 end
