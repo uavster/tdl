@@ -75,7 +75,7 @@ template_def void TimeSignal_::getNeighborKeyPoints(float time, int numNeighbors
 	if (dirty) sort(false);
 
 	// Time is inside bounds
-	if (time >= keypoints.cbegin()->time && time <= keypoints.back().time) {
+	if (time >= keypoints.front().time && time <= keypoints.back().time) {
 
 		// Find nearest key point
 		if (time > currentKeyPoint->time) {
@@ -139,7 +139,7 @@ template_def void TimeSignal_::getNeighborKeyPoints(float time, int numNeighbors
 	} else {
 
 		// Time is out of bounds. Generate time vector maintaining the time sequence.
-		if (time < keypoints.cbegin()->time) {
+		if (time < keypoints.front().time) {
 			currentKeyPoint = keypoints.cbegin();
 			float t = time - TIME_SIGNAL_TIME_INC_OUTSIDE_BOUNDS * (numNeighbors / 2 - 1);
 			list<KeyPoint>::const_iterator it = keypoints.cbegin();
@@ -158,7 +158,7 @@ template_def void TimeSignal_::getNeighborKeyPoints(float time, int numNeighbors
 		} else {
 			currentKeyPoint = --keypoints.cend();
 			float t = time + TIME_SIGNAL_TIME_INC_OUTSIDE_BOUNDS * (numNeighbors / 2 - 1);
-			list<KeyPoint>::const_iterator it = --keypoints.cend();
+			list<KeyPoint>::const_reverse_iterator it = keypoints.crbegin();
 			bool gotOffset = false; float offset = 0.0f; int offsetIndex = 0;
 			for (int i = numNeighbors - 1; i >= 0; --i) {
 				neighbors[i] = *it;
@@ -167,7 +167,7 @@ template_def void TimeSignal_::getNeighborKeyPoints(float time, int numNeighbors
 					t -= TIME_SIGNAL_TIME_INC_OUTSIDE_BOUNDS;
 				} else {
 					if (!gotOffset) { offset = keypoints.back().time - t; offsetIndex = i; gotOffset = true; }
-					--it;
+					++it;
 				}
 			}
 			if (gotOffset) for (int i = offsetIndex + 1; i < numNeighbors; ++i) neighbors[i].time += offset;
