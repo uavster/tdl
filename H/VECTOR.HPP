@@ -292,7 +292,7 @@ public:
 			size_ = count;
 			return;
 		}
-		insert(end(), count, value);
+		insert(end(), count - size_, value);
 	}
 	
 protected:
