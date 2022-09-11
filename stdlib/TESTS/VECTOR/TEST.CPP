@@ -198,6 +198,10 @@ int main() {
 		EXPECT_1EQ(v.back(), 53);
 	}	
 	{
+		NewTest("iterator: default constructor can be called.");
+		vector<int>::iterator it;
+	}
+	{
 		NewTest("iterator: dereferencing returns value.");
 		vector<int> v(1, 52);
 		EXPECT_1EQ(*v.begin(), 52);
@@ -288,6 +292,10 @@ int main() {
 		EXPECT_EQ(actual, expected);
 	}
 	{
+		NewTest("const_iterator: default constructor can be called.");
+		vector<int>::const_iterator it;
+	}
+	{
 		NewTest("const_iterator: dereferencing returns value.");
 		vector<int> v(1, 52);
 		EXPECT_1EQ(*v.cbegin(), 52);
@@ -352,6 +360,10 @@ int main() {
 		v.push_back(53);
 		v.push_back(54);
 		EXPECT_1EQ(*(v.cend() - 3), 52);
+	}
+	{
+		NewTest("reverse_iterator: default constructor can be called.");
+		vector<int>::reverse_iterator it;
 	}
 	{
 		NewTest("reverse_iterator: dereferencing returns value.");
@@ -423,6 +435,10 @@ int main() {
 		}	
 		const int expected[] = {3, 2, 1};
 		EXPECT_EQ(actual, expected);
+	}
+	{
+		NewTest("const_reverse_iterator: default constructor can be called.");
+		vector<int>::const_reverse_iterator it;
 	}
 	{
 		NewTest("const_reverse_iterator: dereferencing returns value.");

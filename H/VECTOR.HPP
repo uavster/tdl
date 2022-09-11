@@ -10,6 +10,8 @@ namespace std {
 
 template<class T> class random_access_iterator {
 public:	
+	random_access_iterator() {}
+
 	T *operator->() const {
 		return p_;
 	}
@@ -112,6 +114,8 @@ template<class T> T operator-(const T it, const size_t n) {
 
 template<class T> class random_access_reverse_iterator : public random_access_iterator<T> {
 public:
+	random_access_reverse_iterator() : random_access_iterator<T>() {}
+
 	random_access_reverse_iterator<T> operator++(int) {
 		return random_access_iterator<T>::operator--(0);
 	}
@@ -223,6 +227,7 @@ public:
 	typedef random_access_iterator<T> iterator;
 	class const_iterator : public random_access_iterator<const T> {
 	public:
+		const_iterator() : random_access_iterator<const T>() {}
 		const_iterator(iterator it) : random_access_iterator<const T>(&*it) {}
 		const_iterator(const random_access_iterator<const T> &it) : random_access_iterator<const T>(it) {}
 	};
@@ -236,6 +241,7 @@ public:
 	typedef random_access_reverse_iterator<T> reverse_iterator;
 	class const_reverse_iterator : public random_access_reverse_iterator<const T> {
 	public:
+		const_reverse_iterator() : random_access_reverse_iterator<const T>() {}
 		const_reverse_iterator(reverse_iterator it) : random_access_reverse_iterator<const T>(&*it) {}
 		const_reverse_iterator(const random_access_reverse_iterator<const T> &it) : random_access_reverse_iterator<const T>(it) {}
 	};
