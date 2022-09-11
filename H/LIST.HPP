@@ -62,6 +62,7 @@ template<class T> class base_list_iterator {
 public:
 	friend class list<T>;
 
+	base_list_iterator() {}
 	base_list_iterator(const base_list_iterator<T> &other) : nodes_(other.nodes_), index_(other.index_) {}
 
 	base_list_iterator &operator++() {
@@ -104,6 +105,7 @@ template<class T> class list_iterator : public base_list_iterator<T> {
 public:	
 	friend class list<T>;
 	
+	list_iterator() : base_list_iterator<T>() {}
 	list_iterator(const base_list_iterator<T> &it) : base_list_iterator<T>(it) {}
 	
 	T &operator*() const {
@@ -125,6 +127,7 @@ template<class T> class const_list_iterator : public base_list_iterator<T> {
 public:
 	friend class list<T>;
 
+	const_list_iterator() : base_list_iterator<T>() {}
 	const_list_iterator(const base_list_iterator<T> &it) : base_list_iterator<T>(it) {}
 	const_list_iterator(const list_iterator<T> &it) : base_list_iterator<T>(it) {}
 
@@ -147,6 +150,7 @@ template<class T> class base_reverse_list_iterator : public base_list_iterator<T
 public:
 	friend class list<T>;
 
+	base_reverse_list_iterator() : base_list_iterator<T>() {}
 	base_reverse_list_iterator(const base_reverse_list_iterator<T> &other) : base_list_iterator<T>(other) {}
 	base_reverse_list_iterator(const base_list_iterator<T> &other) : base_list_iterator<T>(other) {}
 
@@ -181,6 +185,7 @@ template<class T> class reverse_list_iterator : public base_reverse_list_iterato
 public:	
 	friend class list<T>;
 	
+	reverse_list_iterator() : base_reverse_list_iterator<T>() {}
 	reverse_list_iterator(const base_reverse_list_iterator<T> &it) : base_reverse_list_iterator<T>(it) {}
 	
 	T &operator*() const {
@@ -202,6 +207,7 @@ template<class T> class const_reverse_list_iterator : public base_reverse_list_i
 public:
 	friend class list<T>;
 
+	const_reverse_list_iterator() : base_reverse_list_iterator<T>() {}
 	const_reverse_list_iterator(const base_reverse_list_iterator<T> &it) : base_reverse_list_iterator<T>(it) {}
 	const_reverse_list_iterator(const reverse_list_iterator<T> &it) : base_reverse_list_iterator<T>(it) {}
 
