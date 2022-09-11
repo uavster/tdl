@@ -147,10 +147,29 @@ int main() {
 		EXPECT_1EQ(v[1], 53);
 	}	
 	{
-		NewTest("resize() changes size.");
+		NewTest("resize() to larger size increases size.");
 		vector<int> v;
 		v.resize(3);
 		EXPECT_SIZE(v, 3);
+	}	
+	{
+		NewTest("resize() to same size conserves size.");
+		vector<int> v(3);
+		v.resize(3);
+		EXPECT_SIZE(v, 3);
+	}	
+	{
+		NewTest("resize() to smaller size reduces size.");
+		vector<int> v(3);
+		v.resize(1);
+		EXPECT_SIZE(v, 1);
+	}	
+	{
+		NewTest("resize() to larger size with value sets value of new elements.");
+		vector<int> v(1, 52);
+		v.resize(3, 53);
+		const int expected[] = { 52, 53, 53 };
+		EXPECT_EQ(v, expected);
 	}	
 	{
 		NewTest("reserve() does not change size if larger.");
@@ -483,6 +502,65 @@ int main() {
 		}	
 		const int expected[] = {3, 2, 1};
 		EXPECT_EQ(actual, expected);
+	}
+	{
+		NewTest("insert one element at the start.");
+		vector<int> v;
+		v.push_back(2);
+		v.push_back(3);
+		v.insert(v.begin(), 1);
+		const int expected[] = {1, 2, 3};
+		EXPECT_EQ(v, expected);
+	}
+	{
+		NewTest("insert one element mid-vector.");
+		vector<int> v;
+		v.push_back(1);
+		v.push_back(3);
+		v.insert(v.begin() + 1, 2);
+		const int expected[] = {1, 2, 3};
+		EXPECT_EQ(v, expected);
+	}
+	{
+		NewTest("insert one element at the end.");
+		vector<int> v;
+		v.push_back(1);
+		v.push_back(2);
+		v.insert(v.end(), 3);
+		const int expected[] = {1, 2, 3};
+		EXPECT_EQ(v, expected);
+	}
+	{
+		NewTest("insert multiple elements.");
+		vector<int> v;
+		v.push_back(1);
+		v.push_back(3);
+		v.insert(v.begin() + 1, 3, 2);
+		const int expected[] = {1, 2, 2, 2, 3};
+		EXPECT_EQ(v, expected);
+	}
+	{
+		NewTest("erase multiple elements.");
+		vector<int> v;
+		v.push_back(1);
+		v.push_back(2);
+		v.push_back(3);
+		v.push_back(4);
+		v.push_back(5);
+		v.erase(v.begin() + 1, v.end() - 1);
+		const int expected[] = {1, 5};
+		EXPECT_EQ(v, expected);
+	}
+	{
+		NewTest("erase all elements.");
+		vector<int> v;
+		v.push_back(1);
+		v.push_back(2);
+		v.push_back(3);
+		v.push_back(4);
+		v.push_back(5);
+		v.erase(v.begin(), v.end());
+		EXPECT_EMPTY(v);
 	}
 	
 	printf("[SUCCESS] %dn tests passed.", num_tests);
