@@ -3,12 +3,12 @@
 
 #include "intpltor.hpp"
 
-template<class _SampleT> class SampleHoldInterpolator : public virtual Interpolator<_SampleT> {
+template<class SampleT> class SampleHoldInterpolator : public virtual Interpolator<SampleT> {
 public:
-	SampleHoldInterpolator() : Interpolator<_SampleT>() {}
-	SampleHoldInterpolator(TimeSignal<_SampleT> &signal) : Interpolator<_SampleT>(signal) {}
+	SampleHoldInterpolator() : Interpolator<SampleT>() {}
+	SampleHoldInterpolator(TimeSignal<SampleT> &signal) : Interpolator<SampleT>(signal) {}
 
-	virtual _SampleT getValue(float time);
+	virtual SampleT getValue(float time);
 	virtual SubspaceType getSubspace() { return SUBSPACE_WHOLE; }
 };
 

@@ -1,35 +1,36 @@
-// #include "cubic.hpp"
+#include "cubic.hpp"
 #include "intpltor.hpp"
 
 #ifndef LINEARINTERPOLATOR_H_
 #define LINEARINTERPOLATOR_H_
 
-template<class _T> class LinearInterpolator : public Interpolator<_T> {
+template<class SampleT> class LinearInterpolator : public Interpolator<SampleT> {
 public:
-	LinearInterpolator() : Interpolator<_T>() {}
-	LinearInterpolator(TimeSignal<_T> &signal) : Interpolator<_T>(signal) {}
+	LinearInterpolator() : Interpolator<SampleT>() {}
+	LinearInterpolator(TimeSignal<SampleT> &signal) : Interpolator<SampleT>(signal) {}
 
-	virtual _T getValue(float t);
+	virtual SampleT getValue(float t);
 	virtual SubspaceType getSubspace() { return SUBSPACE_WHOLE; }
-	virtual void setSignal(TimeSignal<_T> &signal) { Interpolator<_T>::setSignal(signal); }
+	virtual void setSignal(TimeSignal<SampleT> &signal) { Interpolator<SampleT>::setSignal(signal); }
 
 protected:
-	static _T lerp(float normalizedT, const _T &kp0, const _T &kp1);
+	static SampleT lerp(float normalizedT, const SampleT &kp0, const SampleT &kp1);
 };
 
-template<class _T> class LinearSphericalInterpolator : public LinearInterpolator<_T> {
-	// template<class _SampleT, SubspaceType _SubspaceT, CubicInterpolationMethod _Method> friend class CubicInterpolator;
+template<class SampleT> class LinearSphericalInterpolator : public LinearInterpolator<SampleT> {
+	friend class CubicCatmullRomSphericalInterpolator<SampleT>;
+	friend class CubicFiniteDiffSphericalInterpolator<SampleT>;
 public:
-	LinearSphericalInterpolator() : LinearInterpolator<_T>() {}
-	LinearSphericalInterpolator(TimeSignal<_T> &signal) : LinearInterpolator<_T>(signal), preprocessingDone(false) {}
-	virtual void setSignal(TimeSignal<_T> &signal) { LinearInterpolator<_T>::setSignal(signal); preprocessingDone = false; }
+	LinearSphericalInterpolator() : LinearInterpolator<SampleT>() {}
+	LinearSphericalInterpolator(TimeSignal<SampleT> &signal) : LinearInterpolator<SampleT>(signal), preprocessingDone(false) {}
+	virtual void setSignal(TimeSignal<SampleT> &signal) { LinearInterpolator<SampleT>::setSignal(signal); preprocessingDone = false; }
 
-	virtual _T getValue(float t);
+	virtual SampleT getValue(float t);
 	virtual SubspaceType getSubspace() { return SUBSPACE_SPHERICAL; }
 
 protected:
-	static _T slerp(float normalizedT, const _T &kp0, const _T &kp1);
-	static void preprocess(TimeSignal<_T> *ts);
+	static SampleT slerp(float normalizedT, const SampleT &kp0, const SampleT &kp1);
+	static void preprocess(TimeSignal<SampleT> *ts);
 private:
 	bool preprocessingDone;
 };
