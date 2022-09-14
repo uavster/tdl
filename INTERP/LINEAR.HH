@@ -11,7 +11,7 @@ template<class _T> _T LinearInterpolator<_T>::lerp(float normalizedT, const _T &
 	return kp0 + (kp1 - kp0) * normalizedT;
 }
 
-template<class _T> _T LinearInterpolatorSpherical<_T>::getValue(float t) {
+template<class _T> _T LinearSphericalInterpolator<_T>::getValue(float t) {
 	if (!preprocessingDone) {
 		preprocess(getSignal());
 		preprocessingDone = true;
@@ -23,7 +23,7 @@ template<class _T> _T LinearInterpolatorSpherical<_T>::getValue(float t) {
 	return slerp(normalizedTime, keypoints[0].value, keypoints[1].value);
 }
 
-template<class _T> _T LinearInterpolatorSpherical<_T>::slerp(float normalizedT, const _T &kp0, const _T &kp1) {
+template<class _T> _T LinearSphericalInterpolator<_T>::slerp(float normalizedT, const _T &kp0, const _T &kp1) {
 	float a = acos(kp0 * kp1);
 
 	float w0, w1;
@@ -40,7 +40,7 @@ template<class _T> _T LinearInterpolatorSpherical<_T>::slerp(float normalizedT, 
 	return kp0 * w0 + kp1 * w1;
 }
 
-template<class _T> void LinearInterpolatorSpherical<_T>::preprocess(TimeSignal<_T> *ts) {
+template<class _T> void LinearSphericalInterpolator<_T>::preprocess(TimeSignal<_T> *ts) {
 	list<TimeSignal<_T>::KeyPoint> &keypoints = ts->getKeyPoints();
 	for (list<TimeSignal<_T>::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.rbegin(); it++) {
 		list<TimeSignal<_T>::KeyPoint>::iterator nit = it;

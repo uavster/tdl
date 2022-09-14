@@ -17,11 +17,11 @@ protected:
 	static _T lerp(float normalizedT, const _T &kp0, const _T &kp1);
 };
 
-template<class _T> class LinearInterpolatorSpherical : public LinearInterpolator<_T> {
+template<class _T> class LinearSphericalInterpolator : public LinearInterpolator<_T> {
 	// template<class _SampleT, SubspaceType _SubspaceT, CubicInterpolationMethod _Method> friend class CubicInterpolator;
 public:
-	LinearInterpolatorSpherical() : LinearInterpolator<_T>() {}
-	LinearInterpolatorSpherical(TimeSignal<_T> &signal) : LinearInterpolator<_T>(signal), preprocessingDone(false) {}
+	LinearSphericalInterpolator() : LinearInterpolator<_T>() {}
+	LinearSphericalInterpolator(TimeSignal<_T> &signal) : LinearInterpolator<_T>(signal), preprocessingDone(false) {}
 	virtual void setSignal(TimeSignal<_T> &signal) { LinearInterpolator<_T>::setSignal(signal); preprocessingDone = false; }
 
 	virtual _T getValue(float t);
