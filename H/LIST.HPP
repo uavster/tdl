@@ -249,13 +249,37 @@ template<class T> class list {
 public:
 	list() : head_(list_kTerminalNode), tail_(list_kTerminalNode), size_(0) {}
 	list(size_t count, const T &value = T()) : head_(list_kTerminalNode), tail_(list_kTerminalNode), size_(0) {
-		nodes_.resize(count, list_node<T>(value));
-		vector<list_node<T> >::iterator it = nodes_.begin();
-		for (size_t i = 0; i < nodes_.size(); ++i, ++it) {
-			it->prev = i - 1;	// Assumes list_kTerminalNode == -1.
-			it->next = i + 1;
+		resize(count, value);
+	}
+	
+	void resize(size_t count, const T &value = T()) {
+		size_t old_size = nodes_.size();
+		if (count == old_size) {
+			return;
 		}
-		nodes_.rbegin()->next = list_kTerminalNode;
+		size_ = count;
+		if (count > old_size) {
+			nodes_.resize(size_, list_node<T>(value));
+			if (head_ == list_kTerminalNode) {
+				head_ = 0;
+			}
+			if (tail_ != list_kTerminalNode) {
+				nodes_[tail_].next = old_size;
+			}
+			nodes_[old_size].prev = tail_;
+			nodes_[old_size].next = old_size + 1;
+			for (size_t i = old_size + 1; i < nodes_.size(); ++i) {
+				nodes_[i].prev = i - 1;		// Assumes list_kTerminalNode == -1.
+				nodes_[i].next = i + 1;
+			}
+			nodes_[nodes_.size() - 1].next = list_kTerminalNode;
+			tail_ = nodes_.size() - 1;
+		} else {
+			list<T>::const_iterator it = crbegin();
+			while (count-- > 0) { ++it; }				
+			tail_ = it.index_;
+			nodes_[tail_].next = list_kTerminalNode;
+		}
 	}
 	
 	size_t size() const { return size_; }
