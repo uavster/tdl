@@ -72,7 +72,7 @@ void CheckIteratorsEqual(const list<int>::const_iterator &it1, const list<int>::
 	if (it1 == it2) {
 		printf(" [OK]\n");
 	} else {
-		printf(" [ERROR]\nExpected: == return true\nActual: == returns false\n");
+		printf(" [ERROR]\nExpected: == returns true\nActual: == returns false\n");
 		exit(1);
 	}
 }
@@ -163,62 +163,51 @@ int main() {
 		const int expected[] = { 52, 53, 53 };
 		EXPECT_EQ(l, expected);
 	}	
-	// {
-		// NewTest("reserve() does not change size if larger.");
-		// vector<int> v;
-		// v.reserve(3);
-		// EXPECT_EMPTY(v);
-	// }	
-	// {
-		// NewTest("reserve() does not change size if smaller.");
-		// vector<int> v(3);
-		// v.reserve(1);
-		// EXPECT_SIZE(v, 3);
-	// }	
-	// {
-		// NewTest("front() returns first element.");
-		// vector<int> v;
-		// v.push_back(52);
-		// v.push_back(53);
-		// EXPECT_1EQ(v.front(), 52);
-	// }	
-	// {
-		// NewTest("back() returns last element.");
-		// vector<int> v;
-		// v.push_back(52);
-		// v.push_back(53);
-		// EXPECT_1EQ(v.back(), 53);
-	// }	
-	// {
-		// NewTest("iterator: default constructor can be called.");
-		// vector<int>::iterator it;
-	// }
-	// {
-		// NewTest("iterator: dereferencing returns value.");
-		// vector<int> v(1, 52);
-		// EXPECT_1EQ(*v.begin(), 52);
-	// }
-	// {
-		// NewTest("iterator: assignment makes iterators equal.");
-		// vector<int> v(1, 52);
-		// vector<int>::iterator it = v.begin();
-		// EXPECT_IT_EQ(it, v.begin());
-	// }
-	// {
-		// NewTest("iterator: increment passed last element equals end().");
-		// vector<int> v(1, 52);
-		// EXPECT_IT_EQ(++v.begin(), v.end());
-	// }
-	// {
-		// NewTest("iterator: decrement passed first element equals rend().");
-		// vector<int> v(1, 52);
-		// EXPECT_IT_EQ(--v.begin(), v.rend());
-	// }
-	// {
-		// NewTest("iterator: --end() equals rbegin().");
-		// vector<int> v(1, 52);
-		// EXPECT_IT_EQ(--v.end(), v.rbegin());
-	// }
+	{
+		NewTest("front() returns first element.");
+		list<int> l;
+		l.push_back(52);
+		l.push_back(53);
+		EXPECT_1EQ(l.front(), 52);
+	}	
+	{
+		NewTest("back() returns last element.");
+		list<int> l;
+		l.push_back(52);
+		l.push_back(53);
+		EXPECT_1EQ(l.back(), 53);
+	}	
+	{
+		NewTest("iterator: default constructor can be called.");
+		list<int>::iterator it;
+		printf(" [OK]\n");
+	}
+	{
+		NewTest("iterator: dereferencing returns value.");
+		list<int> l(1, 52);
+		EXPECT_1EQ(*l.begin(), 52);
+	}
+	{
+		NewTest("iterator: assignment makes iterators equal.");
+		list<int> l(1, 52);
+		list<int>::iterator it = l.begin();
+		EXPECT_IT_EQ(it, l.begin());
+	}
+	{
+		NewTest("iterator: increment passed last element equals end().");
+		list<int> l(1, 52);
+		EXPECT_IT_EQ(++l.begin(), l.end());
+	}
+	{
+		NewTest("iterator: decrement passed first element equals rend().");
+		list<int> l(1, 52);
+		EXPECT_IT_EQ(--l.begin(), l.rend());
+	}
+	{
+		NewTest("iterator: --end() equals rbegin().");
+		list<int> l(1, 52);
+		EXPECT_IT_EQ(--l.end(), l.rbegin());
+	}
 	// {
 		// NewTest("iterator: arrow operator returns structure members.");
 		// struct Structure {
@@ -226,9 +215,9 @@ int main() {
 			// char b;
 		// };
 		// Structure element = { 52, 53 };
-		// vector<Structure> s(2, element);
-		// vector<int> actual;
-		// for (vector<Structure>::iterator it = s.begin(); it != s.end(); ++it) {
+		// list<Structure> s(2, element);
+		// list<int> actual;
+		// for (list<Structure>::iterator it = s.begin(); it != s.end(); ++it) {
 			// actual.push_back(it->a);
 			// actual.push_back(it->b);
 		// }	
@@ -236,34 +225,10 @@ int main() {
 		// EXPECT_EQ(actual, expected);
 	// }
 	// {
-		// NewTest("iterator: positive indexing returns value.");
-		// EXPECT_1EQ(vector<int>(1, 52).begin()[0], 52);
-	// }
-	// {
-		// NewTest("iterator: negative indexing returns value.");
-		// EXPECT_1EQ(vector<int>(1, 52).end()[-1], 52);
-	// }
-	// {
-		// NewTest("iterator: adding int gives correct new iterator.");
-		// vector<int> v;
-		// v.push_back(52);
-		// v.push_back(53);
-		// v.push_back(54);
-		// EXPECT_1EQ(*(v.begin() + 2), 54);
-	// }
-	// {
-		// NewTest("iterator: subtracting int gives correct new iterator.");
-		// vector<int> v;
-		// v.push_back(52);
-		// v.push_back(53);
-		// v.push_back(54);
-		// EXPECT_1EQ(*(v.end() - 3), 52);
-	// }
-	// {
 		// NewTest("iterator: deferencing allows mutation.");
-		// vector<int> s(1, 52);
-		// ++*s.begin();
-		// EXPECT_1EQ(s.front(), 53);
+		// list<int> l(1, 52);
+		// ++*l.begin();
+		// EXPECT_1EQ(l.front(), 53);
 	// }
 	// {
 		// NewTest("iterator: arrow operator allows mutation.");
@@ -272,11 +237,11 @@ int main() {
 			// char b;
 		// };
 		// Structure element = { 52, 53 };
-		// vector<Structure> s(1, element);
+		// list<Structure> s(1, element);
 		// ++s.begin()->a;
 		// ++s.begin()->b;
-		// vector<int> actual;
-		// for (vector<Structure>::iterator it = s.begin(); it != s.end(); ++it) {
+		// list<int> actual;
+		// for (list<Structure>::iterator it = s.begin(); it != s.end(); ++it) {
 			// actual.push_back(it->a);
 			// actual.push_back(it->b);
 		// }	
@@ -285,33 +250,33 @@ int main() {
 	// }
 	// {
 		// NewTest("const_iterator: default constructor can be called.");
-		// vector<int>::const_iterator it;
+		// list<int>::const_iterator it;
 	// }
 	// {
 		// NewTest("const_iterator: dereferencing returns value.");
-		// vector<int> v(1, 52);
-		// EXPECT_1EQ(*v.cbegin(), 52);
+		// list<int> l(1, 52);
+		// EXPECT_1EQ(*l.cbegin(), 52);
 	// }
 	// {
 		// NewTest("const_iterator: assignment makes iterators equal.");
-		// vector<int> v(1, 52);
-		// vector<int>::const_iterator it = v.cbegin();
-		// EXPECT_IT_EQ(it, v.cbegin());
+		// list<int> l(1, 52);
+		// list<int>::const_iterator it = l.cbegin();
+		// EXPECT_IT_EQ(it, l.cbegin());
 	// }
 	// {
 		// NewTest("const_iterator: increment passed last element equals cend().");
-		// vector<int> v(1, 52);
-		// EXPECT_IT_EQ(++v.cbegin(), v.cend());
+		// list<int> l(1, 52);
+		// EXPECT_IT_EQ(++l.cbegin(), l.cend());
 	// }
 	// {
 		// NewTest("const_iterator: decrement passed first element equals crend().");
-		// vector<int> v(1, 52);
-		// EXPECT_IT_EQ(--v.cbegin(), v.crend());
+		// list<int> l(1, 52);
+		// EXPECT_IT_EQ(--l.cbegin(), l.crend());
 	// }
 	// {
 		// NewTest("const_iterator: --end() equals rbegin().");
-		// vector<int> v(1, 52);
-		// EXPECT_IT_EQ(--v.cend(), v.crbegin());
+		// list<int> l(1, 52);
+		// EXPECT_IT_EQ(--l.cend(), l.crbegin());
 	// }
 	// {
 		// NewTest("const_iterator: arrow operator returns structure members.");
@@ -320,9 +285,9 @@ int main() {
 			// char b;
 		// };
 		// Structure element = { 52, 53 };
-		// vector<Structure> s(2, element);
-		// vector<int> actual;
-		// for (vector<Structure>::const_iterator it = s.cbegin(); it != s.cend(); ++it) {
+		// list<Structure> s(2, element);
+		// list<int> actual;
+		// for (list<Structure>::const_iterator it = s.cbegin(); it != s.cend(); ++it) {
 			// actual.push_back(it->a);
 			// actual.push_back(it->b);
 		// }	
@@ -331,57 +296,57 @@ int main() {
 	// }
 	// {
 		// NewTest("const_iterator: positive indexing returns value.");
-		// EXPECT_1EQ(vector<int>(1, 52).cbegin()[0], 52);
+		// EXPECT_1EQ(list<int>(1, 52).cbegin()[0], 52);
 	// }
 	// {
 		// NewTest("const_iterator: negative indexing returns value.");
-		// EXPECT_1EQ(vector<int>(1, 52).cend()[-1], 52);
+		// EXPECT_1EQ(list<int>(1, 52).cend()[-1], 52);
 	// }
 	// {
 		// NewTest("const_iterator: adding int gives correct new iterator.");
-		// vector<int> v;
-		// v.push_back(52);
-		// v.push_back(53);
-		// v.push_back(54);
-		// EXPECT_1EQ(*(v.cbegin() + 2), 54);
+		// list<int> v;
+		// l.push_back(52);
+		// l.push_back(53);
+		// l.push_back(54);
+		// EXPECT_1EQ(*(l.cbegin() + 2), 54);
 	// }
 	// {
 		// NewTest("const_iterator: subtracting int gives correct new iterator.");
-		// vector<int> v;
-		// v.push_back(52);
-		// v.push_back(53);
-		// v.push_back(54);
-		// EXPECT_1EQ(*(v.cend() - 3), 52);
+		// list<int> v;
+		// l.push_back(52);
+		// l.push_back(53);
+		// l.push_back(54);
+		// EXPECT_1EQ(*(l.cend() - 3), 52);
 	// }
 	// {
 		// NewTest("reverse_iterator: default constructor can be called.");
-		// vector<int>::reverse_iterator it;
+		// list<int>::reverse_iterator it;
 	// }
 	// {
 		// NewTest("reverse_iterator: dereferencing returns value.");
-		// vector<int> v(1, 52);
-		// EXPECT_1EQ(*v.rbegin(), 52);
+		// list<int> l(1, 52);
+		// EXPECT_1EQ(*l.rbegin(), 52);
 	// }
 	// {
 		// NewTest("reverse_iterator: assignment makes iterators equal.");
-		// vector<int> v(1, 52);
-		// vector<int>::reverse_iterator it = v.rbegin();
-		// EXPECT_IT_EQ(it, v.rbegin());
+		// list<int> l(1, 52);
+		// list<int>::reverse_iterator it = l.rbegin();
+		// EXPECT_IT_EQ(it, l.rbegin());
 	// }
 	// {
 		// NewTest("reverse_iterator: increment passed last element equals rend().");
-		// vector<int> v(1, 52);
-		// EXPECT_IT_EQ(++v.rbegin(), v.rend());
+		// list<int> l(1, 52);
+		// EXPECT_IT_EQ(++l.rbegin(), l.rend());
 	// }
 	// {
 		// NewTest("reverse_iterator: decrement passed first element equals end().");
-		// vector<int> v(1, 52);
-		// EXPECT_IT_EQ(--v.rbegin(), v.end());
+		// list<int> l(1, 52);
+		// EXPECT_IT_EQ(--l.rbegin(), l.end());
 	// }
 	// {
 		// NewTest("reverse_iterator: --rend() equals begin().");
-		// vector<int> v(1, 52);
-		// EXPECT_IT_EQ(--v.rend(), v.begin());
+		// list<int> l(1, 52);
+		// EXPECT_IT_EQ(--l.rend(), l.begin());
 	// }
 	// {
 		// NewTest("reverse_iterator: arrow operator returns structure members.");
@@ -390,9 +355,9 @@ int main() {
 			// char b;
 		// };
 		// Structure element = { 52, 53 };
-		// vector<Structure> s(2, element);
-		// vector<int> actual;
-		// for (vector<Structure>::reverse_iterator it = s.rbegin(); it != s.rend(); ++it) {
+		// list<Structure> s(2, element);
+		// list<int> actual;
+		// for (list<Structure>::reverse_iterator it = s.rbegin(); it != s.rend(); ++it) {
 			// actual.push_back(it->a);
 			// actual.push_back(it->b);
 		// }	
@@ -401,28 +366,28 @@ int main() {
 	// }
 	// {
 		// NewTest("reverse_iterator: positive indexing returns value.");
-		// EXPECT_1EQ(vector<int>(1, 52).rbegin()[0], 52);
+		// EXPECT_1EQ(list<int>(1, 52).rbegin()[0], 52);
 	// }
 	// {
 		// NewTest("reverse_iterator: negative indexing returns value.");
-		// EXPECT_1EQ(vector<int>(1, 52).rend()[-1], 52);
+		// EXPECT_1EQ(list<int>(1, 52).rend()[-1], 52);
 	// }
 	// {
 		// NewTest("reverse_iterator: subtracting int gives correct new iterator.");
-		// vector<int> v;
-		// v.push_back(52);
-		// v.push_back(53);
-		// v.push_back(54);
-		// EXPECT_1EQ(*(v.rend() - 2), 53);
+		// list<int> v;
+		// l.push_back(52);
+		// l.push_back(53);
+		// l.push_back(54);
+		// EXPECT_1EQ(*(l.rend() - 2), 53);
 	// }
 	// {
 		// NewTest("reverse_iterator: iteration reverses element order.");
-		// vector<int> v;
-		// v.push_back(1);
-		// v.push_back(2);
-		// v.push_back(3);
-		// vector<int> actual;
-		// for (vector<int>::reverse_iterator it = v.rbegin(); it != v.rend(); ++it) {
+		// list<int> v;
+		// l.push_back(1);
+		// l.push_back(2);
+		// l.push_back(3);
+		// list<int> actual;
+		// for (list<int>::reverse_iterator it = l.rbegin(); it != l.rend(); ++it) {
 			// actual.push_back(*it);
 		// }	
 		// const int expected[] = {3, 2, 1};
@@ -430,33 +395,33 @@ int main() {
 	// }
 	// {
 		// NewTest("const_reverse_iterator: default constructor can be called.");
-		// vector<int>::const_reverse_iterator it;
+		// list<int>::const_reverse_iterator it;
 	// }
 	// {
 		// NewTest("const_reverse_iterator: dereferencing returns value.");
-		// vector<int> v(1, 52);
-		// EXPECT_1EQ(*v.crbegin(), 52);
+		// list<int> l(1, 52);
+		// EXPECT_1EQ(*l.crbegin(), 52);
 	// }
 	// {
 		// NewTest("const_reverse_iterator: assignment makes iterators equal.");
-		// vector<int> v(1, 52);
-		// vector<int>::const_reverse_iterator it = v.crbegin();
-		// EXPECT_IT_EQ(it, v.crbegin());
+		// list<int> l(1, 52);
+		// list<int>::const_reverse_iterator it = l.crbegin();
+		// EXPECT_IT_EQ(it, l.crbegin());
 	// }
 	// {
 		// NewTest("const_reverse_iterator: inc passed last elem equals crend().");
-		// vector<int> v(1, 52);
-		// EXPECT_IT_EQ(++v.crbegin(), v.crend());
+		// list<int> l(1, 52);
+		// EXPECT_IT_EQ(++l.crbegin(), l.crend());
 	// }
 	// {
 		// NewTest("const_reverse_iterator: dec passed first elem equals cend().");
-		// vector<int> v(1, 52);
-		// EXPECT_IT_EQ(--v.crbegin(), v.cend());
+		// list<int> l(1, 52);
+		// EXPECT_IT_EQ(--l.crbegin(), l.cend());
 	// }
 	// {
 		// NewTest("const_reverse_iterator: --crend() equals cbegin().");
-		// vector<int> v(1, 52);
-		// EXPECT_IT_EQ(--v.crend(), v.cbegin());
+		// list<int> l(1, 52);
+		// EXPECT_IT_EQ(--l.crend(), l.cbegin());
 	// }
 	// {
 		// NewTest("const_reverse_iterator: arrow operator returns structure members.");
@@ -465,9 +430,9 @@ int main() {
 			// char b;
 		// };
 		// Structure element = { 52, 53 };
-		// vector<Structure> s(2, element);
-		// vector<int> actual;
-		// for (vector<Structure>::const_reverse_iterator it = s.crbegin(); it != s.crend(); ++it) {
+		// list<Structure> s(2, element);
+		// list<int> actual;
+		// for (list<Structure>::const_reverse_iterator it = s.crbegin(); it != s.crend(); ++it) {
 			// actual.push_back(it->a);
 			// actual.push_back(it->b);
 		// }	
@@ -476,36 +441,36 @@ int main() {
 	// }
 	// {
 		// NewTest("const_reverse_iterator: positive indexing returns value.");
-		// EXPECT_1EQ(vector<int>(1, 52).crbegin()[0], 52);
+		// EXPECT_1EQ(list<int>(1, 52).crbegin()[0], 52);
 	// }
 	// {
 		// NewTest("const_reverse_iterator: negative indexing returns value.");
-		// EXPECT_1EQ(vector<int>(1, 52).crend()[-1], 52);
+		// EXPECT_1EQ(list<int>(1, 52).crend()[-1], 52);
 	// }
 	// {
 		// NewTest("const_reverse_iterator: adding int gives correct new iterator.");
-		// vector<int> v;
-		// v.push_back(52);
-		// v.push_back(53);
-		// v.push_back(54);
-		// EXPECT_1EQ(*(v.crbegin() + 2), 52);
+		// list<int> v;
+		// l.push_back(52);
+		// l.push_back(53);
+		// l.push_back(54);
+		// EXPECT_1EQ(*(l.crbegin() + 2), 52);
 	// }
 	// {
 		// NewTest("const_reverse_iterator: subtract int gives correct new iterator.");
-		// vector<int> v;
-		// v.push_back(52);
-		// v.push_back(53);
-		// v.push_back(54);
-		// EXPECT_1EQ(*(v.crend() - 2), 53);
+		// list<int> v;
+		// l.push_back(52);
+		// l.push_back(53);
+		// l.push_back(54);
+		// EXPECT_1EQ(*(l.crend() - 2), 53);
 	// }
 	// {
 		// NewTest("const_reverse_iterator: iteration reverses element order.");
-		// vector<int> v;
-		// v.push_back(1);
-		// v.push_back(2);
-		// v.push_back(3);
-		// vector<int> actual;
-		// for (vector<int>::const_reverse_iterator it = v.crbegin(); it != v.crend(); ++it) {
+		// list<int> v;
+		// l.push_back(1);
+		// l.push_back(2);
+		// l.push_back(3);
+		// list<int> actual;
+		// for (list<int>::const_reverse_iterator it = l.crbegin(); it != l.crend(); ++it) {
 			// actual.push_back(*it);
 		// }	
 		// const int expected[] = {3, 2, 1};
@@ -513,61 +478,61 @@ int main() {
 	// }
 	// {
 		// NewTest("insert one element at the start.");
-		// vector<int> v;
-		// v.push_back(2);
-		// v.push_back(3);
-		// v.insert(v.begin(), 1);
+		// list<int> v;
+		// l.push_back(2);
+		// l.push_back(3);
+		// l.insert(l.begin(), 1);
 		// const int expected[] = {1, 2, 3};
 		// EXPECT_EQ(v, expected);
 	// }
 	// {
-		// NewTest("insert one element mid-vector.");
-		// vector<int> v;
-		// v.push_back(1);
-		// v.push_back(3);
-		// v.insert(v.begin() + 1, 2);
+		// NewTest("insert one element mid-list.");
+		// list<int> v;
+		// l.push_back(1);
+		// l.push_back(3);
+		// l.insert(l.begin() + 1, 2);
 		// const int expected[] = {1, 2, 3};
 		// EXPECT_EQ(v, expected);
 	// }
 	// {
 		// NewTest("insert one element at the end.");
-		// vector<int> v;
-		// v.push_back(1);
-		// v.push_back(2);
-		// v.insert(v.end(), 3);
+		// list<int> v;
+		// l.push_back(1);
+		// l.push_back(2);
+		// l.insert(l.end(), 3);
 		// const int expected[] = {1, 2, 3};
 		// EXPECT_EQ(v, expected);
 	// }
 	// {
 		// NewTest("insert multiple elements.");
-		// vector<int> v;
-		// v.push_back(1);
-		// v.push_back(3);
-		// v.insert(v.begin() + 1, 3, 2);
+		// list<int> v;
+		// l.push_back(1);
+		// l.push_back(3);
+		// l.insert(l.begin() + 1, 3, 2);
 		// const int expected[] = {1, 2, 2, 2, 3};
 		// EXPECT_EQ(v, expected);
 	// }
 	// {
 		// NewTest("erase multiple elements.");
-		// vector<int> v;
-		// v.push_back(1);
-		// v.push_back(2);
-		// v.push_back(3);
-		// v.push_back(4);
-		// v.push_back(5);
-		// v.erase(v.begin() + 1, v.end() - 1);
+		// list<int> v;
+		// l.push_back(1);
+		// l.push_back(2);
+		// l.push_back(3);
+		// l.push_back(4);
+		// l.push_back(5);
+		// l.erase(l.begin() + 1, l.end() - 1);
 		// const int expected[] = {1, 5};
 		// EXPECT_EQ(v, expected);
 	// }
 	// {
 		// NewTest("erase all elements.");
-		// vector<int> v;
-		// v.push_back(1);
-		// v.push_back(2);
-		// v.push_back(3);
-		// v.push_back(4);
-		// v.push_back(5);
-		// v.erase(v.begin(), v.end());
+		// list<int> v;
+		// l.push_back(1);
+		// l.push_back(2);
+		// l.push_back(3);
+		// l.push_back(4);
+		// l.push_back(5);
+		// l.erase(l.begin(), l.end());
 		// EXPECT_EMPTY(v);
 	// }
 	
