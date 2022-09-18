@@ -63,41 +63,49 @@ public:
 	friend class list<T>;
 
 	base_list_iterator() {}
-	base_list_iterator(const base_list_iterator<T> &other) : nodes_(other.nodes_), index_(other.index_) {}
+	base_list_iterator(const base_list_iterator<T> &other) : list_(other.list_), index_(other.index_) {}
 
 	base_list_iterator &operator++() {
-		index_ = (*nodes_)[index_].next;
+		if (index_ != list_kTerminalNode) {
+			index_ = list_->nodes_[index_].next;
+		} else {
+			index_ = list_->head_;
+		}
 		return *this;
 	}
 	base_list_iterator operator++(int) {
 		base_list_iterator it(*this);
-		index_ = (*nodes_)[index_].next;
+		++(*this);
 		return it;
 	}
 	base_list_iterator &operator--() {
-		index_ = (*nodes_)[index_].prev;
+		if (index_ != list_kTerminalNode) {
+			index_ = list_->nodes_[index_].prev;
+		} else {
+			index_ = list_->tail_;
+		}
 		return *this;
 	}
 	base_list_iterator operator--(int) {
 		base_list_iterator it(*this);
-		index_ = (*nodes_)[index_].prev;
+		--(*this);
 		return it;
 	}	
 	bool operator==(const base_list_iterator &it) const {
 		return index_ == it.index_;
 	}
 	bool operator!=(const base_list_iterator &it) const {
-		return index_ != it.index_;
+		return !(*this == it);
 	}
 	base_list_iterator &operator=(const base_list_iterator &other) {
-		nodes_ = other.nodes_;
+		list_ = other.list_;
 		index_ = other.index_;
 		return *this;
 	}
 
 protected:
-	base_list_iterator(const vector<list_node<T> > *nodes, size_t index) : nodes_(nodes), index_(index) {}
-	const vector<list_node<T> > *nodes_;
+	base_list_iterator(const list<T> *list, size_t index) : list_(list), index_(index) {}
+	const list<T> *list_;
 	size_t index_;
 };
 
@@ -109,10 +117,10 @@ public:
 	list_iterator(const base_list_iterator<T> &it) : base_list_iterator<T>(it) {}
 	
 	T &operator*() const {
-		return (*nodes_)[index_].value;
+		return list_->nodes_[index_].value;
 	}
 	T *operator->() const {
-		return &(*nodes_)[index_].value;
+		return &*(*this);
 	}
 	list_iterator &operator=(const list_iterator &other) {
 		base_list_iterator::operator=(other);
@@ -120,7 +128,7 @@ public:
 	}
 
 protected:
-	list_iterator(const vector<list_node<T> > *nodes, size_t index) : base_list_iterator<T>(nodes, index) {}
+	list_iterator(const list<T> *list, size_t index) : base_list_iterator<T>(list, index) {}
 };
 
 template<class T> class const_list_iterator : public base_list_iterator<T> {
@@ -132,10 +140,10 @@ public:
 	const_list_iterator(const list_iterator<T> &it) : base_list_iterator<T>(it) {}
 
 	const T &operator*() const {
-		return (*nodes_)[index_].value;
+		return list_->nodes_[index_].value;
 	}
 	const T *operator->() const {
-		return &(*nodes_)[index_].value;
+		return &*(*this);
 	}
 	const_list_iterator operator=(const const_list_iterator &other) {
 		base_list_iterator::operator=(other);
@@ -143,7 +151,7 @@ public:
 	}
 	
 protected:
-	const_list_iterator(const vector<list_node<T> > *nodes, size_t index) : base_list_iterator<T>(nodes, index) {}
+	const_list_iterator(const list<T> *list, size_t index) : base_list_iterator<T>(list, index) {}
 };
 
 template<class T> class base_reverse_list_iterator : public base_list_iterator<T> {
@@ -155,22 +163,18 @@ public:
 	base_reverse_list_iterator(const base_list_iterator<T> &other) : base_list_iterator<T>(other) {}
 
 	base_reverse_list_iterator &operator++() {
-		index_ = (*nodes_)[index_].prev;
+		base_list_iterator::operator--();
 		return *this;
 	}
 	base_reverse_list_iterator operator++(int) {
-		base_reverse_list_iterator it(*this);
-		index_ = (*nodes_)[index_].prev;
-		return it;
+		return base_list_iterator::operator--(0);
 	}
 	base_reverse_list_iterator &operator--() {
-		index_ = (*nodes_)[index_].next;
+		base_list_iterator::operator++();
 		return *this;
 	}
 	base_reverse_list_iterator operator--(int) {
-		base_reverse_list_iterator it(*this);
-		index_ = (*nodes_)[index_].next;
-		return it;
+		return base_list_iterator::operator++(0);
 	}	
 	base_reverse_list_iterator &operator=(const base_reverse_list_iterator &other) {
 		base_list_iterator::operator=(other);
@@ -178,7 +182,7 @@ public:
 	}
 	
 protected:
-	base_reverse_list_iterator(const vector<list_node<T> > *nodes, size_t index) : base_list_iterator<T>(nodes, index) {}
+	base_reverse_list_iterator(const list<T> *list, size_t index) : base_list_iterator<T>(list, index) {}
 };
 
 template<class T> class reverse_list_iterator : public base_reverse_list_iterator<T> {
@@ -189,10 +193,10 @@ public:
 	reverse_list_iterator(const base_reverse_list_iterator<T> &it) : base_reverse_list_iterator<T>(it) {}
 	
 	T &operator*() const {
-		return (*nodes_)[index_].value;
+		return list_->nodes_[index_].value;
 	}
 	T *operator->() const {
-		return &(*nodes_)[index_].value;
+		return &*(*this);
 	}
 	reverse_list_iterator &operator=(const reverse_list_iterator &other) {
 		base_reverse_list_iterator::operator=(other);
@@ -200,7 +204,7 @@ public:
 	}
 
 protected:
-	reverse_list_iterator(const vector<list_node<T> > *nodes, size_t index) : base_reverse_list_iterator<T>(nodes, index) {}
+	reverse_list_iterator(const list<T> *list, size_t index) : base_reverse_list_iterator<T>(list, index) {}
 };
 
 template<class T> class const_reverse_list_iterator : public base_reverse_list_iterator<T> {
@@ -212,10 +216,10 @@ public:
 	const_reverse_list_iterator(const reverse_list_iterator<T> &it) : base_reverse_list_iterator<T>(it) {}
 
 	const T &operator*() const {
-		return (*nodes_)[index_].value;
+		return list_->nodes_[index_].value;
 	}
 	const T *operator->() const {
-		return &(*nodes_)[index_].value;
+		return &*(*this);
 	}
 	const_reverse_list_iterator &operator=(const const_reverse_list_iterator &other) {
 		base_reverse_list_iterator::operator=(other);
@@ -223,7 +227,7 @@ public:
 	}
 	
 protected:
-	const_reverse_list_iterator(const vector<list_node<T> > *nodes, size_t index) : base_reverse_list_iterator<T>(nodes, index) {}
+	const_reverse_list_iterator(const list<T> *list, size_t index) : base_reverse_list_iterator<T>(list, index) {}
 };
 
 // STL-style list that owns the elements and allows for multiple iterators.
@@ -246,6 +250,11 @@ protected:
 // not prevent iterator invalidation, and would violate the STL invalidation
 // rules.
 template<class T> class list {
+	friend class base_list_iterator<T>;
+	friend class list_iterator<T>;
+	friend class const_list_iterator<T>;
+	friend class reverse_list_iterator<T>;
+	friend class const_reverse_list_iterator<T>;
 public:
 	list() : head_(list_kTerminalNode), tail_(list_kTerminalNode), size_(0) {}
 	list(size_t count, const T &value = T()) : head_(list_kTerminalNode), tail_(list_kTerminalNode), size_(0) {
@@ -290,8 +299,8 @@ public:
 	
 	typedef list_iterator<T> iterator;
 	
-	iterator begin() const { return iterator(&nodes_, head_); }
-	iterator end() const { return iterator(&nodes_, list_kTerminalNode); }
+	iterator begin() const { return iterator(this, head_); }
+	iterator end() const { return iterator(this, list_kTerminalNode); }
 
 	typedef const_list_iterator<T> const_iterator;
 	
@@ -300,8 +309,8 @@ public:
 
 	typedef reverse_list_iterator<T> reverse_iterator;
 	
-	reverse_iterator rbegin() const { return reverse_iterator(&nodes_, tail_); }
-	reverse_iterator rend() const { return reverse_iterator(&nodes_, list_kTerminalNode); }
+	reverse_iterator rbegin() const { return reverse_iterator(this, tail_); }
+	reverse_iterator rend() const { return reverse_iterator(this, list_kTerminalNode); }
 
 	typedef const_reverse_list_iterator<T> const_reverse_iterator;
 
@@ -336,7 +345,7 @@ public:
 		nodes_[new_index].prev = new_prev;
 		nodes_[new_index].next = position.index_;		
 		++size_;
-		return iterator(&nodes_, new_index);
+		return iterator(this, new_index);
 	}
 	
 	void erase(iterator position) {
