@@ -440,18 +440,49 @@ int main() {
 		const int expected[] = {1, 2, 3};
 		EXPECT_EQ(l, expected);
 	}
-	// {
-		// NewTest("insert multiple elements.");
-		// list<int> l;
-		// l.push_back(1);
-		// l.push_back(3);
-		// l.insert(++l.begin(), 3, 2);
-		// const int expected[] = {1, 2, 2, 2, 3};
-		// EXPECT_EQ(l, expected);
-	// }
+	{
+		NewTest("insert multiple elements mid list.");
+		list<int> l;
+		l.push_back(1);
+		l.push_back(3);
+		l.insert(++l.begin(), 3, 2);
+		const int expected[] = {1, 2, 2, 2, 3};
+		EXPECT_EQ(l, expected);
+	}
+	{
+		NewTest("insert multiple elements at end.");
+		list<int> l;
+		l.push_back(1);
+		l.push_back(3);
+		l.insert(l.end(), 3, 2);
+		const int expected[] = {1, 3, 2, 2, 2};
+		EXPECT_EQ(l, expected);
+	}
+	{
+		NewTest("rbegin() valid after inserting multiple elements at end.");
+		list<int> l;
+		l.push_back(1);
+		l.push_back(3);
+		l.insert(l.end(), 3, 2);
+		list<int> rl;
+		for (list<int>::const_reverse_iterator it = l.crbegin(); it != l.crend(); ++it) {
+			rl.push_back(*it);
+		}
+		const int expected[] = {2, 2, 2, 3, 1};
+		EXPECT_EQ(rl, expected);
+	}
+	{
+		NewTest("insert multiple elements at start.");
+		list<int> l;
+		l.push_back(1);
+		l.push_back(3);
+		l.insert(l.begin(), 3, 2);
+		const int expected[] = {2, 2, 2, 1, 3};
+		EXPECT_EQ(l, expected);
+	}
 	// {
 		// NewTest("erase multiple elements.");
-		// list<int> v;
+		// list<int> l;
 		// l.push_back(1);
 		// l.push_back(2);
 		// l.push_back(3);
@@ -459,7 +490,7 @@ int main() {
 		// l.push_back(5);
 		// l.erase(l.begin() + 1, l.end() - 1);
 		// const int expected[] = {1, 5};
-		// EXPECT_EQ(v, expected);
+		// EXPECT_EQ(l, expected);
 	// }
 	// {
 		// NewTest("erase all elements.");
