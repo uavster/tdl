@@ -317,9 +317,12 @@ public:
 	const_reverse_iterator crbegin() const { return const_reverse_iterator(rbegin()); }
 	const_reverse_iterator crend() const { return const_reverse_iterator(rend()); }
 
-	iterator insert(iterator position, const T &value) {
-		nodes_.push_back(value);
-		size_t new_index = nodes_.size() - 1;
+	iterator insert(iterator position, size_t count, const T &value) {
+		if (count == 0) {
+			return position;
+		}
+		nodes_.insert(nodes_.end(), count, value);
+		size_t new_index = nodes_.size() - count;
 		size_t new_prev;
 		if (position.index_ != list_kTerminalNode) {
 			// The list is not empty, and not inserting at end.
@@ -340,12 +343,21 @@ public:
 				// Inserting at end.
 				head_ = new_index;
 			}
-			tail_ = new_index;
+			tail_ = new_index + count - 1;
 		}
 		nodes_[new_index].prev = new_prev;
-		nodes_[new_index].next = position.index_;		
-		++size_;
+		nodes_[new_index].next = new_index + 1;
+		for (size_t i = new_index + 1; i < new_index + count; ++i) {
+			nodes_[i].prev = i - 1;
+			nodes_[i].next = i + 1;
+		}
+		nodes_[new_index + count - 1].next = position.index_;
+		size_ += count;
 		return iterator(this, new_index);
+	}
+	
+	iterator insert(iterator position, const T &value) {
+		return insert(position, 1, value);
 	}
 	
 	void erase(iterator position) {
