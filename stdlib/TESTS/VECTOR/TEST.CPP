@@ -136,10 +136,6 @@ int main() {
 		EXPECT_EMPTY(v);
 	}
 	{
-		NewTest("size() returns number of elements.");
-		EXPECT_1EQ(vector<int>(3, 0).size(), 3);
-	}
-	{
 		NewTest("indexing returns value.");
 		vector<int> v;
 		v.push_back(52);
