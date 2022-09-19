@@ -249,6 +249,13 @@ protected:
 // when iterating, compared to pointing directly at the node, but that would
 // not prevent iterator invalidation, and would violate the STL invalidation
 // rules.
+// 
+// An important difference with the standard is that those functions erasing
+// elements do not call their destructors, so callers have to do it explicitly
+// before erasing. This is a limitation imposed by Watcom 11, as it does not
+// compile if the destructor is called on a native type, unlike modern compilers,
+// where that is a no op. That would prevent lists from being used for native 
+// types, so we do not call the destructor.
 template<class T> class list {
 	friend class base_list_iterator<T>;
 	friend class list_iterator<T>;
@@ -360,12 +367,17 @@ public:
 		return insert(position, 1, value);
 	}
 	
-	void erase(iterator position) {
-		if (position.index_ == list_kTerminalNode) {
-			return;
+	iterator erase(iterator first, iterator last) {
+		if (first == end() || first == last) {
+			return last;
 		}
-		size_t prev_index = nodes_[position.index_].prev;
-		size_t next_index = nodes_[position.index_].next;
+		for (list<T>::iterator it = first; it != last; ++it) {
+			// Unlike on modern compilers, Watcom 11 fails compiling the destructor call if T is a native type.
+			// it->~T();
+			--size_;
+		}
+		size_t prev_index = nodes_[first.index_].prev;
+		size_t next_index = last.index_;
 		if (prev_index != list_kTerminalNode) {
 			nodes_[prev_index].next = next_index;
 		} else {
@@ -376,7 +388,12 @@ public:
 		} else {
 			tail_ = prev_index;
 		}
-		--size_;
+		return last;
+	}
+	
+	iterator erase(iterator position) {
+		list<T>::iterator last(position);
+		return erase(position, ++last);
 	}
 	
 	void push_front(const T &value) {
