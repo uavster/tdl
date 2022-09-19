@@ -200,6 +200,7 @@ int main() {
 	{
 		NewTest("iterator: default constructor can be called.");
 		vector<int>::iterator it;
+		printf(" [OK]\n");
 	}
 	{
 		NewTest("iterator: dereferencing returns value.");
@@ -294,6 +295,7 @@ int main() {
 	{
 		NewTest("const_iterator: default constructor can be called.");
 		vector<int>::const_iterator it;
+		printf(" [OK]\n");
 	}
 	{
 		NewTest("const_iterator: dereferencing returns value.");
@@ -364,6 +366,7 @@ int main() {
 	{
 		NewTest("reverse_iterator: default constructor can be called.");
 		vector<int>::reverse_iterator it;
+		printf(" [OK]\n");
 	}
 	{
 		NewTest("reverse_iterator: dereferencing returns value.");
@@ -439,6 +442,7 @@ int main() {
 	{
 		NewTest("const_reverse_iterator: default constructor can be called.");
 		vector<int>::const_reverse_iterator it;
+		printf(" [OK]\n");
 	}
 	{
 		NewTest("const_reverse_iterator: dereferencing returns value.");
