@@ -480,29 +480,29 @@ int main() {
 		const int expected[] = {2, 2, 2, 1, 3};
 		EXPECT_EQ(l, expected);
 	}
-	// {
-		// NewTest("erase multiple elements.");
-		// list<int> l;
-		// l.push_back(1);
-		// l.push_back(2);
-		// l.push_back(3);
-		// l.push_back(4);
-		// l.push_back(5);
-		// l.erase(l.begin() + 1, l.end() - 1);
-		// const int expected[] = {1, 5};
-		// EXPECT_EQ(l, expected);
-	// }
-	// {
-		// NewTest("erase all elements.");
-		// list<int> v;
-		// l.push_back(1);
-		// l.push_back(2);
-		// l.push_back(3);
-		// l.push_back(4);
-		// l.push_back(5);
-		// l.erase(l.begin(), l.end());
-		// EXPECT_EMPTY(v);
-	// }
+	{
+		NewTest("erase multiple elements.");
+		list<int> l;
+		l.push_back(1);
+		l.push_back(2);
+		l.push_back(3);
+		l.push_back(4);
+		l.push_back(5);
+		l.erase(++l.begin(), --l.end());
+		const int expected[] = {1, 5};
+		EXPECT_EQ(l, expected);
+	}
+	{
+		NewTest("erase all elements.");
+		list<int> l;
+		l.push_back(1);
+		l.push_back(2);
+		l.push_back(3);
+		l.push_back(4);
+		l.push_back(5);
+		l.erase(l.begin(), l.end());
+		EXPECT_EMPTY(l);
+	}
 	
 	printf("[SUCCESS] %dn tests passed.", num_tests);
 	
