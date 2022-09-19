@@ -208,46 +208,48 @@ int main() {
 		list<int> l(1, 52);
 		EXPECT_IT_EQ(--l.end(), l.rbegin());
 	}
-	// {
-		// NewTest("iterator: arrow operator returns structure members.");
-		// struct Structure {
-			// int a;
-			// char b;
-		// };
-		// Structure element = { 52, 53 };
-		// list<Structure> s(2, element);
-		// list<int> actual;
-		// for (list<Structure>::iterator it = s.begin(); it != s.end(); ++it) {
-			// actual.push_back(it->a);
-			// actual.push_back(it->b);
-		// }	
-		// const int expected[] = {52, 53, 52, 53};
-		// EXPECT_EQ(actual, expected);
-	// }
+	{
+		NewTest("iterator: arrow operator returns structure members.");
+		struct Structure {
+			int a;
+			char b;
+			bool operator<(const Structure &s) { return a < s.a; }
+		};
+		Structure element = { 52, 53 };
+		list<Structure> l(2, element);
+		list<int> actual;
+		for (list<Structure>::iterator it = l.begin(); it != l.end(); ++it) {
+			actual.push_back(it->a);
+			actual.push_back(it->b);
+		}	
+		const int expected[] = {52, 53, 52, 53};
+		EXPECT_EQ(actual, expected);
+	}
 	{
 		NewTest("iterator: deferencing allows mutation.");
 		list<int> l(1, 52);
 		++*l.begin();
 		EXPECT_1EQ(l.front(), 53);
 	}
-	// {
+	{
 		// NewTest("iterator: arrow operator allows mutation.");
-		// struct Structure {
-			// int a;
-			// char b;
-		// };
-		// Structure element = { 52, 53 };
-		// list<Structure> s(1, element);
-		// ++s.begin()->a;
-		// ++s.begin()->b;
-		// list<int> actual;
-		// for (list<Structure>::iterator it = s.begin(); it != s.end(); ++it) {
-			// actual.push_back(it->a);
-			// actual.push_back(it->b);
-		// }	
-		// const int expected[] = {53, 54};
-		// EXPECT_EQ(actual, expected);
-	// }
+		struct Structure {
+			int a;
+			char b;
+			bool operator<(const Structure &s) { return a < s.a; }
+		};
+		Structure element = { 52, 53 };
+		list<Structure> s(1, element);
+		++s.begin()->a;
+		++s.begin()->b;
+		list<int> actual;
+		for (list<Structure>::iterator it = s.begin(); it != s.end(); ++it) {
+			actual.push_back(it->a);
+			actual.push_back(it->b);
+		}	
+		const int expected[] = {53, 54};
+		EXPECT_EQ(actual, expected);
+	}
 	{
 		NewTest("const_iterator: default constructor can be called.");
 		list<int>::const_iterator it;
@@ -278,22 +280,23 @@ int main() {
 		list<int> l(1, 52);
 		EXPECT_IT_EQ(--l.cend(), l.crbegin());
 	}
-	// {
-		// NewTest("const_iterator: arrow operator returns structure members.");
-		// struct Structure {
-			// int a;
-			// char b;
-		// };
-		// Structure element = { 52, 53 };
-		// list<Structure> s(2, element);
-		// list<int> actual;
-		// for (list<Structure>::const_iterator it = s.cbegin(); it != s.cend(); ++it) {
-			// actual.push_back(it->a);
-			// actual.push_back(it->b);
-		// }	
-		// const int expected[] = {52, 53, 52, 53};
-		// EXPECT_EQ(actual, expected);
-	// }
+	{
+		NewTest("const_iterator: arrow operator returns structure members.");
+		struct Structure {
+			int a;
+			char b;
+			bool operator<(const Structure &s) { return a < s.a; }
+		};
+		Structure element = { 52, 53 };
+		list<Structure> s(2, element);
+		list<int> actual;
+		for (list<Structure>::const_iterator it = s.cbegin(); it != s.cend(); ++it) {
+			actual.push_back(it->a);
+			actual.push_back(it->b);
+		}	
+		const int expected[] = {52, 53, 52, 53};
+		EXPECT_EQ(actual, expected);
+	}
 	{
 		NewTest("reverse_iterator: default constructor can be called.");
 		list<int>::reverse_iterator it;
@@ -324,22 +327,23 @@ int main() {
 		list<int> l(1, 52);
 		EXPECT_IT_EQ(--l.rend(), l.begin());
 	}
-	// {
-		// NewTest("reverse_iterator: arrow operator returns structure members.");
-		// struct Structure {
-			// int a;
-			// char b;
-		// };
-		// Structure element = { 52, 53 };
-		// list<Structure> s(2, element);
-		// list<int> actual;
-		// for (list<Structure>::reverse_iterator it = s.rbegin(); it != s.rend(); ++it) {
-			// actual.push_back(it->a);
-			// actual.push_back(it->b);
-		// }	
-		// const int expected[] = {52, 53, 52, 53};
-		// EXPECT_EQ(actual, expected);
-	// }
+	{
+		NewTest("reverse_iterator: arrow operator returns structure members.");
+		struct Structure {
+			int a;
+			char b;
+			bool operator<(const Structure &s) { return a < s.a; }
+		};
+		Structure element = { 52, 53 };
+		list<Structure> s(2, element);
+		list<int> actual;
+		for (list<Structure>::reverse_iterator it = s.rbegin(); it != s.rend(); ++it) {
+			actual.push_back(it->a);
+			actual.push_back(it->b);
+		}	
+		const int expected[] = {52, 53, 52, 53};
+		EXPECT_EQ(actual, expected);
+	}
 	{
 		NewTest("reverse_iterator: iteration reverses element order.");
 		list<int> l;
@@ -384,22 +388,23 @@ int main() {
 		list<int> l(1, 52);
 		EXPECT_IT_EQ(--l.crend(), l.cbegin());
 	}
-	// {
-		// NewTest("const_reverse_iterator: arrow operator returns structure members.");
-		// struct Structure {
-			// int a;
-			// char b;
-		// };
-		// Structure element = { 52, 53 };
-		// list<Structure> s(2, element);
-		// list<int> actual;
-		// for (list<Structure>::const_reverse_iterator it = s.crbegin(); it != s.crend(); ++it) {
-			// actual.push_back(it->a);
-			// actual.push_back(it->b);
-		// }	
-		// const int expected[] = {52, 53, 52, 53};
-		// EXPECT_EQ(actual, expected);
-	// }
+	{
+		NewTest("const_reverse_iterator: arrow operator returns structure members.");
+		struct Structure {
+			int a;
+			char b;
+			bool operator<(const Structure &s) { return a < s.a; }
+		};
+		Structure element = { 52, 53 };
+		list<Structure> s(2, element);
+		list<int> actual;
+		for (list<Structure>::const_reverse_iterator it = s.crbegin(); it != s.crend(); ++it) {
+			actual.push_back(it->a);
+			actual.push_back(it->b);
+		}	
+		const int expected[] = {52, 53, 52, 53};
+		EXPECT_EQ(actual, expected);
+	}
 	{
 		NewTest("const_reverse_iterator: iteration reverses element order.");
 		list<int> l;
