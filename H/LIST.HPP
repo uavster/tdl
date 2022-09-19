@@ -235,14 +235,14 @@ protected:
 // individually. This is meant to minimize the allocation time and memory
 // overhead that would dominate in lists with small elements, and favor 
 // efficient cache use if elements are not reordered.
-
+//
 // For simplicity, the nodes of inserted elements are always appended to the
 // back of the store, and the space left by an erasure is never reused. 
 // This has an extra memory cost, but could also favor cache efficiency of
 // iteration after erasing or inserting at the back by keeping node addresses
-// monotonically increasing. Copying the list can be used to compact the layout
-// (and make nodes sequential) in memory again, which may be worth it if it
-// has to be iterated many times.
+// monotonically increasing. Copying the list can be used to compact the
+// layout (and make nodes sequential) in memory again, which may be worth it
+// if it has to be iterated many times.
 // 
 // Iterators keep a reference to the list and the node index in the 
 // store so that they are always valid. There could be a performance penalty
@@ -253,9 +253,8 @@ protected:
 // An important difference with the standard is that those functions erasing
 // elements do not call their destructors, so callers have to do it explicitly
 // before erasing. This is a limitation imposed by Watcom 11, as it does not
-// compile if the destructor is called on a native type, unlike modern compilers,
-// where that is a no op. That would prevent lists from being used for native 
-// types, so we do not call the destructor.
+// compile if the destructor is called on a native type, unlike modern
+// compilers, where that is a no-op.
 template<class T> class list {
 	friend class base_list_iterator<T>;
 	friend class list_iterator<T>;
