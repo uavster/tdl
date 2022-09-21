@@ -161,6 +161,7 @@ sbuffer.obj:     sbuffer.asm      sbuffer.inc      alloc.inc        memmgr.asm  
 vector3.obj:	vector3.cpp		vector3.hpp		matrix3.cpp		matrix3.hpp
 matrix3.obj:	matrix3.cpp		matrix3.hpp		vector3.cpp		vector3.hpp
 rotmat3.obj:	rotmat3.cpp		rotmat3.hpp		matrix3.cpp		matrix3.hpp		vector3.cpp		vector3.hpp
+vector4.obj:	vector4.cpp		vector4.hpp		vector3.cpp		vector3.hpp
 
 #------------ wUF! ----------------
 
@@ -208,7 +209,7 @@ tdl.lib:        stdc.obj        new.obj		except.obj	stdio.obj       count.obj   
                 3ds.obj\
                 uniload.obj     stdc.obj        render.obj\
                 3dmath.obj\
-				vector3.obj		matrix3.obj		rotmat3.obj\
+				vector3.obj		matrix3.obj		rotmat3.obj		vector4.obj\
                 litt32.obj\
                 polyint.obj\
 #                player.obj      modload.obj     load_mod.obj\
