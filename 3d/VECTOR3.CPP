@@ -1,6 +1,6 @@
 #include "vector3.hpp"
 #include "matrix3.hpp"
-#include <math.h>
+#include "tinymath.h"
 
 Vector3::~Vector3() {
 }
