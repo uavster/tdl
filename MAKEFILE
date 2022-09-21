@@ -158,11 +158,11 @@ render.obj:      render.asm       render.inc       gfx.inc         line.asm     
 3dmath.obj:     3dmath.asm
 gentri.obj:      gentri.c         tdl.h            tinymath.h      sbuffer.asm
 sbuffer.obj:     sbuffer.asm      sbuffer.inc      alloc.inc        memmgr.asm      sli.inc      sli.asm         stderror.inc    utils.inc
-vector3.obj:	vector3.cpp		vector3.hpp		matrix3.cpp		matrix3.hpp
-matrix3.obj:	matrix3.cpp		matrix3.hpp		vector3.cpp		vector3.hpp
-rotmat3.obj:	rotmat3.cpp		rotmat3.hpp		matrix3.cpp		matrix3.hpp		vector3.cpp		vector3.hpp
-vector4.obj:	vector4.cpp		vector4.hpp		vector3.cpp		vector3.hpp
-
+vector3.obj:	vector3.cpp		vector3.hpp		matrix3.cpp		matrix3.hpp		tinymath.h
+matrix3.obj:	matrix3.cpp		matrix3.hpp		vector3.cpp		vector3.hpp		memcpy.asm      memcpy.inc
+rotmat3.obj:	rotmat3.cpp		rotmat3.hpp		matrix3.cpp		matrix3.hpp		vector3.cpp		vector3.hpp		tinymath.h
+vector4.obj:	vector4.cpp		vector4.hpp		vector3.cpp		vector3.hpp		tinymath.h		matrix4.cpp		matrix4.hpp
+matrix4.obj:	matrix4.cpp		matrix4.hpp		vector4.cpp		vector4.hpp		vector3.cpp		vector3.hpp		tinymath.h		memcpy.asm      memcpy.inc
 #------------ wUF! ----------------
 
 wuf!.obj:       wuf!.asm        wuf!.inc        stderror.inc    sounddev.asm    sounddev.inc    utils.inc       utils.asm
@@ -209,7 +209,7 @@ tdl.lib:        stdc.obj        new.obj		except.obj	stdio.obj       count.obj   
                 3ds.obj\
                 uniload.obj     stdc.obj        render.obj\
                 3dmath.obj\
-				vector3.obj		matrix3.obj		rotmat3.obj		vector4.obj\
+				vector3.obj		matrix3.obj		rotmat3.obj		vector4.obj	matrix4.obj\
                 litt32.obj\
                 polyint.obj\
 #                player.obj      modload.obj     load_mod.obj\
