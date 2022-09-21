@@ -8,8 +8,8 @@ class Vector3
 public:
 	float x, y, z;
 
-	inline Vector3(float x = 0.0, float y = 0.0, float z = 0.0) { Vector3::x = x; Vector3::y = y; Vector3::z = z; }
-	inline Vector3(float *a) { x = a[0]; y = a[1]; z = a[2]; }
+	Vector3(float x = 0.0, float y = 0.0, float z = 0.0) { Vector3::x = x; Vector3::y = y; Vector3::z = z; }
+	Vector3(float *a) { x = a[0]; y = a[1]; z = a[2]; }
 	virtual ~Vector3();
 
 	Vector3 operator - () const;
@@ -35,6 +35,6 @@ public:
 	int countValues(float v) const;
 };
 
-inline Vector3 operator * (float left, const Vector3 &right) { return right * left; }
+Vector3 operator * (float left, const Vector3 &right) { return right * left; }
 
 #endif

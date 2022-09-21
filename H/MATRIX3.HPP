@@ -10,12 +10,12 @@ class Matrix3
 public:
 	float value[3][3];
 
-	inline Matrix3() { }
+	Matrix3() { }
 	Matrix3(const Matrix3 &m);
-	inline Matrix3(float *a) { memcpy(value, a, sizeof(value)); }
+	Matrix3(float *a) { memcpy(value, a, sizeof(value)); }
 	Matrix3(float a00, float a01, float a02, float a10, float a11, float a12, float a20, float a21, float a22);
-	inline Matrix3(const Vector3 &row1, const Vector3 &row2, const Vector3 &row3) { setRows(row1, row2, row3); }
-	inline virtual ~Matrix3() { }
+	Matrix3(const Vector3 &row1, const Vector3 &row2, const Vector3 &row3) { setRows(row1, row2, row3); }
+	virtual ~Matrix3() { }
 
 	Matrix3 &operator = (const Matrix3 &m);
 	Matrix3 &setRows(const Vector3 &row1, const Vector3 &row2, const Vector3 &row3);
@@ -39,6 +39,6 @@ public:
 	virtual int countValues(float v) const;
 };
 
-inline Matrix3 operator * (float left, const Matrix3 &right) { return right * left; }
+Matrix3 operator * (float left, const Matrix3 &right) { return right * left; }
 
 #endif
