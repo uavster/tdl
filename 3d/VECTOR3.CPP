@@ -41,6 +41,13 @@ Vector3 Vector3::normalize() const {
 	return Vector3(x / mod, y / mod, z / mod);
 }
 
+Vector3 &Vector3::operator = (const Vector3 &v) {
+	x = v.x;
+	y = v.y;
+	z = v.z;
+	return *this;
+}
+
 float Vector3::modulus() const {
 	return sqrt(x * x + y * y + z * z);
 }
