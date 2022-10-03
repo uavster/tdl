@@ -110,4 +110,9 @@ align 16
 __wcpp_4_ctor_array__:
 		retn
 
+public __wcpp_4_dtor_array__
+align 16
+__wcpp_4_dtor_array__:
+		retn
+
 end
