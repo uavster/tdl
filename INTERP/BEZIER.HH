@@ -55,17 +55,19 @@ template<class SampleT> SampleT Bezier<SampleT>::getControlPoint(int index) {
 }
 
 template<class SampleT> SampleT Bezier<SampleT>::solve(float t) {
-	num_aux_ = aux_.size() - 1;
+	num_aux_ = aux_.size();
 	aux_ = points_;
 	solveRecursive(t);
 	return aux_[0];
 }
 
 template<class SampleT> void Bezier<SampleT>::solveRecursive(float t) {
+	if (num_aux_ == 1) {
+		return;
+	}
+	--num_aux_;
 	for (int i = 0; i < num_aux_; i++)
 		aux_[i] = (1 - t) * aux_[i] + t * aux_[i + 1];
 
-	if (num_aux_ < 1) {
-		solveRecursive(t);
-	}
+	solveRecursive(t);
 }
