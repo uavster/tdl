@@ -33,6 +33,7 @@ public:
 	Vector3 operator < (const Vector3 &v) const;
 	Vector3 operator < (float t) const;
 	int countValues(float v) const;
+	bool operator<(const Vector3 &v) { return false;}
 };
 
 Vector3 operator * (float left, const Vector3 &right) { return right * left; }
