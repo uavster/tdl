@@ -164,6 +164,7 @@ rotmat3.obj:	rotmat3.cpp		rotmat3.hpp		matrix3.cpp		matrix3.hpp		vector3.cpp		ve
 vector4.obj:	vector4.cpp		vector4.hpp		vector3.cpp		vector3.hpp		tinymath.h		matrix4.cpp		matrix4.hpp
 matrix4.obj:	matrix4.cpp		matrix4.hpp		vector4.cpp		vector4.hpp		vector3.cpp		vector3.hpp		tinymath.h		memcpy.asm      memcpy.inc
 quatnion.obj:	quatnion.cpp	quatnion.hpp	rotmat3.cpp		rotmat3.hpp		vector4.cpp		vector4.hpp		vector3.cpp		vector3.hpp		tinymath.h
+htmat4.obj:		htmat4.cpp		htmat4.hpp		rotmat3.cpp		rotmat3.hpp		vector3.cpp		vector3.hpp
 #------------ wUF! ----------------
 
 wuf!.obj:       wuf!.asm        wuf!.inc        stderror.inc    sounddev.asm    sounddev.inc    utils.inc       utils.asm
@@ -210,7 +211,7 @@ tdl.lib:        stdc.obj        new.obj		except.obj	stdio.obj       count.obj   
                 3ds.obj\
                 uniload.obj     stdc.obj        render.obj\
                 3dmath.obj\
-				vector3.obj		matrix3.obj		rotmat3.obj		vector4.obj	matrix4.obj	quatnion.obj\
+				vector3.obj		matrix3.obj		rotmat3.obj		vector4.obj	matrix4.obj	quatnion.obj	htmat4.obj\
                 litt32.obj\
                 polyint.obj\
 #                player.obj      modload.obj     load_mod.obj\
