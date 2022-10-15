@@ -77,7 +77,7 @@ ClipY   endp
 ;         EDI -> destination SLI
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 Line    proc
-
+		push	ebp
         ; ---------------------Move clip zone to origin-----------------------
         sub     eax,[edi.SLIClip.SLRR1.SLPX]
         sub     ecx,[edi.SLIClip.SLRR1.SLPX]
@@ -265,6 +265,7 @@ Line    proc
         dec     ecx
         jnz     short line_loop
         dont_draw_line:
+		pop		ebp
         ret
 
 Line    endp
