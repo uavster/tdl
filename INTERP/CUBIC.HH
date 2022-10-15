@@ -87,8 +87,8 @@ template<class SampleT> SampleT CubicFiniteDiffSphericalInterpolator<SampleT>::g
 template<class SampleT> SampleT CubicFiniteDiffSphericalInterpolator<SampleT>::squad(float normalizedT, const SampleT &q0, const SampleT &q1, const SampleT &s0, const SampleT &s1) {
 	return LinearSphericalInterpolator<SampleT>::slerp(
 			2 * normalizedT * (1 - normalizedT),
-			LinearInterpolator<SampleT, SUBSPACE_SPHERICAL>::slerp(normalizedT, q0, q1),
-			LinearInterpolator<SampleT, SUBSPACE_SPHERICAL>::slerp(normalizedT, s0, s1)
+			LinearSphericalInterpolator<SampleT>::slerp(normalizedT, q0, q1),
+			LinearSphericalInterpolator<SampleT>::slerp(normalizedT, s0, s1)
 			);
 }
 
