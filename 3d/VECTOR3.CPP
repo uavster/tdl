@@ -115,3 +115,7 @@ int Vector3::countValues(float v) const {
 	if (z == v) count++;
 	return count;
 }
+
+Vector3 operator * (float left, const Vector3 &right) { 
+	return right * left;
+}

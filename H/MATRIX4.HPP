@@ -48,6 +48,6 @@ private:
 	Vector4 res_vector;
 };
 
-Matrix4 operator * (float left, const Matrix4 &right) { return right * left; }
+Matrix4 operator * (float left, const Matrix4 &right);
 
 #endif

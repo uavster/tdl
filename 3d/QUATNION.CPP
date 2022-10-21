@@ -201,3 +201,7 @@ Quaternion Quaternion::normalize() const {
 	float k = 1.0 / norm();
 	return Quaternion(x * k, y * k, z * k, w * k);
 }
+
+Quaternion operator * (float left, const Quaternion &right) {
+	return right * left;
+}

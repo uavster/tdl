@@ -36,6 +36,6 @@ public:
 	bool operator<(const Vector3 &v) { return false;}
 };
 
-Vector3 operator * (float left, const Vector3 &right) { return right * left; }
+Vector3 operator * (float left, const Vector3 &right);
 
 #endif

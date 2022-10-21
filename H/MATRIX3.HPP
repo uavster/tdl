@@ -39,6 +39,6 @@ public:
 	virtual int countValues(float v) const;
 };
 
-Matrix3 operator * (float left, const Matrix3 &right) { return right * left; }
+Matrix3 operator * (float left, const Matrix3 &right);
 
 #endif

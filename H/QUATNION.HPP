@@ -36,6 +36,6 @@ public:
 	float norm() const;
 };
 
-Quaternion operator * (float left, const Quaternion &right) { return right * left; }
+Quaternion operator * (float left, const Quaternion &right);
 
 #endif /* QUATERNION_H_ */

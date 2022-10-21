@@ -180,3 +180,7 @@ Matrix3 Matrix3::operator *(const Matrix3 &m) const {
 float Matrix3::trace() const {
 	return value[0][0] + value[1][1] + value[2][2];
 }
+
+Matrix3 operator * (float left, const Matrix3 &right) {
+	return right * left;
+}

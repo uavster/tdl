@@ -273,3 +273,7 @@ Matrix4 Matrix4::operator > (float t) const {
 			out.value[y][x] = value[y][x] > t ? 1.0 : 0.0;
 	return out;
 }
+
+Matrix4 operator * (float left, const Matrix4 &right) { 
+	return right * left;
+}
