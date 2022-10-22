@@ -13,7 +13,7 @@ public:
 		this->signal = &signal;
 	}
 
-	virtual void setSignal(TimeSignal<SampleT> &signal) { printf("I::setSignal\n"); this->signal = &signal; }
+	virtual void setSignal(TimeSignal<SampleT> &signal) { this->signal = &signal; }
 	TimeSignal<SampleT> *getSignal() const { return signal; }
 
 	virtual SampleT getValue(float time) = 0;
