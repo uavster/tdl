@@ -2,6 +2,7 @@
 #define VECTOR_HPP_INCLUDED_
 
 #include "stddef.h"
+#include "stdio.h"
 #include "alloc.h"
 #include "except.hpp"
 #include "memcpy.h"
