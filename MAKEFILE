@@ -4,12 +4,12 @@
 # �                                                                        �
 # 읕컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴켸
 
-HDIR   = $(TDLPATH)\h
+HDIR   = $(TDLPATH)\h;$(TDLPATH)\interp
 INCDIR = $(TDLPATH)\include
 DEFDIR = $(TDLPATH)\defaults
 
 .path.c = $(TDLPATH)\STDLIB;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\LOADER
-.path.cpp = $(TDLPATH)\STDLIB;$(TDLPATH)\WUF!\LOADER\S3M;$(TDLPATH)\WUF!\PLAYER;$(TDLPATH)\3D
+.path.cpp = $(TDLPATH)\STDLIB;$(TDLPATH)\WUF!\LOADER\S3M;$(TDLPATH)\WUF!\PLAYER;$(TDLPATH)\3D;$(TDLPATH)\INTERP
 .path.asm = $(TDLPATH)\STDLIB;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\BLITTER;$(TDLPATH)\SPUF!\LOADER;$(TDLPATH)\SPUF!;$(TDLPATH)\SPUF!\SLI;$(TDLPATH)\SPUF!\GFX;$(TDLPATH)\WUF!;$(TDLPATH)\WUF!\DEVICES;$(TDLPATH)\3D\RENDER;$(TDLPATH)\3D\LOADER;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\PLAYER;$(TDLPATH)\3D;$(TDLPATH)\WUF!\MIXER;$(TDLPATH)\WUF!\LOADER;$(TDLPATH)\WUF!\LOADER\WAV
 .path.obj = $(TDLPATH)\OBJS
 .path.mac = $(INCDIR)
@@ -28,14 +28,12 @@ WLIBOPTS=/q
 COPTS = -db -d4 -w3 -fpi87 -fp5 -zdp -zu -bt=dos -i$(HDIR) -oneatx -s -zq -3r
 CCOPTS = -4r -hw -db -d2 -fpi87 -fp3 -i$(HDIR) -mf -w5 -ze -zp4 -zdp -zl -xs
 ASMOPTS = /m6 /mx /zi /w-aln /t /i. /i$(INCDIR) /i$(TDLPATH)\NEWSGL /d__DEBUG__=1
-LNKOPT = system tx32 debug all op q
 
 !else
 
 COPTS = -w3 -fpi87 -fp5 -zdp -zu -bt=dos -i$(HDIR) -oneatx -s -zq -3r -wcd=302
 CCOPTS = -4r -fpi87 -fp3 -i$(HDIR) -mf -w5 -ze -zdp -zl -xs
 ASMOPTS = /m6 /mx /w-aln /t /i. /i$(INCDIR) /i$(DEFDIR) /i$(TDLPATH)\NEWSGL /d__DEBUG__=0
-LNKOPT = system tx32 op q
 
 !endif
 
@@ -166,6 +164,7 @@ matrix4.obj:	matrix4.cpp		matrix4.hpp		vector4.cpp		vector4.hpp		vector3.cpp		ve
 quatnion.obj:	quatnion.cpp	quatnion.hpp	rotmat3.cpp		rotmat3.hpp		vector4.cpp		vector4.hpp		vector3.cpp		vector3.hpp		tinymath.h
 htmat4.obj:		htmat4.cpp		htmat4.hpp		rotmat3.cpp		rotmat3.hpp		vector3.cpp		vector3.hpp
 pose3.obj:		pose3.cpp		pose3.hpp		vector3.cpp		vector3.hpp		quatnion.cpp	quatnion.hpp	matrix4.cpp		matrix4.hpp
+pose3int.obj:	pose3int.cpp	pose3int.hpp	cubic.hpp	vector3.hpp	vector3.cpp		quatnion.hpp	quatnion.cpp
 #------------ wUF! ----------------
 
 wuf!.obj:       wuf!.asm        wuf!.inc        stderror.inc    sounddev.asm    sounddev.inc    utils.inc       utils.asm
@@ -212,7 +211,7 @@ tdl.lib:        stdc.obj        new.obj		except.obj	stdio.obj       count.obj   
                 3ds.obj\
                 uniload.obj     stdc.obj        render.obj\
                 3dmath.obj\
-				vector3.obj		matrix3.obj		rotmat3.obj		vector4.obj	matrix4.obj	quatnion.obj	htmat4.obj	pose3.obj\
+				vector3.obj		matrix3.obj		rotmat3.obj		vector4.obj	matrix4.obj	quatnion.obj	htmat4.obj	pose3.obj	pose3int.obj\
                 litt32.obj\
                 polyint.obj\
 #                player.obj      modload.obj     load_mod.obj\
