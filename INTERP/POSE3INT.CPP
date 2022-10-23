@@ -1,16 +1,16 @@
 #include "pose3int.hpp"
 
-void PoseTrajectory::addKeyPoint(float time, const Vector3 &position, const Quaternion &orientation) {
-	positions_.addKeyPoint(time, position);
-	orientations_.addKeyPoint(time, orientation);
+void Pose3Trajectory::addKeyPoint(float time, const Pose3 &pose) {
+	positions_.addKeyPoint(time, pose.position());
+	orientations_.addKeyPoint(time, pose.orientation());
 }
 
-void PoseTrajectory::removeKeyPoint(float time) {
+void Pose3Trajectory::removeKeyPoint(float time) {
 	positions_.removeKeyPoint(time);
 	orientations_.removeKeyPoint(time);
 }
 
-void Pose3Interpolator::setTrajectory(PoseTrajectory &trajectory) {
+void Pose3Interpolator::setTrajectory(Pose3Trajectory &trajectory) {
 	positionInterpolator().setSignal(trajectory.positions());
 	orientationInterpolator().setSignal(trajectory.orientations());
 }

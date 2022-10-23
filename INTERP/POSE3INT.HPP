@@ -6,9 +6,9 @@
 #include "pose3.hpp"
 #include "interp.hpp"
 
-class PoseTrajectory {
+class Pose3Trajectory {
 public:
-	void addKeyPoint(float time, const Vector3 &position, const Quaternion &orientation);
+	void addKeyPoint(float time, const Pose3 &pose);
 	void removeKeyPoint(float time);
 
 	TimeSignal<Vector3> &positions() const { return positions_; }
@@ -21,7 +21,7 @@ private:
 
 class Pose3Interpolator {
 public:
-	void setTrajectory(PoseTrajectory &trajectory);
+	void setTrajectory(Pose3Trajectory &trajectory);
 	Pose3 getValue(float t);
 	
 protected:
@@ -29,7 +29,7 @@ protected:
 	virtual Interpolator<Quaternion> &orientationInterpolator();
 	
 private:
-	PoseTrajectory *trajectory_;
+	Pose3Trajectory *trajectory_;
 };
 
 class Pose3CubicCatmullRomInterpolator : public Pose3Interpolator {
