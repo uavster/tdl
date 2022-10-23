@@ -63,11 +63,8 @@ int main() {
 		ClearCurrentFrame(buffer, 0);
 		
 		// Draw key point poses.
-		list<TimeSignal<Quaternion>::KeyPoint>::const_iterator orientation_it = pose_trajectory.orientations().getKeyPoints().cbegin();
-		for (list<TimeSignal<Vector3>::KeyPoint>::const_iterator pos_it = pose_trajectory.positions().getKeyPoints().cbegin(); 
-			pos_it != pose_trajectory.positions().getKeyPoints().cend(); 
-			++pos_it, ++orientation_it) {
-			Pose3(pos_it->value, orientation_it->value).Draw(buffer, cam_model, key_point_colors);
+		for (Pose3Trajectory::const_iterator it = pose_trajectory.cbegin(); it != pose_trajectory.cend(); ++it) {
+			it->pose().Draw(buffer, cam_model, key_point_colors);
 		}
 		
 		// Draw interpolating pose.
