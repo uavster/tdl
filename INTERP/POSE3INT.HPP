@@ -6,14 +6,46 @@
 #include "pose3.hpp"
 #include "interp.hpp"
 
+using namespace std;
+
 class Pose3Trajectory {
 public:
+	class KeyPoint {
+	public:
+		KeyPoint(float time, const Pose3 &pose) : time_(time), pose_(pose) {}
+		
+		float time() const { return time_; }
+		const Pose3 &pose() const { return pose_; }
+	private:
+		float time_;
+		Pose3 pose_;
+	};
 	void addKeyPoint(float time, const Pose3 &pose);
+	void addKeyPoint(const KeyPoint &key_point);
 	void removeKeyPoint(float time);
 
-	TimeSignal<Vector3> &positions() const { return positions_; }
-	TimeSignal<Quaternion> &orientations() const { return orientations_; }
+	class const_iterator {
+	friend class Pose3Trajectory;
+	public:
+		const_iterator &operator++();
+		const_iterator &operator++(int);
+		const KeyPoint &operator*();
+		const KeyPoint *operator->();
+		bool operator==(const const_iterator &it) const;
+		bool operator!=(const const_iterator &it) const;
 
+	private:
+		const_iterator(list<TimeSignal<Vector3>::KeyPoint>::const_iterator position_iterator, list<TimeSignal<Quaternion>::KeyPoint>::const_iterator orientation_iterator);
+		list<TimeSignal<Vector3>::KeyPoint>::const_iterator position_iterator_;
+		list<TimeSignal<Quaternion>::KeyPoint>::const_iterator orientation_iterator_;
+		KeyPoint pose_;
+	};
+	const_iterator cbegin();
+	const_iterator cend();
+	
+	TimeSignal<Vector3> &positions() { return positions_; }
+	TimeSignal<Quaternion> &orientations() { return orientations_; }
+	
 private:
 	TimeSignal<Vector3> positions_;
 	TimeSignal<Quaternion> orientations_;
