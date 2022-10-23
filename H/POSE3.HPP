@@ -8,16 +8,16 @@
 
 class Pose3 {
 public:
-	Pose3(const Vector3 &position, const Quaternion &rotation);
+	Pose3(const Vector3 &position, const Quaternion &orientation);
 	
 	const Vector3 &position() const;
-	const Quaternion &rotation() const;
+	const Quaternion &orientation() const;
 	
 	// Draws a stick representation of the pose in a 32-bit SLI, with the passed projection matrix and axis colors.
 	void Draw(SLI *sli32, const Matrix4 &projection, const DWORD *axis_colors) const;
 	
 private:
-	Quaternion rotation_;
+	Quaternion orientation_;
 	Vector3 position_;
 };
 

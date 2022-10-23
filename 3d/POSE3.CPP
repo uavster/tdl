@@ -2,14 +2,14 @@
 #include "htmat4.hpp"
 #include "gfx.h"
 
-Pose3::Pose3(const Vector3 &position, const Quaternion &rotation) : position_(position), rotation_(rotation) {}
+Pose3::Pose3(const Vector3 &position, const Quaternion &orientation) : position_(position), orientation_(orientation) {}
 
 const Vector3 &Pose3::position() const { return position_; }
 
-const Quaternion &Pose3::rotation() const { return rotation_; }
+const Quaternion &Pose3::orientation() const { return orientation_; }
 	
 void Pose3::Draw(SLI *sli32, const Matrix4 &projection, const DWORD *axis_colors) const {
-	HTMatrix4 pose(rotation_.getRotMatrix(), position_);
+	HTMatrix4 pose(orientation_.getRotMatrix(), position_);
 	// 'points' columns are: x_tip, y_tip, z_tip, center.
 	Matrix4 points = pose * Matrix4(1, 0, 0, 0, 
 									0, 1, 0, 0, 
