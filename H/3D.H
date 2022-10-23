@@ -18,6 +18,9 @@
 #define kVertex1HasProps	4
 #define kVertex2HasProps	8
 #define kVertex3HasProps	16
+#define kVertex1NormalFromPoint	32
+#define kVertex2NormalFromPoint	64
+#define kVertex3NormalFromPoint	128
 
 typedef struct
 {

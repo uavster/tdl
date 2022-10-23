@@ -689,6 +689,7 @@ HandleVisibility        endp
 ;         ECX = Number of RENDERLIGHTS
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 Iluminate       proc
+		push	ebp
 		test	ecx,ecx
 		jz		no_more_lights
 		push	eax ebx ecx
@@ -799,9 +800,39 @@ Iluminate       proc
                                 fstp    trash
                                 fld     light_constant
                         vertex_more_lights:
-						fst 	[esi.vertex1_props.Light1]
-						fst	    [esi.vertex2_props.Light1]
-						fstp    [esi.vertex3_props.Light1]
+						
+						mov		ebp,[esi.PolyFlags]						
+						test	ebp,VERTEX1_NORMAL_FROM_POINT
+						jnz		take_vertex1_normal_from_point
+								fst 	[esi.vertex1_props.Light1]
+								jmp		vertex2_choose_normal
+						take_vertex1_normal_from_point:
+								mov		eax,[esi.point1]
+								mov		eax,[eax.Properties.Light1]
+								mov		[esi.vertex1_props.Light1],eax
+						vertex2_choose_normal:
+
+						test	ebp,VERTEX2_NORMAL_FROM_POINT
+						jnz		take_vertex2_normal_from_point
+								fst 	[esi.vertex2_props.Light1]
+								jmp		vertex3_choose_normal
+						take_vertex2_normal_from_point:
+								mov		eax,[esi.point2]
+								mov		eax,[eax.Properties.Light1]
+								mov		[esi.vertex2_props.Light1],eax
+						vertex3_choose_normal:
+						
+						test	ebp,VERTEX3_NORMAL_FROM_POINT
+						jnz		take_vertex3_normal_from_point
+								fst 	[esi.vertex3_props.Light1]
+								jmp		no_more_vertex_normals_to_choose
+						take_vertex3_normal_from_point:
+								mov		eax,[esi.point3]
+								mov		eax,[eax.Properties.Light1]
+								mov		[esi.vertex3_props.Light1],eax
+						no_more_vertex_normals_to_choose:
+						
+						fstp	trash
 						add     esi,size RENDERPOLY
 				dec     edx
 				jnz     ilum_faces
@@ -811,6 +842,7 @@ Iluminate       proc
         jnz		illuminate_poly_faces_loop
 		
         no_more_lights:
+		pop		ebp
         ret
 light_constant  dd 255.0
 Iluminate       endp
