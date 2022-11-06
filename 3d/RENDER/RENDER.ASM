@@ -850,20 +850,18 @@ Iluminate       endp
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Rotates a RENDERMESH
 ;
-; INPUT : EAX -> Float ALPHA
-;         EBX -> Float BETA
+; INPUT : ST1 = Float ALPHA
+;         ST0 = Float BETA
 ;         EDX -> RENDERMESH structure
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 RotateMesh      proc
-        fld     dword ptr [eax]
-        fsincos
-        fstp    m_cos_alpha
-        fstp    m_sin_alpha
-
-        fld     dword ptr [ebx]
         fsincos
         fstp    m_cos_beta
         fstp    m_sin_beta
+
+        fsincos
+        fstp    m_cos_alpha
+        fstp    m_sin_alpha
 
         mov     ecx,[edx.points]
         mov     ebx,[edx.pointdata]

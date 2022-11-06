@@ -182,9 +182,6 @@ start:
                         fdivp
                         fldf 6.2831
                         fmulp
-						sub esp,4						
-                        fstp dword ptr ss:[esp]
-                        mov eax,esp
 
                         mov trash,ebx
                         fld trash
@@ -192,9 +189,6 @@ start:
                         fdivp
                         fldf 6.2831
                         fmulp
-						sub esp,4
-                        fstp dword ptr ss:[esp]
-                        mov ebx,esp
 
                         mov     edx,mesh_ptr
                         call    RotateMesh
