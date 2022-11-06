@@ -38,12 +38,13 @@ RotMatrix3 Quaternion::getRotMatrix() const {
 }
 
 void Quaternion::set(const Vector3 &axis, float angle) {
+	Vector3 normalized_axis = axis.normalize();
 	// q = cos(angle) + axis * sin(angle)
 	float sinA = sin(angle * 0.5);
 
-	x = axis.x * sinA;
-	y = axis.y * sinA;
-	z = axis.z * sinA;
+	x = normalized_axis.x * sinA;
+	y = normalized_axis.y * sinA;
+	z = normalized_axis.z * sinA;
 	w = cos(angle * 0.5);
 }
 
