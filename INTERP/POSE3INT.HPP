@@ -29,6 +29,8 @@ public:
 	public:
 		const_iterator &operator++();
 		const_iterator &operator++(int);
+		const_iterator &operator--();
+		const_iterator &operator--(int);		
 		const KeyPoint &operator*();
 		const KeyPoint *operator->();
 		bool operator==(const const_iterator &it) const;

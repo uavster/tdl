@@ -40,6 +40,18 @@ Pose3Trajectory::const_iterator &Pose3Trajectory::const_iterator::operator++(int
 	return it;
 }
 
+Pose3Trajectory::const_iterator &Pose3Trajectory::const_iterator::operator--() {
+	--position_iterator_;
+	--orientation_iterator_;
+	return *this;
+}
+
+Pose3Trajectory::const_iterator &Pose3Trajectory::const_iterator::operator--(int) {
+	const_iterator it = *this;
+	--(*this);
+	return it;
+}
+
 const Pose3Trajectory::KeyPoint &Pose3Trajectory::const_iterator::operator*()  {
 	pose_ = KeyPoint(position_iterator_->time, Pose3(position_iterator_->value, orientation_iterator_->value));
 	return pose_;
