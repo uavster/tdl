@@ -9,7 +9,7 @@ INCDIR = $(TDLPATH)\include
 DEFDIR = $(TDLPATH)\defaults
 
 .path.c = $(TDLPATH)\STDLIB;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\LOADER
-.path.cpp = $(TDLPATH)\STDLIB;$(TDLPATH)\WUF!\LOADER\S3M;$(TDLPATH)\WUF!\PLAYER;$(TDLPATH)\3D;$(TDLPATH)\INTERP
+.path.cpp = $(TDLPATH)\STDLIB;$(TDLPATH)\WUF!\LOADER\S3M;$(TDLPATH)\WUF!\PLAYER;$(TDLPATH)\3D;$(TDLPATH)\INTERP;$(TDLPATH)\SPUF!\GFX
 .path.asm = $(TDLPATH)\STDLIB;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\BLITTER;$(TDLPATH)\SPUF!\LOADER;$(TDLPATH)\SPUF!;$(TDLPATH)\SPUF!\SLI;$(TDLPATH)\SPUF!\GFX;$(TDLPATH)\WUF!;$(TDLPATH)\WUF!\DEVICES;$(TDLPATH)\3D\RENDER;$(TDLPATH)\3D\LOADER;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\PLAYER;$(TDLPATH)\3D;$(TDLPATH)\WUF!\MIXER;$(TDLPATH)\WUF!\LOADER;$(TDLPATH)\WUF!\LOADER\WAV
 .path.obj = $(TDLPATH)\OBJS
 .path.mac = $(INCDIR)
@@ -114,6 +114,7 @@ sglmain.obj:    sglmain.asm     drvga.asm newsgl.inc  drvbe.asm dpmi.inc dpmi.as
 initg.obj:      initg.c         tdl.h
 #------------ SPUF! ----------------
 sli.obj:        sli.asm         sli.inc         alloc.inc       memmgr.asm
+palette.obj:	palette.cpp		palette.hpp		sli.asm			sli.h			vector.hpp
 
 alpha.obj:      alpha.asm       memmgr.asm      alloc.inc       stderror.inc
 
@@ -204,7 +205,7 @@ tdl.lib:        stdc.obj        new.obj		except.obj	stdio.obj       count.obj   
                 blitter.obj     blt8-16.obj     blt8-24.obj\
                 blt8-32.obj     blt24-32.obj    blt32-16.obj\
                 blt32-24.obj    blt32-32.obj    clip.obj\
-                loader.obj      sli.obj         pcx.obj         fli.obj\
+                loader.obj      sli.obj         palette.obj		pcx.obj         fli.obj\
                 sbuffer.obj     gentri.obj      line.obj\
                 wuf!.obj        sounddev.obj    sb1xx.obj       sb200.obj	sb201.obj sb3xx.obj	sb4xx.obj	mixer.obj       sbhard.obj      waveload.obj    wav.obj	s3m_.obj	s3m.obj	s3mplay.obj		player.obj\
                 dma.obj         list.obj        alpha.obj\
