@@ -74,7 +74,7 @@ typedef struct
     DWORD SLILoopEnd		; //Frame final del loop de animación
     BYTE  *SLIFramePtr      ; //Puntero al frame actual
 
-    DWORD SLIPImages        ; //puntero a la lista de punteros de frames
+    void **SLIPImages        ; //puntero a la lista de punteros de frames
 
     DWORD SLITemp[SLI_TEMP_VARS];// Espacio para variables temporales
 
@@ -270,6 +270,21 @@ global  SetBlitType : NEAR
 void SetBlitType(SLI *slip, int type);
 #pragma aux SetBlitType "*" parm [eax] [ebx]\
                      modify [eax ebx ecx edx esi edi ebp];
+
+/*
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Devuelve el n£mero total de frames
+;
+; INPUT  : EAX -> SLI
+;
+; OUTPUT : EBX = Número de frames
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+global  GetNumFrames : NEAR
+*/
+int GetNumFrames(const SLI *slip);
+#pragma aux GetNumFrames "*"	parm [eax]\
+								modify [ebx]\
+								value [ebx];
 /*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Pone el n£mero de frame actual
@@ -383,13 +398,20 @@ void SetPos(SLI *slip, int x1, int y1);
 ;          EBX = Frame
 ;
 ; OUTPUT : CF = 0 si ok
-;               EAX = NULL
+;				EAX = 0
 ;               EBX -> Frame
 ;          CF = 1 si el frame no existe
 ;               EAX = Error code
+;				EBX = NULL
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 global  GetFramePtr : NEAR
+*/
+void *GetFramePtr(SLI *slip, int frame);
+#pragma aux GetFramePtr "*"	parm [eax] [ebx]\
+							modify [eax ebx ecx edx esi edi ebp]\
+							value [ebx];
 
+/*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Pone el puntero a un frame determinado
 ;

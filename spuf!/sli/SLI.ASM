@@ -415,6 +415,19 @@ SetPalette      proc
         endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Devuelve el n£mero total de frames
+;
+; INPUT  : EAX -> SLI
+;
+; OUTPUT : EBX = Número de frames
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+GetNumFrames	proc
+		mov 	ebx,[eax.SLITotalFrames]
+        shr     ebx,16
+		ret
+GetNumFrames	endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Devuelve el n£mero de frame actual
 ;
 ; INPUT  : EAX -> SLI
@@ -611,6 +624,7 @@ GetFramePtr     proc
 
         getframe_error:
         mov     eax,INVALID_FRAME
+		xor		ebx,ebx
         stc
         ret
 GetFramePtr     endp
