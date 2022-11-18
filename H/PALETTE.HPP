@@ -1,18 +1,9 @@
 #include "stddef.h"
 #include "sli.h"
+#include "vector.hpp"
 
-class LuminanceComparableARGB {
-public:
-	LuminanceComparableARGB() {}
-	LuminanceComparableARGB(int color_index, DWORD argb);
-	bool operator<(const LuminanceComparableARGB &l) const;
-	DWORD argb() const;
-	int color_index() const;
-	
-private:
-	DWORD argb_;
-	DWORD luminance_;
-	int color_index_;
-};
+using namespace std;
 
-void SortSLIPaletteLuminance(SLI *sli);
+void UpdateSLIPixelsToNewPalette(SLI *sli, const vector<int> &new_index_from_old_index);
+void SortSLIPaletteByLuminance(SLI *sli);
+void CompressSLIPalette(SLI *sli, int in_range_first, int in_range_last, int out_range_first, int out_range_low);
