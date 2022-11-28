@@ -38,6 +38,7 @@ void DieIfSLIHasNoPalette(const SLI *sli) {
 
 void UpdateSLIPixelsToNewPalette(SLI *sli, const vector<int> &new_index_from_old_index) {
 	DieIfSLIHasNoPalette(sli);
+	
 	for (int f = 0; f < GetNumFrames(sli); ++f) {		
 		BYTE *ptr = static_cast<BYTE *>(GetFramePtr(sli, f));
 		for (int j = 0; j < sli->SLIYSize; ++j) {
@@ -143,4 +144,56 @@ void CompressSLIPalette(SLI *sli, int in_range_first, int in_range_last, int out
 	}
 	
 	UpdateSLIPixelsToNewPalette(sli, new_index_from_old_index);
+}
+
+static void UnpackARGB(DWORD color, DWORD *a, DWORD *r, DWORD *g, DWORD *b) {
+	*a = color >> 24;
+	*r = (color >> 16) & 0xff;
+	*g = (color >> 8) & 0xff;
+	*b = color & 0xff;
+}
+
+static DWORD PackARGB(DWORD a, DWORD r, DWORD g, DWORD b) {
+	return (a << 24) | (r << 16) | (g << 8) | b;
+}
+
+static DWORD Saturate(int n, int min, int max) {
+	if (n < min) { return min; }
+	if (n > max) { return max; }
+	return n;
+}
+
+void MixWithSLIPalette(SLI *sli, DWORD *palette_to_mix) {
+	for (int i = 0; i < 256; ++i) {
+		DWORD a, r, g, b;
+		UnpackARGB(palette_to_mix[i], &a, &r, &g, &b);
+		DWORD as, rs, gs, bs;
+		UnpackARGB(sli->SLIPalette[i], &as, &rs, &gs, &bs);
+		r = ((255 - a) * rs + a * r) >> 8;
+		g = ((255 - a) * gs + a * g) >> 8;
+		b = ((255 - a) * bs + a * b) >> 8;
+		sli->SLIPalette[i] = 0xff000000 | (r << 16) | (g << 8) | b;
+	}
+}
+
+void CreateColorRamp(DWORD *palette, int first_index, DWORD first_color, int last_index, DWORD last_color) {
+	int index_diff = last_index - first_index;
+	if (index_diff < 0) {
+		throw Exception("first_index must be lower than last_index.");
+	}
+	DWORD a0, r0, g0, b0;
+	UnpackARGB(first_color, &a0, &r0, &g0, &b0);
+	DWORD a1, r1, g1, b1;
+	UnpackARGB(last_color, &a1, &r1, &g1, &b1);
+
+	int a_diff = a1 - a0;
+	int r_diff = r1 - r0;
+	int g_diff = g1 - g0;
+	int b_diff = b1 - b0;
+	for (int i = 0; i < index_diff + 1; ++i) {
+		palette[i + first_index] = PackARGB(Saturate((i * a_diff) / index_diff + a0, 0, 255), 
+											Saturate((i * r_diff) / index_diff + r0, 0, 255), 
+											Saturate((i * g_diff) / index_diff + g0, 0, 255),
+											Saturate((i * b_diff) / index_diff + b0, 0, 255));
+	}
 }
