@@ -182,9 +182,11 @@ SetFramePointers        endp
 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 CreateSLI       proc
 ;mov cbits,ecx
-                push    ebp
+                push    ebp ebx
                 call    NormalizeBits
-                ErrorCodePOP eax, ebp
+				mov		ebx,0
+                ErrorCodePOP eax, ecx ebp
+				pop		ebx
                 push    eax ebx ecx edx
                 mul     edx
                 mul     ebx
@@ -309,8 +311,8 @@ DestroySLI      proc
 ;³                              EAX = Error Code
 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
-.data?
-VideoSLI        dd ?
+.data
+VideoSLI        dd 0
 
 .code
 CreateVideoSLI  proc
@@ -370,7 +372,10 @@ DestroyVideoSLI proc
                 push    ebp
                 call    UnsetVideoMode
                 mov     ebx, VideoSLI
-                call    free
+				test	ebx,ebx
+				jz		skip_free
+						call    free
+				skip_free:
                 pop     ebp
                 ErrorCode FREE_ERROR
                 xor     eax,eax
