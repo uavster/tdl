@@ -186,14 +186,14 @@ void CreateColorRamp(DWORD *palette, int first_index, DWORD first_color, int las
 	DWORD a1, r1, g1, b1;
 	UnpackARGB(last_color, &a1, &r1, &g1, &b1);
 
-	int a_diff = a1 - a0;
-	int r_diff = r1 - r0;
-	int g_diff = g1 - g0;
-	int b_diff = b1 - b0;
+	int a_diff = static_cast<int>(a1) - static_cast<int>(a0);
+	int r_diff = static_cast<int>(r1) - static_cast<int>(r0);
+	int g_diff = static_cast<int>(g1) - static_cast<int>(g0);
+	int b_diff = static_cast<int>(b1) - static_cast<int>(b0);
 	for (int i = 0; i < index_diff + 1; ++i) {
-		palette[i + first_index] = PackARGB(Saturate((i * a_diff) / index_diff + a0, 0, 255), 
-											Saturate((i * r_diff) / index_diff + r0, 0, 255), 
-											Saturate((i * g_diff) / index_diff + g0, 0, 255),
-											Saturate((i * b_diff) / index_diff + b0, 0, 255));
+		palette[i + first_index] = PackARGB(Saturate((i * a_diff) / index_diff + static_cast<int>(a0), 0, 255), 
+											Saturate((i * r_diff) / index_diff + static_cast<int>(r0), 0, 255), 
+											Saturate((i * g_diff) / index_diff + static_cast<int>(g0), 0, 255),
+											Saturate((i * b_diff) / index_diff + static_cast<int>(b0), 0, 255));
 	}
 }
