@@ -207,6 +207,27 @@ void SetRenderMethode(int);
 #pragma aux SetRenderMethode "*" parm   [eax] \
                              modify [eax ebx ecx edx esi edi ebp];
 
+typedef struct {
+	float	x;
+	float	y;
+} POINT2;
+
+/*
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+; Project point on camera.
+;
+; INPUT  : EAX -> POINT2D where to store the point projection
+; 		   ECX -> RENDERPOINT
+;          EDX -> RENDERCAMERA
+;
+; OUTPUT : EAX -> POINT2D with the point projected on the camera plane
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+*/
+const POINT2D *ProjectPointOnCamera(RENDERPOINT *, RENDERCAMERA *, POINT2D *);
+#pragma aux ProjectPointOnCamera "*" parm   [ecx] [edx] [eax] \
+                             modify [eax ebx ecx edx esi edi ebp 8087] \
+							 value [eax];
+
 #ifdef __cplusplus
   };
 #endif

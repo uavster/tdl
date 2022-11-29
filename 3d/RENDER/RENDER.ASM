@@ -398,16 +398,16 @@ SetApperture    endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Perspective transform of a RENDERPOINT
 ;
-; INPUT  : EAX = Center X of destination SLI
-;          EBX = Center Y of destination SLI
-;          ECX -> RENDERPOINT
+; INPUT  : ECX -> RENDERPOINT
 ;          EDX -> RENDERCAMERA
 ;          XS = Float where to store 2D X
 ;          YS = Float where to store 2D Y
+;		   IZ = Float where to store 1/z
 ;
-; OUTPUT : 2D x,y stored
+; OUTPUT : 2D x,y,1/z stored
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 TransformPoint  MACRO XS,YS,IZ
+		local not_behind
         ; X0 = Xo - XC
         fld     [ecx.PointPos.x]
         fsub    [edx.CamPos.x]
@@ -494,6 +494,23 @@ TransformPoint  MACRO XS,YS,IZ
         fstp    trash
         fstp    trash
 ENDM
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Project point on camera.
+;
+; INPUT  : EAX -> POINT2D where to store the point projection
+; 		   ECX -> RENDERPOINT
+;          EDX -> RENDERCAMERA
+;
+; OUTPUT : EAX -> POINT2D with the point projected on the camera plane
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ProjectPointOnCamera	proc
+		push	ebp ebx
+		mov		ebp, esp
+		TransformPoint [eax.u],[eax.v],[ebp.u]
+		pop 	ebx ebp
+		ret
+endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Perspective transform of 3D points
