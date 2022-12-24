@@ -26,13 +26,13 @@ WLIBOPTS=/q
 !if $d(DEBUG)
 
 COPTS = -db -d4 -w3 -fpi87 -fp5 -zdp -zu -bt=dos -i$(HDIR) -oneatx -s -zq -3r
-CCOPTS = -4r -hw -db -d2 -fpi87 -fp3 -i$(HDIR) -mf -w5 -ze -zp4 -zdp -zl -xs
+CCOPTS = -4r -hw -db -d2 -fpi87 -fp3 -i$(HDIR) -mf -w5 -ze -zp4 -zdp -zl -xst
 ASMOPTS = /m6 /mx /zi /w-aln /t /i. /i$(INCDIR) /i$(TDLPATH)\NEWSGL /d__DEBUG__=1
 
 !else
 
 COPTS = -w3 -fpi87 -fp5 -zdp -zu -bt=dos -i$(HDIR) -oneatx -s -zq -3r -wcd=302
-CCOPTS = -4r -fpi87 -fp3 -i$(HDIR) -mf -w5 -ze -zdp -zl -xs
+CCOPTS = -4r -fpi87 -fp3 -i$(HDIR) -mf -w5 -ze -zdp -zl -xst -s
 ASMOPTS = /m6 /mx /w-aln /t /i. /i$(INCDIR) /i$(DEFDIR) /i$(TDLPATH)\NEWSGL /d__DEBUG__=0
 
 !endif
