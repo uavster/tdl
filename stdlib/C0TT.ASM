@@ -29,6 +29,7 @@ MAX_DOS_COMMAND_LINE_LENGTH		EQU 127		; Including final carry return.
         include utils.inc
 		include memcpy.inc
 		include dpmi.inc
+        INCLUDE newsgl.inc
 
         extrn   main_: near
         public  _cstart_
