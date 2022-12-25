@@ -80,15 +80,15 @@ void *GetObjectByName(char *,RENDERWORLD *,int);
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets the position of the camera from the world reference system
 ;
-; INTPUT -> EAX = float X
-;           EBX = float Y
-;           ECX = float Z
+; INTPUT -> ST0 = X
+;           ST1 = Y
+;           ST2 = Z
 ;           EDX -> RENDERCAMERA or NULL if Current Camera
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 */
 void SetCameraPos(float,float,float,RENDERCAMERA *);
-#pragma aux SetCameraPos "*" parm   [eax] [ebx] [ecx] [edx] \
-                             modify [eax ebx ecx edx esi edi ebp];
+#pragma aux SetCameraPos "*" parm   [8087] [8087] [8087] [edx] \
+                             modify [eax ebx ecx edx esi edi ebp 8087];
 
 /*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -120,15 +120,15 @@ void SetCameraOrientation(float alpha, float beta, float gamma, RENDERCAMERA *ca
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Points the camera to a target point
 ;
-; INPUT : EAX = float target X
-;         EBX = float target Y
-;         ECX = float target Z
+; INPUT : st0 = float target X
+;         st1 = float target Y
+;         st2 = float target Z
 ;         EDX -> RENDERCAMERA or NULL if Current Camera
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 */
 void SetCameraTarget(float,float,float,RENDERCAMERA *);
-#pragma aux SetCameraTarget "*" parm   [eax] [ebx] [ecx] [edx] \
-                             modify [eax ebx ecx edx esi edi ebp];
+#pragma aux SetCameraTarget "*" parm   [8087] [8087] [8087] [edx] \
+                             modify [eax ebx ecx edx esi edi ebp 8087];
 
 /*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
@@ -173,14 +173,14 @@ void SetLinedRenderColor(int);
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Rotates a RENDERMESH
 ;
-; INPUT : ST1 = Float ALPHA
-;         ST0 = Float BETA
+; INPUT : ST0 = Float ALPHA
+;         ST1 = Float BETA
 ;         EDX -> RENDERMESH structure
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 */
 void RotateMesh(float, float, RENDERMESH *);
 #pragma aux RotateMesh "*" parm   [8087] [8087] [edx] \
-                             modify [eax ebx ecx edx esi edi ebp];
+                             modify [eax ebx ecx edx esi edi ebp 8087];
 
 /*
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ

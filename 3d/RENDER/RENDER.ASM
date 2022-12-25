@@ -96,9 +96,9 @@ LinedPoly       endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Sets the position of the camera from the world reference system
 ;
-; INPUT : EAX = float X
-;         EBX = float Y
-;         ECX = float Z
+; INPUT : ST0 = X
+;         ST1 = Y
+;         ST2 = Z
 ;         EDX -> RENDERCAMERA or NULL if Current Camera
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetCameraPos    proc
@@ -106,9 +106,9 @@ SetCameraPos    proc
         jnz     no_def_cam_pos
                 mov     edx,Camera
         no_def_cam_pos:
-        mov     [edx.CamPos.x],eax
-        mov     [edx.CamPos.y],ebx
-        mov     [edx.CamPos.z],ecx
+        fstp	[edx.CamPos.x]
+        fstp	[edx.CamPos.y]
+        fstp	[edx.CamPos.z]
         ret
 SetCameraPos    endp
 
@@ -312,9 +312,9 @@ GetCameraOrientation    endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Points a camera to a target point
 ;
-; INTPUT : EAX = float target X
-;          EBX = float target Y
-;          ECX = float target Z
+; INTPUT : ST0 = float target X
+;          ST1 = float target Y
+;          ST2 = float target Z
 ;          EDX -> RENDERCAMERA or NULL if Current Camera
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetCameraTarget proc
@@ -322,6 +322,12 @@ SetCameraTarget proc
         jnz     no_def_cam_pointing
                 mov     edx,Camera
         no_def_cam_pointing:
+		fstp	trash
+		mov		eax,trash
+		fstp	trash
+		mov		ebx,trash
+		fstp	trash
+		mov		ecx,trash
         mov     trash,eax
         fld     trash
         fsub    [edx.CamPos.x]
@@ -867,18 +873,18 @@ Iluminate       endp
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Rotates a RENDERMESH
 ;
-; INPUT : ST1 = Float ALPHA
-;         ST0 = Float BETA
+; INPUT : ST0 = Float ALPHA
+;         ST1 = Float BETA
 ;         EDX -> RENDERMESH structure
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 RotateMesh      proc
         fsincos
-        fstp    m_cos_beta
-        fstp    m_sin_beta
-
-        fsincos
         fstp    m_cos_alpha
         fstp    m_sin_alpha
+
+        fsincos
+        fstp    m_cos_beta
+        fstp    m_sin_beta
 
         mov     ecx,[edx.points]
         mov     ebx,[edx.pointdata]

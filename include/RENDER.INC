@@ -129,8 +129,8 @@ global  SetLinedRenderColor : NEAR
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 ; Rotates a RENDERMESH
 ;
-; INPUT : EAX -> Float ALPHA
-;         EBX -> Float BETA
+; INPUT : ST0 = Float ALPHA
+;         ST1 = Float BETA
 ;         EDX -> RENDERMESH structure
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 global  RotateMesh : NEAR
