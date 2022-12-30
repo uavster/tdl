@@ -7,7 +7,10 @@
 #define template_def	template<class _T>
 #define TimeSignal_		TimeSignal<_T>
 
-template_def TimeSignal_::TimeSignal() : dirty(false), currentKeyPoint(keypoints.cend()) {}
+template_def TimeSignal_::TimeSignal() : currentKeyPoint(keypoints.cend()), dirty(false), back_to_front_time(-1) {}
+
+template_def TimeSignal_::TimeSignal(const TimeSignal &other) : keypoints(other.keypoints), currentKeyPoint(keypoints.size() == 0 ? keypoints.cend() : keypoints.cbegin()), dirty(other.dirty), back_to_front_time(other.back_to_front_time) {
+}
 
 template_def TimeSignal_::~TimeSignal() {
 }
@@ -59,11 +62,11 @@ template_def void TimeSignal_::removeAllKeyPoints() {
 	currentKeyPoint = keypoints.cend();
 }
 
-template_def void TimeSignal_::getNeighborKeyPoints(float time, int numNeighbors, KeyPoint *neighbors) {
+template_def void TimeSignal_::getNeighborKeyPoints(float time0, int numNeighbors, KeyPoint *neighbors) {
 	if (keypoints.size() == 0) throw Exception("[TimeSignal::getNeighborKeyPoints] No keypoints in this signal");
 
 	if (keypoints.size() == 1) {
-		float t = time - TIME_SIGNAL_TIME_INC_OUTSIDE_BOUNDS * (numNeighbors / 2 - 1);
+		float t = time0 - TIME_SIGNAL_TIME_INC_OUTSIDE_BOUNDS * (numNeighbors / 2 - 1);
 		for (int i = 0; i < numNeighbors; ++i) {
 			neighbors[i] = keypoints.front();
 			neighbors[i].time = t;
@@ -73,69 +76,115 @@ template_def void TimeSignal_::getNeighborKeyPoints(float time, int numNeighbors
 	}
 
 	if (dirty) sort(false);
-
+	
+	float time = time0;
+	int num_periods = 0;
+	float period = keypoints.back().time - keypoints.front().time + back_to_front_time;
+	if (back_to_front_time >= 0) {
+		if (time0 >= keypoints.front().time) {
+			num_periods = floor((time0 - keypoints.front().time) / period);
+			time = keypoints.front().time + fmod(time0 - keypoints.front().time, period);
+		} else {
+			num_periods = floor((keypoints.front().time - time0) / period);
+			time = keypoints.back().time + back_to_front_time - fmod(keypoints.front().time - time0, period);
+		}
+	}
+	
 	// Time is inside bounds
-	if (time >= keypoints.front().time && time <= keypoints.back().time) {
-
+	if (time >= keypoints.front().time && time <= keypoints.back().time + (back_to_front_time < 0 ? 0 : back_to_front_time)) {
 		// Find nearest key point
 		if (time > currentKeyPoint->time) {
 			while(currentKeyPoint != keypoints.cend() && time > currentKeyPoint->time) ++currentKeyPoint;
-			if (currentKeyPoint == keypoints.cend()) --currentKeyPoint;
-			else {
+			if (currentKeyPoint == keypoints.cend()) {
+				--currentKeyPoint;
+			} else {
 				// Select closest key point in time between next and previous
 				list<KeyPoint>::const_iterator it = currentKeyPoint;
 				--it;
-				if (fabs(time - it->time) < fabs(currentKeyPoint->time - time)) {
+				if (time - it->time < currentKeyPoint->time - time) {
 					--currentKeyPoint;
 				}
 			}
 		} else if (time < currentKeyPoint->time) {
 			while(currentKeyPoint != keypoints.cbegin() && time < currentKeyPoint->time) --currentKeyPoint;
-			// Select closest key point in time between next and previous
-			list<KeyPoint>::const_iterator it = currentKeyPoint;
-			++it;
-			if (fabs(it->time - time) < fabs(time - currentKeyPoint->time)) {
-				++currentKeyPoint;
+			if (time < currentKeyPoint->time) {
+				// Time is before first keypoint.
+				if (back_to_front_time >= 0) {
+					// Periodic signal. Is first or last closer?
+					if (keypoints.front().time - time > back_to_front_time * 0.5) {
+						currentKeyPoint = keypoints.cend();
+						--currentKeyPoint;
+					}					
+				}
+			} else {
+				// Select closest key point in time between next and previous
+				list<KeyPoint>::const_iterator it = currentKeyPoint;
+				++it;
+				if (it->time - time < time - currentKeyPoint->time) {
+					++currentKeyPoint;
+				}
 			}
 		}
-
 		// Select the output vector index that corresponds to the closest key point, so the current time is as centered as possible in the interval
 		int midIndex;
-		if (time >= currentKeyPoint->time)
+		if (time >= currentKeyPoint->time) {
 			midIndex = ceil(0.5f * static_cast<float>(numNeighbors)) - 1;
-		else
+		} else {
 			midIndex = floor(0.5f * static_cast<float>(numNeighbors));
-
+		}
+	
 		// Copy previous key points to the output buffer
-		list<KeyPoint>::const_iterator it = currentKeyPoint;
-		float inc = 0.0f;
-		for (int i = midIndex - 1; i >= 0; --i) {
-			if (it == keypoints.cbegin()) it = keypoints.cend();
-			else if (it != keypoints.cend()) --it;
+		if (back_to_front_time < 0) {
+			list<KeyPoint>::const_iterator it = currentKeyPoint;
+			float inc = 0.0f;
+			for (int i = midIndex - 1; i >= 0; --i) {
+				if (it == keypoints.cbegin()) it = keypoints.cend();
+				else if (it != keypoints.cend()) --it;
 
-			if (it != keypoints.cend()) {
+				if (it != keypoints.cend()) {
+					neighbors[i] = *it;
+				} else {
+					neighbors[i] = keypoints.front();
+					inc -= TIME_SIGNAL_TIME_INC_OUTSIDE_BOUNDS;
+					neighbors[i].time += inc;
+				}
+			}
+			// Copy current and next key points to the output buffer
+			it = currentKeyPoint;
+			inc = 0.0f;
+			for (i = midIndex; i < numNeighbors; ++i) {
+				if (it != keypoints.cend()) {
+					neighbors[i] = *it;
+				} else {
+					neighbors[i] = keypoints.back();
+					inc += TIME_SIGNAL_TIME_INC_OUTSIDE_BOUNDS;
+					neighbors[i].time += inc;
+				}
+
+				if (it != keypoints.cend()) ++it;
+			}
+		} else {
+			list<KeyPoint>::const_iterator it = currentKeyPoint;
+			float kpt = it->time + num_periods * period;
+			for (int i = midIndex - 1; i >= 0; --i) {
+				if (it == keypoints.cbegin()) { it = keypoints.cend(); }
+				float t0 = it->time;
+				--it;
+				kpt -= (it->time <= t0 ? t0 - it->time : back_to_front_time);
 				neighbors[i] = *it;
-			} else {
-				neighbors[i] = keypoints.front();
-				inc -= TIME_SIGNAL_TIME_INC_OUTSIDE_BOUNDS;
-				neighbors[i].time += inc;
+				neighbors[i].time = kpt;
+			}
+			it = currentKeyPoint;
+			kpt = it->time + num_periods * period;
+			for (i = midIndex; i < numNeighbors; ++i) {			
+				neighbors[i] = *it;
+				neighbors[i].time = kpt;
+				float t0 = it->time;
+				++it;
+				if (it == keypoints.cend()) { it = keypoints.cbegin(); }
+				kpt += (it->time >= t0 ? it->time - t0 : back_to_front_time);
 			}
 		}
-		// Copy current and next key points to the output buffer
-		it = currentKeyPoint;
-		inc = 0.0f;
-		for (i = midIndex; i < numNeighbors; ++i) {
-			if (it != keypoints.cend()) {
-				neighbors[i] = *it;
-			} else {
-				neighbors[i] = keypoints.back();
-				inc += TIME_SIGNAL_TIME_INC_OUTSIDE_BOUNDS;
-				neighbors[i].time += inc;
-			}
-
-			if (it != keypoints.cend()) ++it;
-		}
-
 	} else {
 
 		// Time is out of bounds. Generate time vector maintaining the time sequence.

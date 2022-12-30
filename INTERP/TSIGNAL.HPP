@@ -8,6 +8,7 @@ using namespace std;
 template<class _T> class TimeSignal {
 public:
 	TimeSignal();
+	TimeSignal(const TimeSignal &other);
 	virtual ~TimeSignal();
 
 	class KeyPoint {
@@ -32,13 +33,19 @@ public:
 	inline list<KeyPoint> &getKeyPoints() { if (dirty) sort(false); return keypoints; }
 
 	void getNeighborKeyPoints(float time, int numNeighbors, KeyPoint *neighbors);
+	
+	void setPeriodic(float last_to_first_keypoint_time) { back_to_front_time = last_to_first_keypoint_time; }
+	
+	void setNonPeriodic() { back_to_front_time = -1; }
 
 protected:
 	void sort(bool defer);
+	float normalizedTime(float t);
 private:
 	list<KeyPoint> keypoints;
 	list<KeyPoint>::const_iterator currentKeyPoint;
 	bool dirty;		// If true, the list needs to be sorted
+	float back_to_front_time;
 };
 
 #include "tsignal.hh"

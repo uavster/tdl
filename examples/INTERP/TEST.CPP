@@ -30,11 +30,12 @@ private:
 int main() {
 	// Trajectory in camera pose.
 	Pose3Trajectory pose_trajectory;
-	pose_trajectory.addKeyPoint(0.0f, Pose3(Vector3(0, 0, 5), Quaternion(Vector3(1, 0, 0), 0)));
+	pose_trajectory.addKeyPoint(0.0f, Pose3(Vector3(0, 0, 6), Quaternion(Vector3(1, 0, 0), 0)));
 	pose_trajectory.addKeyPoint(1.5f, Pose3(Vector3(-4, 0, 7), Quaternion(Vector3(1, 0, 0), M_PI/4)));
 	pose_trajectory.addKeyPoint(3.0f, Pose3(Vector3(-1, -3.5, 12), Quaternion(Vector3(0, 1, 0), M_PI/2)));
-	pose_trajectory.addKeyPoint(4.5f, Pose3(Vector3(3, 0.5, 5), Quaternion(Vector3(0, 1, 1), M_PI)));
+	pose_trajectory.addKeyPoint(4.5f, Pose3(Vector3(3, 0.5, 5.5), Quaternion(Vector3(0, 1, 1), M_PI)));
 	pose_trajectory.addKeyPoint(6.0f, Pose3(Vector3(1, 3, 12), Quaternion(Vector3(1, 1, 0), M_PI)));
+	pose_trajectory.setPeriodic(1);
 	Pose3CubicCatmullRomInterpolator pose_interpolator;
 	pose_interpolator.setTrajectory(pose_trajectory);
 

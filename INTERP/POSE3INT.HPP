@@ -48,6 +48,12 @@ public:
 	TimeSignal<Vector3> &positions() { return positions_; }
 	TimeSignal<Quaternion> &orientations() { return orientations_; }
 	
+	void setPeriodic(float last_to_first_keypoint_time) { 
+		positions_.setPeriodic(last_to_first_keypoint_time); 
+		orientations_.setPeriodic(last_to_first_keypoint_time);
+	}
+	void setNonPeriodic() { positions_.setNonPeriodic(); orientations_.setNonPeriodic(); }
+	
 private:
 	TimeSignal<Vector3> positions_;
 	TimeSignal<Quaternion> orientations_;
