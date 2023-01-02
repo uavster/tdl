@@ -85,7 +85,7 @@ template_def void TimeSignal_::getNeighborKeyPoints(float time0, int numNeighbor
 			num_periods = floor((time0 - keypoints.front().time) / period);
 			time = keypoints.front().time + fmod(time0 - keypoints.front().time, period);
 		} else {
-			num_periods = floor((keypoints.front().time - time0) / period);
+			num_periods = floor((keypoints.front().time - time0) / period) - 1;
 			time = keypoints.back().time + back_to_front_time - fmod(keypoints.front().time - time0, period);
 		}
 	}
