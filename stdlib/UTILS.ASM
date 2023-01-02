@@ -720,6 +720,15 @@ PRFlab521:
 				inc		esi
 				jmp		print_type_name
 		finite_number:
+		fld		qword ptr [ebx]
+		ftst
+		fnstsw	ax
+		sahf
+		jae		finite_number_positive_or_zero
+				mov		al,'-'
+				call	[CharCallback]
+				fchs
+		finite_number_positive_or_zero:
         ; Convert double to int format as integer.decimals
 		mov		eax,factor_decimal
 		test	eax,eax
@@ -737,7 +746,7 @@ PRFlab521:
 				mov		factor_decimal,eax	; OK to overwrite if any IRQ precalculated this before
 				pop		ebx
 		factor_is_precalculated:
-        fld     qword ptr [ebx]
+		; Precondition: st(0) = qword ptr [ebx]
         fist    dword ptr ss:[ebp]
         fisub   dword ptr ss:[ebp]
         fimul   factor_decimal

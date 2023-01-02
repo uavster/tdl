@@ -25,6 +25,8 @@ void PushToString(char *,char);
 char *strcpy(const char *src, char *dst);
 #pragma aux strcpy_ "*" parm	[esi] [edi] value [edi];
 
+int sprintf(char *str, const char *format, ...);
+
 #ifdef __cplusplus
   };
 #endif

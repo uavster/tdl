@@ -11,17 +11,17 @@
 
 void PrintFormatted(char *);
 #pragma aux PrintFormatted "*" parm [esi]\
-                               modify [eax ebx ecx edx esi edi ebp];
+                               modify [eax ebx ecx edx esi edi ebp 8087];
+							  
+void FormatString(char *, const char *);
+#pragma aux FormatString "*" parm [edi] [esi]\
+                             modify [eax ebx ecx edx esi edi ebp 8087];	
 
-void printf(char *cadena,...) {
-        va_list la;
+void prepare_args(va_list la, const char *cadena, char *tmpstr) {
         DWORD   i,j,len;
-        char    tmpstr[MAX_STRING_LENGTH];
         int     psize;
-
         i=0;
         j=0;
-        va_start(la,cadena);
         len=strlen(cadena);
         while(i<len && i<MAX_STRING_LENGTH)
         {
@@ -64,6 +64,25 @@ void printf(char *cadena,...) {
                 }
         }
         tmpstr[j]='\0';
+}
+
+void printf(char *cadena, ...) {
+        va_list la;
+        char    tmpstr[MAX_STRING_LENGTH];
+
+        va_start(la,cadena);
+		prepare_args(la, cadena, tmpstr);
         va_end(la);
         PrintFormatted(tmpstr);
+}
+
+int sprintf(char *str, const char *format, ...) {
+        va_list la;
+        char    tmp_format[MAX_STRING_LENGTH];
+
+        va_start(la, format);
+		prepare_args(la, format, tmp_format);
+        va_end(la);
+        FormatString(str, tmp_format);
+		return strlen(str);
 }
