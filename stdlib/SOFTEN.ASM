@@ -26,6 +26,7 @@ JUMPS
 ; OUTPUT -> DS:EDI -> buffer softened
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 soften8 proc
+		push ebp
         mov counter_x8,ecx
         mov ebp,ecx
         neg ebp
@@ -60,6 +61,7 @@ soften8 proc
         pop edx
         dec counter_x8
         jnz soft_it1_8
+		pop ebp
         ret
 counter_x8      dd 1
 soften8 endp
@@ -82,6 +84,7 @@ soften8 endp
 ; OUTPUT -> DS:EDI -> buffer softened
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 soften4 proc
+		push ebp
         mov counter_x4,ecx
         mov ebp,ecx
         neg ebp
@@ -108,6 +111,7 @@ soften4 proc
         pop edx
         dec counter_x4
         jnz soft_it1_4
+		pop ebp
         ret
 counter_x4      dd 1
 soften4 endp

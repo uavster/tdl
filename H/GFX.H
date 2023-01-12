@@ -29,6 +29,14 @@ void DrawLine(SLI *sli, int x0, int y0, int x1, int y1, DWORD bgr);
 #pragma aux DrawLine "Line" parm	[edi] [eax] [ebx] [ecx] [edx] [esi]\
 							modify	[eax ebx ecx edx esi edi 8087];
 
+void Soften4(BYTE *in_pixels, int width, int height, BYTE *out_pixels);
+#pragma aux Soften4 "soften4" 	parm	[esi] [ecx] [edx] [edi]\
+								modify	[eax ebx ecx edx esi edi];
+
+void Soften8(BYTE *in_pixels, int width, int height, BYTE *out_pixels);
+#pragma aux Soften8 "soften8" 	parm	[esi] [ecx] [edx] [edi]\
+								modify	[eax ebx ecx edx esi edi];
+								
 #ifdef __cplusplus
   }
 #endif
