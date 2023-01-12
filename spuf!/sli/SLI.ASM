@@ -141,31 +141,46 @@ SetDefProperties        endp
 ;          ECX = Bytes per pixel
 ;          EDX = Frames
 ;          EDI -> SLI
+;		   ESI = Pointer to memory block holding all frames data. If NULL, 
+;				 the SLI header will point to the memory right after the
+;				 header and the frame pointer array.
 ;
 ; OUTPUT : ESI -> First frame
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 SetFramePointers        proc
         test    edx,edx
         jz      no_frames
+		push	ebp
         ; Need to set frame pointers
         push    eax ebx ecx edx
-        lea     esi,[edi+size SLI]
-        mov     [edi.SLIPImages],esi
+		lea		edx,[edi+size SLI]
+        mov		[edi.SLIPImages],edx
+		pop		edx
+		push	edx
         mov     ebp,edx
         mul     ebx
         mul     ecx
         mov     ecx,eax
-        lea     edx,[esi+ebp*4]
+		mov		eax,[edi.SLIPImages]
+		; Set frame pointers to passed memory block, or to area after header if not passed. 
+		test	esi,esi
+		jz		no_ptr_given
+				mov		edx,esi
+				jmp		set_ptr_to_frames
+		no_ptr_given:
+				lea     edx,[eax+ebp*4]
+		set_ptr_to_frames:
         mov     [edi.SLIFramePtr],edx
         xor     ebx,ebx
         SetFramePtrs:
-                mov     [esi+ebx*4],edx
+                mov     [eax+ebx*4],edx
                 inc     ebx
                 add     edx,ecx
         dec     ebp
         jnz     SetFramePtrs
         pop     edx ecx ebx eax
         mov     esi,[edi.SLIFramePtr]
+		pop		ebp
         no_frames:
         ret
 SetFramePointers        endp
@@ -206,6 +221,7 @@ CreateSLI       proc
 
                 call    SetDefProperties
 				push	eax ebx ecx edx edi
+				xor		esi,esi
                 call    SetFramePointers
                 pop		eax
                 push	eax
@@ -267,6 +283,25 @@ CreateVoidSLI   proc
                 clc
                 ret
                 endp
+
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;³ SetFrameData:       Set frame pointers to the given memory buffer. 
+;					   The memory is owned by the caller and must be large
+;					   enough to hold all frames.
+;					   Frames must be contiguous in memory.
+;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;³      Entrada:        EDI : SLI pointer
+;						ESI : Pointer to frame memory.
+;ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SetFrameData	proc
+				mov		eax,[SLI ptr edi.SLIXSize]
+				mov		ebx,[SLI ptr edi.SLIYSize]
+				mov		ecx,[SLI ptr edi.SLIColorBits]		; SLIColorBits is actualy bytes per pixel
+				mov		edx,[SLI ptr edi.SLITotalFrames]	; Number of frames is 16.16
+				shr		edx,16
+				call	SetFramePointers
+				ret
+				endp
 
 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ;³ DestroySLI:          libera un SLI de memoria
