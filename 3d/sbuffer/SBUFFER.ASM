@@ -509,6 +509,19 @@ endif
         endp
 
 ;ีออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออธ
+;ณ  GetFirstSpanPtr :   Returns pointer to first span in a line         ณ
+;ฦออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออต
+;ณ         Entrada   :   EAX - Pointer to SpanBufferSLI                 ณ
+;ณ                       EBX - Line index                               ณ
+;ณ          Salida   :   EAX - Pointer to SPAN                          ณ
+;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+GetFirstSpanInLine		proc
+        mov     eax, [SLI ptr eax.SLISBufferNfo]
+        lea     eax, [eax+ebx*4+4]
+		ret
+endp
+
+;ีออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออธ
 ;ณ  RenderSBufferSLI :   Renderiza el SBufferSLI                        ณ
 ;ฦออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออต
 ;ณ         Entrada   :   EAX - Puntero al SpanBufferSLI                 ณ

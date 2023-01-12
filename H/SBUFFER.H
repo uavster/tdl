@@ -126,6 +126,20 @@ void RenderSBufferSLI(SLI *slip);
 #pragma aux RenderSBufferSLI "*" parm [eax] \
                                  modify [eax ebx ecx edx esi edi ebp];
 
+/*
+;ีออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออธ
+;ณ  GetFirstSpanPtr :   Returns pointer to first span in a line         ณ
+;ฦออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออต
+;ณ         Entrada   :   EAX - Pointer to SpanBufferSLI                 ณ
+;ณ                       EBX - Line index                               ณ
+;ณ          Salida   :   EAX - Pointer to SPAN                          ณ
+;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+	GLOBAL		GetFirstSpanInLine:near
+*/
+SPAN *GetFirstSpanInLine(SLI *slip, int line_index);
+#pragma aux GetFirstSpanInLine "*" parm [eax] [ebx] \
+								   modify [eax] \
+								   value [eax];
 
 void GenericTriangleMapper(SLI *sbuffer, RENDERPOLY *p);
 

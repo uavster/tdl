@@ -107,4 +107,13 @@ SPAN_MAX_INTERPOLATE_VARS equ 4
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
     GLOBAL      GenericTriangleMapper_:near
 
+;ีออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออธ
+;ณ  GetFirstSpanPtr :   Returns pointer to first span in a line         ณ
+;ฦออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออต
+;ณ         Entrada   :   EAX - Pointer to SpanBufferSLI                 ณ
+;ณ                       EBX - Line index                               ณ
+;ณ          Salida   :   EAX - Pointer to SPAN                          ณ
+;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+	GLOBAL		GetFirstSpanInLine:near
+
     GenericTriangleMapper       EQU GenericTriangleMapper_
