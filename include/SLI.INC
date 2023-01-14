@@ -5,9 +5,10 @@
 SLI_TEMP_VARS   EQU 8   ; No puede ser 0 (necesarias para rutinas de blitting)
 
 ; Blitting basic methodes
-SLIBlitCopy      EQU 0
-SLIBlitAlpha     EQU 1
-SLIBlitAlphaMap  EQU 2
+SLIBlitCopy      	EQU 0
+SLIBlitAlpha     	EQU 1
+SLIBlitAlphaMap  	EQU 2
+SLIBlitAddSaturate	EQU 3
 
 SLIMaskedColor   EQU 4
 SLIScaled        EQU 4*2
@@ -229,7 +230,7 @@ global  SetMaskColor : NEAR
 ; Pone el m굏odo de blitting
 ;
 ; INPUT : EAX -> SLI
-;         EBX = Tipo de blit ('SLIBlitCopy', 'SLIBlitAlpha', 'SLIBlitAlphaMap'
+;         EBX = Tipo de blit ('SLIBlitCopy', 'SLIBlitAlpha', 'SLIBlitAlphaMap', 'SLIBlitAddSaturate'
 ;                             y los mismos con '+ SLIMaskedColor' para poner
 ;                             con m쟳cara)
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�

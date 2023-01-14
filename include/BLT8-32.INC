@@ -9,6 +9,7 @@
 global  BlitCopy_8_32: NEAR
 global  BlitAlpha_8_32: NEAR
 global  BlitAlphaMap_8_32: NEAR
+global 	BlitAddSaturate_8_32: NEAR
 
 global  BlitCopyMask_8_32: NEAR
 global  BlitAlphaMask_8_32: NEAR

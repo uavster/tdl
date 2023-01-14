@@ -539,6 +539,87 @@ BlitAlphaMapMask_8_32 proc
         ret
 BlitAlphaMapMask_8_32 endp
 
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+; Makes a blit with 8 bit alpha map from an 8bit SLI to a 32bit one with
+; clipping
+;
+; INPUT : ESI -> Source 8bit SLI
+;         EDI -> Target 32bit SLI
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+BlitAddSaturate_8_32 proc
+        mov     edi,[edi.SLIFramePtr]
+        add     edi,[esi.TARGET_PTR_INIT]
+
+        lea     eax,[esi.SLIPalette]
+        mov     dword ptr sourceimg8_pal_ptr-4,eax
+
+        mov     eax,[esi.TARGET_PTR_INC_Y]
+        mov     CopyTargetIncY,eax
+
+        mov     eax,[esi.SOURCE_SIZE_Y]
+        mov     CopySourceSizeY,eax
+
+        mov     eax,[esi.SOURCE_PTR_INC_Y]
+        mov     CopySourceIncY,eax
+        mov     ebx,[esi.SOURCE_SIZE_X]
+        mov     CopySourceSizeX,ebx
+
+        mov     eax,[esi.SLIFramePtr]
+        mov     sourceimg8_ptr-4,eax
+
+        mov     esi,[esi.SOURCE_PTR_INIT]
+        addsaturate_8_32_y:
+                mov     ecx,CopySourceSizeX
+				; Inner loop total cycles: 97+m (386), 45 (486)
+                addsaturate_8_32_x:
+                        xor     eax,eax	; 2 (386), 1 (486)
+                        mov     al,[esi+12345678h]		; 4, 1
+                        sourceimg8_ptr   LABEL dword	; eax = source image pixel
+                        mov     ebx,[edi]               ; ebp = ARGB of destination image ; 4, 1
+                        mov     eax,[eax*4+12345678h]	; 4, 1
+                        sourceimg8_pal_ptr LABEL dword	; eax = ARGB of source image
+                        
+						; Blue channel.
+						add 	al,bl	; 2, 1
+						rcr 	dh,1	; 9, 3
+						sar 	dh,7	; 3, 2
+						or		al,dh	; 2, 1
+						ror		eax,8	; 3, 2
+						
+						; Green channel.
+						shr		ebx,8	; 3, 2
+						add 	al,bl	; 2, 1
+						rcr 	dh,1	; 9, 3
+						sar 	dh,7	; 3, 2
+						or		al,dh	; 2, 1
+						ror		eax,8	; 3, 2
+						
+						; Red channel.
+						shr		ebx,8	; 3, 2
+						add 	al,bl	; 2, 1
+						rcr 	dh,1	; 9, 3
+						sar 	dh,7	; 3, 2
+						or		al,dh	; 2, 1
+						ror		eax,16	; 3, 2
+						
+						; Alpha channel.
+						; mov		al,0ffh	; 2, 1
+						; ror		eax,8	; 3, 2
+						
+                        mov     [edi],eax	; 2, 1
+						
+                        inc     esi		; 2, 1
+                        add     edi,4	; 2, 1
+                dec     ecx				; 2, 1
+                jnz     addsaturate_8_32_x	; 7+m, 3
+				
+                add     esi,CopySourceIncY
+                add     edi,CopyTargetIncY
+        dec     CopySourceSizeY
+        jnz     addsaturate_8_32_y
+        ret
+BlitAddSaturate_8_32 endp
+
 .data?
 ; ---Blit copy data---
 CopySourceIncY  dd ?

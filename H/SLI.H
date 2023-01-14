@@ -13,11 +13,12 @@
 #endif
 
 //    Blitting basic methodes
-#define SLIBlitCopy       0		// Default
-#define SLIBlitAlpha      1
-#define SLIBlitAlphaMap   2
+#define SLIBlitCopy       	0		// Default
+#define SLIBlitAlpha      	1
+#define SLIBlitAlphaMap   	2
+#define SLIBlitAddSaturate	3
 
-#define SLIMaskedColor    4
+#define SLIMaskedColor    	4
 
 // Animation modes
 #define SLIAnimNormal		0	// Default
