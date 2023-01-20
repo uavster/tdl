@@ -130,6 +130,7 @@ SetDefProperties        proc
         mov		[SLI ptr edi.SLILoopStart], 0
         mov		[SLI ptr edi.SLIPlayingBackwards],0
 		mov		[SLI ptr edi.SLISBufferNfo],0
+		mov		[SLI ptr edi.SLIIntegralImage],0
         ret
 SetDefProperties        endp
 
@@ -323,6 +324,15 @@ DestroySLI      proc
 						pop		eax
 						ErrorCode FREE_ERROR
 				no_sbuffer:
+				; Free the integral image.
+				mov		ebx,[SLI ptr eax.SLIIntegralImage]
+				test	ebx,ebx
+				jz		no_integral_image
+						push	eax
+						call	free
+						pop		eax
+						ErrorCode FREE_ERROR
+				no_integral_image:
                 mov     ebx,eax
                 call    free
                 ErrorCode FREE_ERROR

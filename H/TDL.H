@@ -83,6 +83,8 @@
 
 #include <littable.h>
 
+#include <boxfiltr.h>
+
 #ifdef __cplusplus
   };
 #endif

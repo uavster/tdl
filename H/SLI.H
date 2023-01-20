@@ -82,6 +82,7 @@ typedef struct
     DWORD SLIPalette[256]	; // paleta asociada si no la tiene = NULL
     BYTE  *SLILitTable    	; // puntero a una tabla de conversion si no la tiene = NULL
     DWORD SLISBufferNfo  	; // Datos para los sbufferSLI's
+	int *SLIIntegralImage	; // Points at integral image, or NULL if not available.
 	// Loops will not work well when the end of the loop in fixed point 16.16
 	// is above the range of a signed dword (2^31-1). That's 32,768 frames.
 	BYTE SLIAnimMode		; //0 - Normal

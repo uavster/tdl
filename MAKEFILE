@@ -144,6 +144,7 @@ line.obj:        line.asm         gfx.inc          sli.inc
 draw8x8g.obj:   draw8x8g.asm    sli.inc
 draw4x4g.obj:   draw4x4g.asm    sli.inc
 grid.obj:       grid.asm        grid.inc alloc.inc stderror.inc
+boxfiltr.obj:	boxfiltr.asm	boxfiltr.inc		sli.inc
 
 mglc.obj:       mglc.c          tdl.h               video.h
 
@@ -196,7 +197,7 @@ player.obj:		player.cpp		player.hpp		s3mplay.hpp
 tdl.lib:        stdc.obj        new.obj		except.obj	stdio.obj       count.obj       dpmi.obj	irq.obj\
                 litt16.obj      framerat.obj    sglmain.obj\
                 utils.obj       assert.obj		vga.obj         draw8x8g.obj\
-                draw4x4g.obj    grid.obj\
+                draw4x4g.obj    grid.obj		boxfiltr.obj\
 #                gfiles.obj\
                 filesys.obj     memmgr.obj      pcxread.obj\
                 coolpal.obj     random.obj      soften.obj\
