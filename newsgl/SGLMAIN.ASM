@@ -420,6 +420,7 @@ SVM_ErrorExit:
 ;³                      EAX =   SGL_OK
 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 UnSetVideoMode  proc
+			push	ebp
             cmp     insideMode, -1 ;miramos si hay un modo puesto
             je      UnSetVideoMode_Inmode
             mov     eax, SGL_ERROR
@@ -435,6 +436,7 @@ dontunsetvideom:
 					; Mode unset successfully
 					mov		insideMode, 0
 			unset_video_mode_error:
+			pop		ebp
 			ret
             endp
 ;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
