@@ -19,6 +19,7 @@
 #define SLIBlitAddSaturate	3
 
 #define SLIMaskedColor    	4
+#define SLIScaled			8
 
 // Animation modes
 #define SLIAnimNormal		0	// Default
@@ -491,7 +492,7 @@ void SetAlpha(SLI *slip, void *alpha_value_or_map_ptr);
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 */
 void SetAnimMode(SLI *slip, BYTE anim_mode);
-#pragma aux SetAnimMode "*" parm [eax] [bl]\
+#pragma aux SetAnimMode "*" parm [eax] [ebx]\
 							modify [eax ebx ecx edx esi edi ebp];
 
 /*
