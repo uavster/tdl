@@ -7,6 +7,7 @@ The revamped library features:
 * 2D pipeline with composition of animated layers (SLIs) in multiple image formats
 * 3D pipeline with different texture and lighting modes
 * Full audio stack, including a mixer in multiple audio formats and an S3M player
+* Interpolators of different types
 
 The code is a mix of 90s memorabilia, mostly in assembly, and recent additions in more modern C++. Optimizations target 80486 processors as a homage to a 486 DX4-100, the computer I had when I discovered graphics programming and the demoscene in paper magazines and Bulletin Board Systems.
 
