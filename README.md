@@ -11,6 +11,7 @@ The revamped library features:
 The code is a mix of 90s memorabilia, mostly in assembly, and recent additions in more modern C++. Optimizations target 80486 processors as a homage to a 486 DX4-100, the computer I had when I discovered graphics programming and the demoscene in paper magazines and Bulletin Board Systems.
 
 ## Authors
+As far a I remember (please let me know if I forgot about your contribution):
 * Nitro (Cesar Guirao Robles)
 * Teknik (Xavier Rubio Jansana)
 * B52 (Nacho Mellado, myself)
