@@ -1,5 +1,20 @@
 # The DarkRising Library (TDL)
 
+This is a revamp of the DarkRising's demoscene DOS library. The original library dates back to circa 1998. More than 20 years after its creation, during the COVID pandemic, I came across the library in an old hard disk and saw an unfinished feature I had been working on back in the day (FLI file playing). What started as a compulsion to finish that one feature turned out to be a life saver during the pandemic madness, and ended being a full revamp of the library. 
+
+The revamped library features:
+* Hardware abstractions: video, audio, keyboard, memory, timer.
+* 2D pipeline with composition of animated layers (SLIs) in multiple image formats
+* 3D pipeline with different texture and lighting modes
+* Full audio stack, including a mixer in multiple audio formats and an S3M player
+
+The code is a mix of 90s memorabilia, mostly in assembly, and recent additions in more modern C++. Optimizations target 80486 processors as a homage to a 486 DX4-100, the computer I had when I discovered graphics programming and the demoscene in paper magazines and Bulletin Board Systems.
+
+## Authors
+* Nitro (Cesar Guirao Robles)
+* Teknik (Xavier Rubio Jansana)
+* B52 (Nacho Mellado, myself)
+
 ## System requirements
 * x86 PC with MS-DOS and SVGA video card, or [DOSBox](https://www.dosbox.com/download.php?main=1)
 * Borland Make 3.7 &ast;
