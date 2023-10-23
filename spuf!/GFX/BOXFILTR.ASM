@@ -84,15 +84,18 @@ CreateIntegralImage	proc
 	dec		edx
 	jz		integral_image_done_pop
 	xor		ebx,ebx
+
+  mov		ecx,[SLI ptr esi.SLIXSize]
+  neg		ecx
+  lea		eax,[ecx*4]
+  mov		dword ptr top_cell_offset-4,eax
+  sub		eax,4
+  mov		dword ptr top_left_cell_offset-4,eax
 	create_integral_image_y_loop:			
 			mov		ecx,[SLI ptr esi.SLIXSize]
 			add		ebp,ecx
 			lea		edi,[edi+ecx*4]
 			neg		ecx
-			lea		eax,[ecx*4]
-			mov		dword ptr top_cell_offset-4,eax
-			sub		eax,4
-			mov		dword ptr top_left_cell_offset-4,eax
 			; Set first element in the row as top element + first row pixel.
 			xor		eax,eax
 			mov		bl,[edi+ecx*8]
@@ -104,12 +107,13 @@ CreateIntegralImage	proc
 			jz		create_integral_image_x_loop_done
 			create_integral_image_x_loop:
 					; Each element is previous element + top element - top_left element + current pixel.
-					mov		bl,[edi+ecx*4-12345678h]
+					mov		ebx,[edi+ecx*4-12345678h]
 					top_left_cell_offset:
 					sub		eax,ebx
-					mov		bl,[edi+ecx*4-12345678h]
+					mov		ebx,[edi+ecx*4-12345678h]
 					top_cell_offset:
 					add		eax,ebx
+          xor   ebx,ebx
 					mov		bl,ds:[ebp+ecx]
 					add		eax,ebx
 					mov		[edi+ecx*4],eax
@@ -534,13 +538,13 @@ BoxFilter	proc
   ; The row loop counter is: [0:input_image_width * sizeof(uint32_t):(half_kernel_height + 1) * input_image_width * sizeof(uint32_t))
   ; The column loop counter is: [-(half_kernel_width + 1) * sizeof(uint32_t):sizeof(uint32_t):0)
   ; So, the integral image offset must be:
-  ; integral_image_offset_tl = integral_image.data + sizeof(uint32_t) * (output_image_width - (half_kernel_width + 1) + input_image_width * (integral_image_height - 1 - (2*half_kernel_height + 1))))
+  ; integral_image_offset_tl = integral_image.data + sizeof(uint32_t) * (output_image_width - (half_kernel_width + 1) + input_image_width * (integral_image_height - 1 - (2*half_kernel_height + 1)))
   ; The top right offset is not incremented in the column loop, so:
-  ; integral_image_offset_tr = integral_image.data + sizeof(uint32_t) * (output_image_width - 1 + input_image_width * (integral_image_height - 1 - (2*half_kernel_height + 1))))
+  ; integral_image_offset_tr = integral_image.data + sizeof(uint32_t) * (output_image_width - 1 + input_image_width * (integral_image_height - 1 - (2*half_kernel_height + 1)))
   ; The bottom left offset is not incremented in the row loop, so:
-  ; integral_image_offset_bl = integral_image.data + sizeof(uint32_t) * (output_image_width - (half_kernel_width + 1) + input_image_width * (integral_image_height - 1)
+  ; integral_image_offset_bl = integral_image.data + sizeof(uint32_t) * (output_image_width - (half_kernel_width + 1) + input_image_width * (integral_image_height - 1))
   ; The bottom right offset is not incremented in the row or column loops, so:
-  ; integral_image_offset_br = integral_image.data + sizeof(uint32_t) * (output_image_width - 1 + input_image_width * (integral_image_height - 1)
+  ; integral_image_offset_br = integral_image.data + sizeof(uint32_t) * (output_image_width - 1 + input_image_width * (integral_image_height - 1))
   lea   edx,[ecx*2 + 2]
   sub   edx,[SLI ptr esi.SLIYSize]
   neg   edx
@@ -759,7 +763,7 @@ BoxFilter	proc
         mov   edx,ss:[esp + 4]
         inc   edx
         neg   edx
-        mov   ecx,[12345678h]
+        mov   ecx,ds:[12345678h]
         integral_image_bottom_right_br:
         sub   ecx,[ebx+12345678h]
         integral_image_bottom_right_tr:

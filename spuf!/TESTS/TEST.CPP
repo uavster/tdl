@@ -255,8 +255,8 @@ int main() {
 		BYTE *pixels = (BYTE *)GetCurrentFramePtr(input_sli);
     for (int y = 0; y < input_sli->SLIYSize; ++y) {
       for (int x = 0; x < input_sli->SLIXSize; ++x) {
-        pixels[y * input_sli->SLIPitch + x] = x+2+y+3;
-        // pixels[y * input_sli->SLIPitch + x] = 10;
+        // pixels[y * input_sli->SLIPitch + x] = x+2+y+3;
+        pixels[y * input_sli->SLIPitch + x] = 10;
       }
     }
 		CheckCreateIntegralImage(input_sli);
