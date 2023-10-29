@@ -139,6 +139,8 @@ CreateIntegralImage	endp
 ; with CreateIntegralImage. The time complexity does not depend on the filter
 ; size, only on the image dimensions. 
 ;
+; Input and output SLIs must be the same size.
+;
 ; Input:	EAX -> Input SLI (CreateIntegralImage must have been called first)
 ;			EBX = Kernel width (rounded up to odd number)
 ;     ECX = Kernel height (rounded up to odd number)
@@ -151,6 +153,12 @@ CreateIntegralImage	endp
 ;				INVALID_PARAMETER: the SLI has no integral image allocated
 ;�����������������������������������������������������������������������������
 BoxFilter	proc
+  ; Input and output must have the same size.
+  AssertDword [eax.SLIXSize], _eq, [edi.SLIXSize]
+  AssertDword [eax.SLIYSize], _eq, [edi.SLIYSize]
+  ; The input must have an integral image.
+  AssertDword [eax.SLIIntegralImage], _ne, 0
+
   push  ebp
   ; ebp -> output SLI
   ; esi -> input SLI
