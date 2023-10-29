@@ -29,11 +29,8 @@ void CheckResult(const int *expected, const SLI *actual_sli) {
 }
 
 void CheckCreateIntegralImage(SLI *sli) {
-	int error_code = CreateIntegralImage(sli);
-	if (error_code) {
-		printf(" [ERROR] CreateIntegralImage failed with error %dn.\n", error_code);
-		exit(2);
-	}
+  // Throws if error.
+	CreateIntegralImage(sli);
 }
 
 int num_tests = 0;

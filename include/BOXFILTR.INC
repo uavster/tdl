@@ -5,10 +5,8 @@
 ; had not been allocated already.
 ;
 ; Input:	EAX -> Input SLI
-; Output:	CF = 0, if ok
-;				EAX = 0 (NO_ERROR)
-;			CF = 1, if error
-; 				EAX = Error code
+; Throws: 
+;   Input SLI is not 8bpp
 ;�����������������������������������������������������������������������������
 global CreateIntegralImage: NEAR
 
@@ -25,11 +23,7 @@ global CreateIntegralImage: NEAR
 ;			EBX = Kernel width (rounded up to odd number)
 ;     ECX = Kernel height (rounded up to odd number)
 ;			EDI -> Output SLI
-; Output:	
-;     CF = 0
-;				EAX = 0 (NO_ERROR)
-;			CF = 1, if error
-; 			EAX = Error code
-;				INVALID_PARAMETER: the SLI has no integral image allocated
+; Throws: 
+;   Input SLI does not have an integral image
 ;�����������������������������������������������������������������������������
 global BoxFilter: NEAR

@@ -23,10 +23,8 @@ include boxfiltr.inc
 ; had not been allocated already.
 ;
 ; Input:	EAX -> Input SLI
-; Output:	CF = 0, if ok
-;				EAX = 0 (NO_ERROR)
-;			CF = 1, if error
-; 				EAX = Error code
+; Throws: 
+;   Input SLI is not 8bpp
 ;�����������������������������������������������������������������������������
 CreateIntegralImage	proc
 	; Only 8 bpp supported.
@@ -127,10 +125,44 @@ CreateIntegralImage	proc
 	pop		ebp
 	
 	integral_image_done:
-	xor		eax,eax
-	clc
 	ret
 CreateIntegralImage	endp
+
+
+output_width      equ 0
+output_height     equ 1
+output_pitch      equ 2
+output_frame_ptr  equ 3
+half_kernel_height_plus_one_by_output_pitch   equ 4
+half_kernel_height_by_input_width equ 5
+output_height_by_output_pitch equ 6
+output_height_minus_half_kernel_height_minus_one_by_output_pitch equ 7
+half_kernel_height_by_two_plus_one_by_input_width equ 8
+input_height_minus_one_by_input_width equ 9
+input_height_minus_half_kernel_height_by_two_minus_two_by_input_width equ 10
+minus_half_width_minus_one equ 11
+half_kernel_width_plus_one_by_two_minus_output_width equ 12
+num_variables     equ 13
+
+get macro reg, var_offset
+mov   reg, ss:[ebp+4*var_offset]
+endm
+
+set macro var_offset, reg
+mov   ss:[ebp+4*var_offset], reg
+endm
+
+add_ macro reg, var_offset
+add   reg, ss:[ebp+4*var_offset]
+endm
+
+sub_ macro reg, var_offset
+sub   reg, ss:[ebp+4*var_offset]
+endm
+
+imul_ macro reg, var_offset
+imul  reg, ss:[ebp+4*var_offset]
+endm
 
 ;�����������������������������������������������������������������������������
 ; Applies a box filter of the given size on the SLI contents
@@ -145,30 +177,66 @@ CreateIntegralImage	endp
 ;			EBX = Kernel width (rounded up to odd number)
 ;     ECX = Kernel height (rounded up to odd number)
 ;			EDI -> Output SLI
-; Output:	
-;     CF = 0
-;				EAX = 0 (NO_ERROR)
-;			CF = 1, if error
-; 			EAX = Error code
-;				INVALID_PARAMETER: the SLI has no integral image allocated
+; Throws: 
+;   Input SLI does not have an integral image
 ;�����������������������������������������������������������������������������
 BoxFilter	proc
-  ; Input and output must have the same size.
-  AssertDword [eax.SLIXSize], _eq, [edi.SLIXSize]
-  AssertDword [eax.SLIYSize], _eq, [edi.SLIYSize]
   ; The input must have an integral image.
   AssertDword [eax.SLIIntegralImage], _ne, 0
-
-  push  ebp
-  ; ebp -> output SLI
-  ; esi -> input SLI
-  mov   ebp,edi
-  mov   esi,eax
 
   ; ebx = Half kernel width (rounded up to odd number).
   ; ecx = Half kernel height (rounded up to odd number).
   shr   ebx,1
   shr   ecx,1
+  ; edi -> output SLI
+  ; esi -> input SLI
+  mov   esi,eax
+
+  ; Make space for stack variables.
+  push  ebp
+  sub   esp,num_variables*4
+  mov   ebp,esp
+  ; Init stack variables.
+  mov   eax,[SLI ptr edi.SLIXSize]
+  set   output_width,eax
+  mov   eax,[SLI ptr edi.SLIYSize]
+  set   output_height,eax
+  mov   eax,[SLI ptr edi.SLIPitch]
+  set   output_pitch,eax
+  mov   eax,edi
+  call  GetCurrentFramePtr
+  set   output_frame_ptr,eax
+  mov   eax,ecx
+  inc   eax
+  imul  eax,[SLI ptr edi.SLIPitch]
+  set   half_kernel_height_plus_one_by_output_pitch,eax
+  mov   eax,ecx
+  imul  eax,[SLI ptr esi.SLIXSize]
+  set   half_kernel_height_by_input_width,eax
+  shl   eax,1
+  add   eax,[SLI ptr esi.SLIXSize]
+  set   half_kernel_height_by_two_plus_one_by_input_width,eax
+  mov   eax,[SLI ptr edi.SLIYSize]
+  imul  eax,[SLI ptr edi.SLIPitch]
+  set   output_height_by_output_pitch,eax
+  sub_  eax,half_kernel_height_plus_one_by_output_pitch
+  set   output_height_minus_half_kernel_height_minus_one_by_output_pitch,eax
+  mov   eax,[SLI ptr esi.SLIYSize]
+  dec   eax
+  imul  eax,[SLI ptr esi.SLIYSize]
+  set   input_height_minus_one_by_input_width,eax
+  lea   eax,[ecx*2+2]
+  sub   eax,[SLI ptr esi.SLIYSize]
+  neg   eax
+  imul  eax,[SLI ptr esi.SLIXSize]
+  set   input_height_minus_half_kernel_height_by_two_minus_two_by_input_width,eax
+  mov   eax,ebx
+  inc   eax
+  neg   eax
+  set   minus_half_width_minus_one,eax   
+  lea   eax,[ebx*2+2]  
+  sub_  eax,output_width
+  set   half_kernel_width_plus_one_by_two_minus_output_width,eax
 
   ; ---- Modify code for pointers of top band ----
 
@@ -177,14 +245,10 @@ BoxFilter	proc
   ; The column loop counter is: [-(half_kernel_width + 1) * sizeof(uint8_t):sizeof(uint8_t):0)
   ; So, the input image offset must be:
   ; input_image_offset = output_image.data + sizeof(uint8_t) * (half_kernel_width + 1 + output_image_pitch * (half_kernel_height + 1))
-  mov   edx,ecx
-  inc   edx
-  imul  edx,[SLI ptr ebp.SLIPitch]
+  get   edx,half_kernel_height_plus_one_by_output_pitch
   add   edx,ebx
   inc   edx
-	mov		eax,ebp
-	call	GetCurrentFramePtr
-  add   edx,eax
+  add_  edx,output_frame_ptr
   mov   dword ptr ds:[destination_top_left-4],edx
 
   ; Self-modify the top-left corner address of the integral image.
@@ -193,8 +257,7 @@ BoxFilter	proc
   ; The column loop counter is: [-(half_kernel_width + 1) * sizeof(uint32_t):sizeof(uint32_t):0)
   ; So, the integral image offset must be:
   ; integral_image_offset = integral_image.data + sizeof(uint32_t) * ((half_kernel_width + 1) + half_kernel_width + input_image_width * half_kernel_height)
-  mov   edx,ecx
-  imul  edx,[SLI ptr esi.SLIXSize]
+  get   edx,half_kernel_height_by_input_width
   add   edx,ebx
   add   edx,ebx
   inc   edx
@@ -207,15 +270,11 @@ BoxFilter	proc
   ; The column loop counter is: [sizeof(uint8_t)*(-output_image_width + 2*(half_kernel_width + 1)):sizeof(uint8_t):0)
   ; So, the input image offset must be:
   ; input_image_offset = output_image.data + sizeof(uint8_t) * (output_image_width - (half_kernel_width + 1) + (half_kernel_height + 1) * output_image_pitch)
-  mov   edx,ecx
-  inc   edx
-  imul  edx,[SLI ptr ebp.SLIPitch]
-  add   edx,[SLI ptr ebp.SLIXSize]
+  get   edx,half_kernel_height_plus_one_by_output_pitch
+  add   edx,[SLI ptr edi.SLIXSize]
   sub   edx,ebx
   dec   edx
-	mov		eax,ebp
-	call	GetCurrentFramePtr
-  add   edx,eax
+  add_  edx,output_frame_ptr
   mov   dword ptr ds:[destination_top_center-4],edx
 
   ; Self-modify the top-center corner addresses of the integral image.
@@ -226,9 +285,8 @@ BoxFilter	proc
   ; integral_image_offset_l = integral_image.data + sizeof(uint32_t) * (output_image_width - 2*(half_kernel_width + 1) + half_kernel_height * integral_image_width)
   ; integral_image_offset_r = integral_image.data + sizeof(uint32_t) * (output_image_width - 1 + half_kernel_height * integral_image_width)
 	mov		eax,[SLI ptr esi.SLIIntegralImage]
-  mov   edx,ecx
-  imul  edx,[SLI ptr esi.SLIXSize]
-  add   edx,[SLI ptr ebp.SLIXSize]
+  get   edx,half_kernel_height_by_input_width
+  add   edx,[SLI ptr edi.SLIXSize]
   push  edx
   dec   edx
   shl   edx,2
@@ -247,13 +305,9 @@ BoxFilter	proc
   ; The column loop counter is: [-(half_kernel_width + 1) * sizeof(uint8_t):sizeof(uint8_t):0)
   ; So, the input image offset must be:
   ; input_image_offset = output_image.data + sizeof(uint8_t) * (output_image_width + (half_kernel_height + 1) * output_image_pitch)
-  mov   edx,ecx
-  inc   edx
-  imul  edx,[SLI ptr ebp.SLIPitch]
-  add   edx,[SLI ptr ebp.SLIXSize]
-	mov		eax,ebp
-	call	GetCurrentFramePtr
-  add   edx,eax
+  get   edx,half_kernel_height_plus_one_by_output_pitch
+  add   edx,[SLI ptr edi.SLIXSize]
+  add_  edx,output_frame_ptr
   mov   dword ptr ds:[destination_top_right-4],edx
 
   ; Self-modify the top-right corner address of the integral image.
@@ -265,8 +319,7 @@ BoxFilter	proc
   ; The right offset is not incremented by the column loop, so:
   ; integral_image_offset_r = integral_image.data + sizeof(uint32_t) * (integral_image_width - 1 + integral_image_width * half_kernel_height)
 	mov		eax,[SLI ptr esi.SLIIntegralImage]
-  mov   edx,ecx
-  imul  edx,[SLI ptr esi.SLIXSize]
+  get   edx,half_kernel_height_by_input_width
   add   edx,[SLI ptr esi.SLIXSize]
   dec   edx
   push  edx
@@ -286,15 +339,10 @@ BoxFilter	proc
   ; The column loop counter is: [-(half_kernel_width + 1) * sizeof(uint8_t):sizeof(uint8_t):0)
   ; So, the input image offset must be:
   ; input_image_offset = output_image.data + sizeof(uint8_t) * (half_kernel_width + 1 + output_image_pitch * (output_image_height - half_kernel_height - 1))
-  mov   edx,[SLI ptr ebp.SLIYSize]
-  sub   edx,ecx
-  dec   edx
-  imul  edx,[SLI ptr ebp.SLIPitch]
+  get   edx,output_height_minus_half_kernel_height_minus_one_by_output_pitch
   add   edx,ebx
   inc   edx
-	mov		eax,ebp
-	call	GetCurrentFramePtr
-  add   edx,eax
+  add_  edx,output_frame_ptr
   mov   dword ptr ds:[destination_center_left-4],edx
 
   ; Self-modify the center-left side address of the integral image.
@@ -309,9 +357,7 @@ BoxFilter	proc
   add   edx,[SLI ptr esi.SLIIntegralImage]
   mov   dword ptr ds:[integral_image_center_left_t-4],edx
   lea   edx,[ebx*2 + 1]
-  lea   eax,[ecx*2 + 1]
-  imul  eax,[SLI ptr esi.SLIXSize]
-  add   edx,eax
+  add_  edx,half_kernel_height_by_two_plus_one_by_input_width
   shl   edx,2
   add   edx,[SLI ptr esi.SLIIntegralImage]
   mov   dword ptr ds:[integral_image_center_left_b-4],edx
@@ -321,16 +367,11 @@ BoxFilter	proc
   ; The column loop counter is: [sizeof(uint8_t)*(-output_image_width + 2*(half_kernel_width + 1)):sizeof(uint8_t):0)
   ; So, the input image offset must be:
   ; input_image_offset = output_image.data + sizeof(uint8_t) * (output_image_width - (half_kernel_width + 1) + output_image_pitch * (output_image_height - half_kernel_height - 1))
-  mov   edx,[SLI ptr ebp.SLIYSize]
-  sub   edx,ecx
-  dec   edx
-  imul  edx,[SLI ptr ebp.SLIPitch]
-  add   edx,[SLI ptr ebp.SLIXSize]
+  get   edx,output_height_minus_half_kernel_height_minus_one_by_output_pitch
+  add   edx,[SLI ptr edi.SLIXSize]
   sub   edx,ebx
   dec   edx
-	mov		eax,ebp
-	call	GetCurrentFramePtr
-  add   edx,eax
+  add_  edx,output_frame_ptr
   mov   dword ptr ds:[destination_center_center-4],edx
 
   ; Self-modify the center-center corner addresses of the integral image.
@@ -343,30 +384,28 @@ BoxFilter	proc
   ; integral_image_offset_bl = integral_image.data + sizeof(uint32_t) * (output_image_width - 2*(half_kernel_width + 1) + input_image_width * (2*half_kernel_height + 1)
   ; integral_image_offset_br = integral_image.data + sizeof(uint32_t) * (output_image_width - 1 + input_image_width * (2*half_kernel_height + 1)
 	mov		eax,[SLI ptr esi.SLIIntegralImage]
-  mov   edx,[SLI ptr ebp.SLIXSize]
+  mov   edx,[SLI ptr edi.SLIXSize]
   sub   edx,ebx
   sub   edx,ebx
   sub   edx,2
   shl   edx,2
   add   edx,eax
   mov   dword ptr ds:[integral_image_center_center_tl-4],edx
-  mov   edx,[SLI ptr ebp.SLIXSize]
+  mov   edx,[SLI ptr edi.SLIXSize]
   dec   edx
   shl   edx,2
   add   edx,eax
   mov   dword ptr ds:[integral_image_center_center_tr-4],edx
-  lea   edx,[ecx*2 + 1]
-  imul  edx,[SLI ptr ebp.SLIXSize]
+  get   edx,half_kernel_height_by_two_plus_one_by_input_width
   sub   edx,ebx
   sub   edx,ebx
   sub   edx,2
-  add   edx,[SLI ptr ebp.SLIXSize]
+  add   edx,[SLI ptr edi.SLIXSize]
   shl   edx,2
   add   edx,eax
   mov   dword ptr ds:[integral_image_center_center_bl-4],edx
-  lea   edx,[ecx*2 + 1]
-  imul  edx,[SLI ptr ebp.SLIXSize]
-  add   edx,[SLI ptr ebp.SLIXSize]
+  get   edx,half_kernel_height_by_two_plus_one_by_input_width
+  add   edx,[SLI ptr edi.SLIXSize]
   dec   edx
   shl   edx,2
   add   edx,eax
@@ -377,14 +416,9 @@ BoxFilter	proc
   ; The column loop counter is: [-(half_kernel_width + 1) * sizeof(uint8_t):sizeof(uint8_t):0)
   ; So, the input image offset must be:
   ; input_image_offset = output_image.data + sizeof(uint8_t) * (output_image_width + output_image_pitch * (output_image_height - half_kernel_height - 1))
-  mov   edx,[SLI ptr ebp.SLIYSize]
-  sub   edx,ecx
-  dec   edx
-  imul  edx,[SLI ptr ebp.SLIPitch]
-  add   edx,[SLI ptr ebp.SLIXSize]
-	mov		eax,ebp
-	call	GetCurrentFramePtr
-  add   edx,eax
+  get   edx,output_height_minus_half_kernel_height_minus_one_by_output_pitch
+  add   edx,[SLI ptr edi.SLIXSize]
+  add_  edx,output_frame_ptr
   mov   dword ptr ds:[destination_center_right-4],edx
 
   ; Self-modify the center-right corner addresses of the integral image.
@@ -404,21 +438,19 @@ BoxFilter	proc
   shl   edx,2
   add   edx,eax
   mov   dword ptr ds:[integral_image_center_right_tl-4],edx
-  mov   edx,[SLI ptr ebp.SLIXSize]
+  mov   edx,[SLI ptr edi.SLIXSize]
   dec   edx
   shl   edx,2
   add   edx,eax
   mov   dword ptr ds:[integral_image_center_right_tr-4],edx
-  lea   edx,[ecx*2 + 1]
-  imul  edx,[SLI ptr esi.SLIXSize]
+  get   edx,half_kernel_height_by_two_plus_one_by_input_width
   add   edx,[SLI ptr esi.SLIXSize]
   sub   edx,ebx
   dec   edx
   shl   edx,2
   add   edx,eax
   mov   dword ptr ds:[integral_image_center_right_bl-4],edx
-  lea   edx,[ecx*2 + 1]
-  imul  edx,[SLI ptr esi.SLIXSize]
+  get   edx,half_kernel_height_by_two_plus_one_by_input_width
   add   edx,[SLI ptr esi.SLIXSize]
   dec   edx
   shl   edx,2
@@ -432,13 +464,10 @@ BoxFilter	proc
   ; The column loop counter is: [-(half_kernel_width + 1) * sizeof(uint8_t):sizeof(uint8_t):0)
   ; So, the input image offset must be:
   ; input_image_offset = output_image.data + sizeof(uint8_t) * (half_kernel_width + 1 + output_image_pitch * output_image_height)
-  mov   edx,[SLI ptr ebp.SLIYSize]
-  imul  edx,[SLI ptr ebp.SLIPitch]
+  get   edx,output_height_by_output_pitch
   add   edx,ebx
   inc   edx
-	mov		eax,ebp
-	call	GetCurrentFramePtr
-  add   edx,eax
+  add_  edx,output_frame_ptr
   mov   dword ptr ds:[destination_bottom_left-4],edx
 
   ; Self-modify the bottom-left side address of the integral image.
@@ -450,20 +479,14 @@ BoxFilter	proc
   ; The right offsets are not incremented in the row loop, so:
   ; integral_image_offset_br = integral_image.data + sizeof(uint32_t) * ((half_kernel_width + 1) + half_kernel_width + input_image_width * (integral_image_height - 1)
   mov   eax,[SLI ptr esi.SLIIntegralImage]
-  lea   edx,[ecx*2+1]
-  sub   edx,[SLI ptr esi.SLIYSize]
-  inc   edx
-  neg   edx
-  imul  edx,[SLI ptr esi.SLIXSize]
+  get   edx,input_height_minus_half_kernel_height_by_two_minus_two_by_input_width
   add   edx,ebx
   add   edx,ebx
   inc   edx
   shl   edx,2
   add   edx,eax
   mov   dword ptr ds:[integral_image_bottom_left_tr-4],edx
-  mov   edx,[SLI ptr esi.SLIYSize]
-  dec   edx
-  imul  edx,[SLI ptr esi.SLIXSize]
+  get   edx,input_height_minus_one_by_input_width
   add   edx,ebx
   add   edx,ebx
   inc   edx
@@ -476,14 +499,11 @@ BoxFilter	proc
   ; The column loop counter is: [sizeof(uint8_t)*(-output_image_width + 2*(half_kernel_width + 1)):sizeof(uint8_t):0)
   ; So, the input image offset must be:
   ; input_image_offset = output_image.data + sizeof(uint8_t) * (output_image_width - (half_kernel_width + 1) + output_image_pitch * output_image_height)
-  mov   edx,[SLI ptr ebp.SLIYSize]
-  imul  edx,[SLI ptr ebp.SLIPitch]
-  add   edx,[SLI ptr ebp.SLIXSize]
+  get   edx,output_height_by_output_pitch
+  add   edx,[SLI ptr edi.SLIXSize]
   sub   edx,ebx
   dec   edx
-	mov		eax,ebp
-	call	GetCurrentFramePtr
-  add   edx,eax
+  add_  edx,output_frame_ptr
   mov   dword ptr ds:[destination_bottom_center-4],edx
 
   ; Self-modify the bottom-center corner addresses of the integral image.
@@ -496,11 +516,8 @@ BoxFilter	proc
   ; The bottom offsets are not incremented in the row loop, so:
   ; integral_image_offset_bl = integral_image.data + sizeof(uint32_t) * (output_image_width - 2*(half_kernel_width + 1) + input_image_width * (integral_image_height - 1)
   ; integral_image_offset_br = integral_image.data + sizeof(uint32_t) * (output_image_width - 1 + input_image_width * (integral_image_height - 1)
-  lea   edx,[ecx*2 + 2]
-  sub   edx,[SLI ptr esi.SLIYSize]
-  neg   edx
-  imul  edx,[SLI ptr esi.SLIXSize]
-  add   edx,[SLI ptr ebp.SLIXSize]
+  get   edx,input_height_minus_half_kernel_height_by_two_minus_two_by_input_width
+  add   edx,[SLI ptr edi.SLIXSize]
   push  edx
   lea   eax,[ebx*2 + 2]
   sub   edx,eax
@@ -512,10 +529,8 @@ BoxFilter	proc
   shl   edx,2
   add   edx,[SLI ptr esi.SLIIntegralImage]
   mov   dword ptr ds:[integral_image_bottom_center_tr-4],edx
-  mov   edx,[SLI ptr esi.SLIYSize]
-  dec   edx
-  imul  edx,[SLI ptr esi.SLIXSize]
-  add   edx,[SLI ptr ebp.SLIXSize]
+  get   edx,input_height_minus_one_by_input_width
+  add   edx,[SLI ptr edi.SLIXSize]
   push  edx
   lea   eax,[2*ebx + 2]
   sub   edx,eax
@@ -533,12 +548,9 @@ BoxFilter	proc
   ; The column loop counter is: [-(half_kernel_width + 1) * sizeof(uint8_t):sizeof(uint8_t):0)
   ; So, the input image offset must be:
   ; input_image_offset = output_image.data + sizeof(uint8_t) * (output_image_width + output_image_pitch * output_image_height)
-  mov   edx,[SLI ptr ebp.SLIYSize]  
-  imul  edx,[SLI ptr ebp.SLIPitch]
-  add   edx,[SLI ptr ebp.SLIXSize]
-	mov		eax,ebp
-	call	GetCurrentFramePtr
-  add   edx,eax
+  get   edx,output_height_by_output_pitch
+  add   edx,[SLI ptr edi.SLIXSize]
+  add_  edx,output_frame_ptr
   mov   dword ptr ds:[destination_bottom_right-4],edx
 
   ; Self-modify the bottom-right corner addresses of the integral image.
@@ -553,11 +565,8 @@ BoxFilter	proc
   ; integral_image_offset_bl = integral_image.data + sizeof(uint32_t) * (output_image_width - (half_kernel_width + 1) + input_image_width * (integral_image_height - 1))
   ; The bottom right offset is not incremented in the row or column loops, so:
   ; integral_image_offset_br = integral_image.data + sizeof(uint32_t) * (output_image_width - 1 + input_image_width * (integral_image_height - 1))
-  lea   edx,[ecx*2 + 2]
-  sub   edx,[SLI ptr esi.SLIYSize]
-  neg   edx
-  imul  edx,[SLI ptr esi.SLIXSize]
-  add   edx,[SLI ptr ebp.SLIXSize]
+  get   edx,input_height_minus_half_kernel_height_by_two_minus_two_by_input_width
+  add   edx,[SLI ptr edi.SLIXSize]
   dec   edx
   push  edx
   sub   edx,ebx
@@ -568,10 +577,8 @@ BoxFilter	proc
   shl   edx,2
   add   edx,[SLI ptr esi.SLIIntegralImage]
   mov   dword ptr ds:[integral_image_bottom_right_tr-4],edx
-  mov   edx,[SLI ptr esi.SLIYSize]
-  dec   edx
-  imul  edx,[SLI ptr esi.SLIXSize]
-  add   edx,[SLI ptr ebp.SLIXSize]
+  get   edx,input_height_minus_one_by_input_width
+  add   edx,[SLI ptr edi.SLIXSize]
   dec   edx
   push  edx
   sub   edx,ebx
@@ -585,21 +592,15 @@ BoxFilter	proc
 
   ; ---- Iterate over the three bands ----
 
-  push  ebx ecx
-
   ; Filter top pixels up to half the kernel height.
   ; edi: output image row offset
-  mov   edi,ecx
-  inc   edi
-  imul  edi,[SLI ptr ebp.SLIPitch]
+  get   edi,half_kernel_height_plus_one_by_output_pitch
   neg   edi
   ; ebx: integral image row offset
   xor   ebx,ebx
   filter_top_pixels:        
         ; edx: column offset
-        mov   edx,ss:[esp + 4]
-        inc   edx
-        neg   edx
+        get   edx,minus_half_width_minus_one
         filter_top_left_pixels:
               mov   eax,[ebx+edx*4+12345678h]
               integral_image_top_left:
@@ -609,11 +610,7 @@ BoxFilter	proc
         inc   edx
         jnz   filter_top_left_pixels
 
-        mov   edx,[SLI ptr ebp.SLIXSize]
-        sub   edx,ss:[esp + 4]
-        sub   edx,ss:[esp + 4]
-        sub   edx,2
-        neg   edx
+        get   edx,half_kernel_width_plus_one_by_two_minus_output_width
         filter_top_central_pixels:
               mov   eax,[ebx+edx*4+12345678h]
               integral_image_top_center_r:
@@ -626,9 +623,7 @@ BoxFilter	proc
         jnz   filter_top_central_pixels
 
         ; edx: column offset
-        mov   edx,ss:[esp + 4]
-        inc   edx
-        neg   edx
+        get   edx,minus_half_width_minus_one
         mov   ecx,[ebx+12345678h]
         integral_image_top_right_r:
         filter_top_right_pixels:
@@ -643,27 +638,18 @@ BoxFilter	proc
 
   mov   eax,[SLI ptr esi.SLIXSize]
   lea   ebx,[ebx+eax*4]
-  add   edi,[SLI ptr ebp.SLIPitch]
+  add_  edi,output_pitch
   jnz   filter_top_pixels
-
-  pop   ecx ebx
-  push  ebx ecx
 
   ; Filter central pixels below half the kernel height and above half the kernel height before the image bottom.
   ; edi: output image row offset
-  mov   edi,[SLI ptr ebp.SLIYSize]
-  sub   edi,ecx
-  sub   edi,ecx
-  sub   edi,2
-  imul  edi,[SLI ptr ebp.SLIPitch]
-  neg   edi
+  get   edi,half_kernel_height_plus_one_by_output_pitch
+  sub_  edi,output_height_minus_half_kernel_height_minus_one_by_output_pitch
   ; ebx: integral image row offset
   xor   ebx,ebx
   filter_center_pixels:        
         ; edx: column offset
-        mov   edx,ss:[esp + 4]
-        inc   edx
-        neg   edx
+        get   edx,minus_half_width_minus_one
         filter_center_left_pixels:
               mov   eax,[ebx+edx*4+12345678h]
               integral_image_center_left_b:
@@ -675,11 +661,7 @@ BoxFilter	proc
         inc   edx
         jnz   filter_center_left_pixels
 
-        mov   edx,[SLI ptr ebp.SLIXSize]
-        sub   edx,ss:[esp + 4]
-        sub   edx,ss:[esp + 4]
-        sub   edx,2
-        neg   edx
+        get   edx,half_kernel_width_plus_one_by_two_minus_output_width
         filter_center_central_pixels:
               mov   eax,[ebx+edx*4+12345678h]
               integral_image_center_center_br:
@@ -696,9 +678,7 @@ BoxFilter	proc
         jnz   filter_center_central_pixels
 
         ; edx: column offset
-        mov   edx,ss:[esp + 4]
-        inc   edx
-        neg   edx
+        get   edx,minus_half_width_minus_one
         mov   ecx,[ebx+12345678h]
         integral_image_center_right_br:
         sub   ecx,[ebx+12345678h]
@@ -717,25 +697,18 @@ BoxFilter	proc
   
   mov   eax,[SLI ptr esi.SLIXSize]
   lea   ebx,[ebx+eax*4]
-  add   edi,[SLI ptr ebp.SLIPitch]
+  add_  edi,output_pitch
   jnz   filter_center_pixels
-
-  pop   ecx ebx
-  push  ebx ecx
 
   ; Filter bottom pixels, up to half kernel height above the bottom of the image.
   ; edi: output image row offset
-  mov   edi,ecx
-  inc   edi
-  imul  edi,[SLI ptr ebp.SLIPitch]
+  get   edi,half_kernel_height_plus_one_by_output_pitch
   neg   edi
   ; ebx: integral image row offset
   xor   ebx,ebx
   filter_bottom_pixels:        
         ; edx: column offset
-        mov   edx,ss:[esp + 4]
-        inc   edx
-        neg   edx
+        get   edx,minus_half_width_minus_one
         filter_bottom_left_pixels:
               mov   eax,[edx*4+12345678h]
               integral_image_bottom_left_br:
@@ -747,11 +720,7 @@ BoxFilter	proc
         inc   edx
         jnz   filter_bottom_left_pixels
 
-        mov   edx,[SLI ptr ebp.SLIXSize]
-        sub   edx,ss:[esp + 4]
-        sub   edx,ss:[esp + 4]
-        sub   edx,2
-        neg   edx
+        get   edx,half_kernel_width_plus_one_by_two_minus_output_width
         filter_bottom_central_pixels:
               mov   eax,[edx*4+12345678h]
               integral_image_bottom_center_br:
@@ -768,9 +737,7 @@ BoxFilter	proc
         jnz   filter_bottom_central_pixels
 
         ; edx: column offset
-        mov   edx,ss:[esp + 4]
-        inc   edx
-        neg   edx
+        get   edx,minus_half_width_minus_one
         mov   ecx,ds:[12345678h]
         integral_image_bottom_right_br:
         sub   ecx,[ebx+12345678h]
@@ -789,11 +756,11 @@ BoxFilter	proc
 
   mov   eax,[SLI ptr esi.SLIXSize]
   lea   ebx,[ebx+eax*4]
-  add   edi,[SLI ptr ebp.SLIPitch]
+  add_  edi,output_pitch
   jnz   filter_bottom_pixels
 
-  pop   ecx ebx
-
+  ; Destroy stack frame.
+  add   esp,num_variables*4
   pop   ebp
 
 	ret
