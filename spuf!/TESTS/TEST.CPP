@@ -255,29 +255,10 @@ int main() {
 		BYTE *pixels = (BYTE *)GetCurrentFramePtr(input_sli);
     for (int y = 0; y < input_sli->SLIYSize; ++y) {
       for (int x = 0; x < input_sli->SLIXSize; ++x) {
-        // pixels[y * input_sli->SLIPitch + x] = x+2+y+3;
-        pixels[y * input_sli->SLIPitch + x] = 10;
+        pixels[y * input_sli->SLIPitch + x] = x+2+y+3;
       }
     }
 		CheckCreateIntegralImage(input_sli);
-
-    // printf("\n");
-    // for (y = 0; y < 8; ++y) {
-    //   for (int x = 0; x < input_sli->SLIXSize; ++x) {
-    //     printf("%dn ", static_cast<unsigned int>(pixels[y * input_sli->SLIPitch + x]));
-    //   }
-    //   printf("\n");
-    // }
-
-		// const int *integral_pixels = input_sli->SLIIntegralImage;
-    // printf("\n");
-    // for (y = 0; y < 8; ++y) {
-    //   for (int x = 0; x < input_sli->SLIXSize; ++x) {
-    //     printf("%dn ", static_cast<unsigned int>(integral_pixels[y * input_sli->SLIXSize + x]));
-    //   }
-    //   printf("\n");
-    // }
-    // printf("\n");
 
     ReferenceBoxFilter(input_sli, 5, 5, expected_sli);
     BoxFilter(input_sli, 5, 5, output_sli);
