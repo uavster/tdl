@@ -5,6 +5,7 @@
 ; had not been allocated already.
 ;
 ; Input:	EAX -> Input SLI
+;         EBX = Multiplier
 ; Throws: 
 ;   Input SLI is not 8bpp
 ;�����������������������������������������������������������������������������

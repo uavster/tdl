@@ -23,6 +23,7 @@ include boxfiltr.inc
 ; had not been allocated already.
 ;
 ; Input:	EAX -> Input SLI
+;         EBX = Multiplier
 ; Throws: 
 ;   Input SLI is not 8bpp
 ;�����������������������������������������������������������������������������
@@ -52,14 +53,22 @@ CreateIntegralImage	proc
 			mov		[SLI ptr esi.SLIIntegralImage],ebx
 	got_integral_image_buffer:
 
+  ; Create multiplication table.
+  xor   ecx,ecx
+  xor   eax,eax
+  create_multiplication_table:
+      mov   [ecx*4+create_multiplication_table],eax
+      add   eax,ebx
+  inc   cl
+  jnz   create_multiplication_table
+
 	push	ebp
-	
+
 	mov		eax,esi
 	call	GetCurrentFramePtr
 	mov		ebp,eax
 	mov		edx,[SLI ptr esi.SLIYSize]
 	xor		eax,eax
-	xor		ebx,ebx
 	mov		edi,[SLI ptr esi.SLIIntegralImage]
 		
 	; First line.
@@ -72,7 +81,7 @@ CreateIntegralImage	proc
 	xor		ebx,ebx
 	create_integral_image_x_loop_0:
 			mov		bl,ds:[ebp+ecx]
-			add		eax,ebx
+			add		eax,[create_multiplication_table+4*ebx]
 			mov		[edi+ecx*4],eax
 	inc		ecx
 	jnz		create_integral_image_x_loop_0
@@ -81,7 +90,6 @@ CreateIntegralImage	proc
 	mov		edx,[SLI ptr esi.SLIYSize]
 	dec		edx
 	jz		integral_image_done_pop
-	xor		ebx,ebx
 
   mov		ecx,[SLI ptr esi.SLIXSize]
   neg		ecx
@@ -96,10 +104,11 @@ CreateIntegralImage	proc
 			neg		ecx
 			; Set first element in the row as top element + first row pixel.
 			xor		eax,eax
+      xor   ebx,ebx
 			mov		bl,[edi+ecx*8]
 			add		eax,ebx
 			mov		bl,ds:[ebp+ecx]
-			add		eax,ebx
+			add		eax,[create_multiplication_table+4*ebx]
 			mov		[edi+ecx*4],eax
 			inc		ecx
 			jz		create_integral_image_x_loop_done
@@ -113,7 +122,7 @@ CreateIntegralImage	proc
 					add		eax,ebx
           xor   ebx,ebx
 					mov		bl,ds:[ebp+ecx]
-					add		eax,ebx
+					add		eax,[create_multiplication_table+4*ebx]
 					mov		[edi+ecx*4],eax
 			inc		ecx
 			jnz		create_integral_image_x_loop
@@ -765,5 +774,8 @@ BoxFilter	proc
 
 	ret
 BoxFilter	endp
+
+.data?
+multiplication_table    dd 256 dup(?)
 
 end

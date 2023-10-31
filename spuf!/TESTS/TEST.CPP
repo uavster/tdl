@@ -30,7 +30,7 @@ void CheckResult(const int *expected, const SLI *actual_sli) {
 
 void CheckCreateIntegralImage(SLI *sli) {
   // Throws if error.
-	CreateIntegralImage(sli);
+	CreateIntegralImage(sli, 1);
 }
 
 int num_tests = 0;

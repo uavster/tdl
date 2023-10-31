@@ -19,16 +19,14 @@
 ; had not been allocated already.
 ;
 ; Input:	EAX -> Input SLI
-; Output:	CF = 0, if ok
-;				EAX = 0 (NO_ERROR)
-;			CF = 1, if error
-; 				EAX = Error code
+;         EBX = Multiplier
+; Throws: 
+;   Input SLI is not 8bpp
 ;�����������������������������������������������������������������������������
 */
-int CreateIntegralImage(SLI *sli);
-#pragma aux CreateIntegralImage "*" parm   [eax] \
-									modify [eax ebx ecx edx esi edi ebp] \
-									value  [eax];
+int CreateIntegralImage(SLI *sli, DWORD multiplier);
+#pragma aux CreateIntegralImage "*" parm   [eax] [ebx] \
+									modify [eax ebx ecx edx esi edi ebp];
 
 /*
 ;�����������������������������������������������������������������������������
@@ -42,12 +40,8 @@ int CreateIntegralImage(SLI *sli);
 ;			EBX = Kernel width (rounded up to odd number)
 ;     ECX = Kernel height (rounded up to odd number)
 ;			EDI -> Output SLI
-; Output:	
-;     CF = 0
-;				EAX = 0 (NO_ERROR)
-;			CF = 1, if error
-; 			EAX = Error code
-;				INVALID_PARAMETER: the SLI has no integral image allocated
+; Throws: 
+;   Input SLI does not have an integral image
 ;�����������������������������������������������������������������������������
 */
 void BoxFilter(const SLI *input_sli, int kernel_width, int kernel_height, SLI *output_sli);
