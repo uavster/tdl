@@ -1,7 +1,7 @@
 #include "tdl.h"
 #include "string.h"
 
-void CheckResult(const int *expected, const SLI *actual_sli) {
+void CheckIntegralmage(const int *expected, const SLI *actual_sli) {
 	const int *actual = actual_sli->SLIIntegralImage;
 	const int len = actual_sli->SLIXSize * actual_sli->SLIYSize;
 	bool are_equal = true;
@@ -26,11 +26,6 @@ void CheckResult(const int *expected, const SLI *actual_sli) {
 		}
 		exit(1);
 	}
-}
-
-void CheckCreateIntegralImage(SLI *sli) {
-  // Throws if error.
-	CreateIntegralImage(sli, 1);
 }
 
 int num_tests = 0;
@@ -139,7 +134,7 @@ int main() {
 	NewTest("CreateIntegralImage does nothing with zero width and height SLI");
 	{
 		SLI *sli = CreateSLI(0, 0, 8, 1);
-		CheckCreateIntegralImage(sli);
+		CreateIntegralImage(sli, 1);
 		DestroySLI(sli);
 		printf(" [OK]\n");
 	}
@@ -147,7 +142,7 @@ int main() {
 	NewTest("CreateIntegralImage does nothing with zero height SLI");
 	{
 		SLI *sli = CreateSLI(2, 0, 8, 1);
-		CheckCreateIntegralImage(sli);
+		CreateIntegralImage(sli, 1);
 		DestroySLI(sli);
 		printf(" [OK]\n");
 	}
@@ -155,7 +150,7 @@ int main() {
 	NewTest("CreateIntegralImage does nothing with zero width SLI");
 	{
 		SLI *sli = CreateSLI(0, 2, 8, 1);
-		CheckCreateIntegralImage(sli);
+		CreateIntegralImage(sli, 1);
 		DestroySLI(sli);
 		printf(" [OK]\n");
 	}
@@ -164,9 +159,9 @@ int main() {
 	{
 		SLI *sli = CreateSLI(1, 1, 8, 1);
 		((BYTE *)GetCurrentFramePtr(sli))[0] = 1;
-		CheckCreateIntegralImage(sli);
+		CreateIntegralImage(sli, 1);
 		const int expected[] = { 1 };
-		CheckResult(expected, sli);
+		CheckIntegralmage(expected, sli);
 		DestroySLI(sli);
 	}
 
@@ -177,9 +172,9 @@ int main() {
 		pixels[0] = 1;
 		pixels[1] = 2;
 		pixels[2] = 3;
-		CheckCreateIntegralImage(sli);
+		CreateIntegralImage(sli, 1);
 		const int expected[] = { 1, 3, 6 };
-		CheckResult(expected, sli);
+		CheckIntegralmage(expected, sli);
 		DestroySLI(sli);
 	}
 
@@ -190,9 +185,9 @@ int main() {
 		pixels[0] = 1;
 		pixels[1] = 2;
 		pixels[2] = 3;
-		CheckCreateIntegralImage(sli);
+		CreateIntegralImage(sli, 1);
 		const int expected[] = { 1, 3, 6 };
-		CheckResult(expected, sli);
+		CheckIntegralmage(expected, sli);
 		DestroySLI(sli);
 	}
 
@@ -209,12 +204,12 @@ int main() {
 		pixels[6] = 7;
 		pixels[7] = 8;
 		pixels[8] = 9;
-		CheckCreateIntegralImage(sli);
+		CreateIntegralImage(sli, 1);
 		const int expected[] = { 	1, 3, 6, 
 									5, 12, 21,
 									12, 27, 45
 								};
-		CheckResult(expected, sli);
+		CheckIntegralmage(expected, sli);
 		DestroySLI(sli);
 	}
 
@@ -234,13 +229,39 @@ int main() {
 		pixels[9] = 10;
 		pixels[10] = 11;
 		pixels[11] = 12;
-		CheckCreateIntegralImage(sli);
+		CreateIntegralImage(sli, 1);
 		const int expected[] = { 	1, 3, 6, 
 									5, 12, 21,
 									12, 27, 45,
 									22, 48, 78
 								};
-		CheckResult(expected, sli);
+		CheckIntegralmage(expected, sli);
+		DestroySLI(sli);
+	}
+
+	NewTest("CreateIntegralImage works with 3x4 SLI with multiplier of 23");
+	{
+		SLI *sli = CreateSLI(3, 4, 8, 1);
+		BYTE *pixels = (BYTE *)GetCurrentFramePtr(sli);
+		pixels[0] = 1;
+		pixels[1] = 2;
+		pixels[2] = 3;
+		pixels[3] = 4;
+		pixels[4] = 5;
+		pixels[5] = 6;
+		pixels[6] = 7;
+		pixels[7] = 8;
+		pixels[8] = 9;
+		pixels[9] = 10;
+		pixels[10] = 11;
+		pixels[11] = 12;
+		CreateIntegralImage(sli, 23);
+		const int expected[] = { 	1*23, 3*23, 6*23, 
+									5*23, 12*23, 21*23,
+									12*23, 27*23, 45*23,
+									22*23, 48*23, 78*23
+								};
+		CheckIntegralmage(expected, sli);
 		DestroySLI(sli);
 	}
 
@@ -255,12 +276,16 @@ int main() {
         pixels[y * input_sli->SLIPitch + x] = x+2+y+3;
       }
     }
-		CheckCreateIntegralImage(input_sli);
+		CreateIntegralImage(input_sli, 1);
 
     ReferenceBoxFilter(input_sli, 5, 5, expected_sli);
     BoxFilter(input_sli, 5, 5, output_sli);
 
     CheckBoxFilter(output_sli, expected_sli);
+
+		DestroySLI(expected_sli);
+		DestroySLI(output_sli);
+		DestroySLI(input_sli);
   }
 
 	printf("[SUCCESS] %dn tests passed.", num_tests);

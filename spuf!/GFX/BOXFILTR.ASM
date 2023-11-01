@@ -46,9 +46,9 @@ CreateIntegralImage	proc
 			imul	[SLI ptr esi.SLIYSize]
 			shl		eax,2
 			mov		ecx,eax
-			push	esi
+			push	esi ebx
 			call	malloc
-			pop		esi
+			pop		edx esi
 			ErrorCode	MALLOC_ERROR
 			mov		[SLI ptr esi.SLIIntegralImage],ebx
 	got_integral_image_buffer:
@@ -57,8 +57,8 @@ CreateIntegralImage	proc
   xor   ecx,ecx
   xor   eax,eax
   create_multiplication_table:
-      mov   [ecx*4+create_multiplication_table],eax
-      add   eax,ebx
+      mov   [ecx*4+multiplication_table],eax
+      add   eax,edx
   inc   cl
   jnz   create_multiplication_table
 
@@ -81,7 +81,7 @@ CreateIntegralImage	proc
 	xor		ebx,ebx
 	create_integral_image_x_loop_0:
 			mov		bl,ds:[ebp+ecx]
-			add		eax,[create_multiplication_table+4*ebx]
+			add		eax,[multiplication_table+4*ebx]
 			mov		[edi+ecx*4],eax
 	inc		ecx
 	jnz		create_integral_image_x_loop_0
@@ -103,12 +103,10 @@ CreateIntegralImage	proc
 			lea		edi,[edi+ecx*4]
 			neg		ecx
 			; Set first element in the row as top element + first row pixel.
-			xor		eax,eax
       xor   ebx,ebx
-			mov		bl,[edi+ecx*8]
-			add		eax,ebx
+			mov		eax,[edi+ecx*8]
 			mov		bl,ds:[ebp+ecx]
-			add		eax,[create_multiplication_table+4*ebx]
+			add		eax,[multiplication_table+4*ebx]
 			mov		[edi+ecx*4],eax
 			inc		ecx
 			jz		create_integral_image_x_loop_done
@@ -122,7 +120,7 @@ CreateIntegralImage	proc
 					add		eax,ebx
           xor   ebx,ebx
 					mov		bl,ds:[ebp+ecx]
-					add		eax,[create_multiplication_table+4*ebx]
+					add		eax,[multiplication_table+4*ebx]
 					mov		[edi+ecx*4],eax
 			inc		ecx
 			jnz		create_integral_image_x_loop
