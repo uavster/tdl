@@ -112,12 +112,10 @@ CreateIntegralImage	proc
 			jz		create_integral_image_x_loop_done
 			create_integral_image_x_loop:
 					; Each element is previous element + top element - top_left element + current pixel.
-					mov		ebx,[edi+ecx*4-12345678h]
+					sub		eax,[edi+ecx*4-12345678h]
 					top_left_cell_offset:
-					sub		eax,ebx
-					mov		ebx,[edi+ecx*4-12345678h]
+					add		eax,[edi+ecx*4-12345678h]
 					top_cell_offset:
-					add		eax,ebx
           xor   ebx,ebx
 					mov		bl,ds:[ebp+ecx]
 					add		eax,[multiplication_table+4*ebx]
