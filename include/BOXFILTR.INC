@@ -23,6 +23,7 @@ global CreateIntegralImage: NEAR
 ; Input:	EAX -> Input SLI (CreateIntegralImage must have been called first)
 ;			EBX = Kernel width (rounded up to odd number)
 ;     ECX = Kernel height (rounded up to odd number)
+;     EDX = log2 of divider; the result for each pixel is divided by this value
 ;			EDI -> Output SLI
 ; Throws: 
 ;   Input SLI does not have an integral image

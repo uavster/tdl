@@ -279,7 +279,7 @@ int main() {
 		CreateIntegralImage(input_sli, 1);
 
     ReferenceBoxFilter(input_sli, 5, 5, expected_sli);
-    BoxFilter(input_sli, 5, 5, output_sli);
+    BoxFilter(input_sli, 5, 5, 0, output_sli);
 
     CheckBoxFilter(output_sli, expected_sli);
 

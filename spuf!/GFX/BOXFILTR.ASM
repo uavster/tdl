@@ -181,6 +181,7 @@ endm
 ; Input:	EAX -> Input SLI (CreateIntegralImage must have been called first)
 ;			EBX = Kernel width (rounded up to odd number)
 ;     ECX = Kernel height (rounded up to odd number)
+;     EDX = log2 of divider; the result for each pixel is divided by this value
 ;			EDI -> Output SLI
 ; Throws: 
 ;   Input SLI does not have an integral image
@@ -196,6 +197,17 @@ BoxFilter	proc
   ; edi -> output SLI
   ; esi -> input SLI
   mov   esi,eax
+
+  ; Update right shift opcodes with log2(divider).
+  mov   byte ptr ds:[divider_top_left-1],dl
+  mov   byte ptr ds:[divider_top_center-1],dl
+  mov   byte ptr ds:[divider_top_right-1],dl
+  mov   byte ptr ds:[divider_center_left-1],dl
+  mov   byte ptr ds:[divider_center_center-1],dl
+  mov   byte ptr ds:[divider_center_right-1],dl
+  mov   byte ptr ds:[divider_bottom_left-1],dl
+  mov   byte ptr ds:[divider_bottom_center-1],dl
+  mov   byte ptr ds:[divider_bottom_right-1],dl
 
   ; Make space for stack variables.
   push  ebp
@@ -609,7 +621,8 @@ BoxFilter	proc
         filter_top_left_pixels:
               mov   eax,[ebx+edx*4+12345678h]
               integral_image_top_left:
-              ; TODO: Normalize EAX by kernel area with division table.
+              shr   eax,5
+              divider_top_left:
               mov   [edi+edx+12345678h],al
               destination_top_left:
         inc   edx
@@ -621,7 +634,8 @@ BoxFilter	proc
               integral_image_top_center_r:
               sub   eax,[ebx+edx*4+12345678h]
               integral_image_top_center_l:
-              ; TODO: Normalize EAX by kernel area with division table.
+              shr   eax,5
+              divider_top_center:
               mov   [edi+edx+12345678h],al
               destination_top_center:
         inc   edx
@@ -635,7 +649,8 @@ BoxFilter	proc
               mov   eax,ecx
               sub   eax,[ebx+edx*4+12345678h]
               integral_image_top_right_l:
-              ; TODO: Normalize EAX by kernel area with division table.
+              shr   eax,5
+              divider_top_right:
               mov   [edi+edx+12345678h],al
               destination_top_right:
         inc   edx
@@ -660,7 +675,8 @@ BoxFilter	proc
               integral_image_center_left_b:
               sub   eax,[ebx+edx*4+12345678h]
               integral_image_center_left_t:
-              ; TODO: Normalize EAX by kernel area with division table.
+              shr   eax,5
+              divider_center_left:
               mov   [edi+edx+12345678h],al
               destination_center_left:
         inc   edx
@@ -676,7 +692,8 @@ BoxFilter	proc
               integral_image_center_center_bl:
               add   eax,[ebx+edx*4+12345678h]
               integral_image_center_center_tl:
-              ; TODO: Normalize EAX by kernel area with division table.
+              shr   eax,5
+              divider_center_center:
               mov   [edi+edx+12345678h],al
               destination_center_center:
         inc   edx
@@ -694,7 +711,8 @@ BoxFilter	proc
               integral_image_center_right_tl:
               sub   eax,[ebx+edx*4+12345678h]
               integral_image_center_right_bl:
-              ; TODO: Normalize EAX by kernel area with division table.
+              shr   eax,5
+              divider_center_right:
               mov   [edi+edx+12345678h],al
               destination_center_right:
         inc   edx
@@ -719,7 +737,8 @@ BoxFilter	proc
               integral_image_bottom_left_br:
               sub   eax,[ebx+edx*4+12345678h]
               integral_image_bottom_left_tr:
-              ; TODO: Normalize EAX by kernel area with division table.
+              shr   eax,5
+              divider_bottom_left:
               mov   [edi+edx+12345678h],al
               destination_bottom_left:
         inc   edx
@@ -735,7 +754,8 @@ BoxFilter	proc
               integral_image_bottom_center_tr:
               add   eax,[ebx+edx*4+12345678h]
               integral_image_bottom_center_tl:
-              ; TODO: Normalize EAX by kernel area with division table.
+              shr   eax,5
+              divider_bottom_center:
               mov   [edi+edx+12345678h],al
               destination_bottom_center:
         inc   edx
@@ -753,7 +773,8 @@ BoxFilter	proc
               integral_image_bottom_right_tl:
               sub   eax,[edx*4+12345678h]
               integral_image_bottom_right_bl:
-              ; TODO: Normalize EAX by kernel area with division table.
+              shr   eax,5
+              divider_bottom_right:
               mov   [edi+edx+12345678h],al
               destination_bottom_right:
         inc   edx

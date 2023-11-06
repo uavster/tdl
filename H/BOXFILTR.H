@@ -39,13 +39,14 @@ int CreateIntegralImage(SLI *sli, DWORD multiplier);
 ; Input:	EAX -> Input SLI (CreateIntegralImage must have been called first)
 ;			EBX = Kernel width (rounded up to odd number)
 ;     ECX = Kernel height (rounded up to odd number)
+;     EDX = log2 of divider; the result for each pixel is divided by this value
 ;			EDI -> Output SLI
 ; Throws: 
 ;   Input SLI does not have an integral image
 ;�����������������������������������������������������������������������������
 */
-void BoxFilter(const SLI *input_sli, int kernel_width, int kernel_height, SLI *output_sli);
-#pragma aux BoxFilter "*" parm  [eax] [ebx] [ecx] [edi] \
+void BoxFilter(const SLI *input_sli, DWORD kernel_width, DWORD kernel_height, DWORD log2_divider, SLI *output_sli);
+#pragma aux BoxFilter "*" parm  [eax] [ebx] [ecx] [edx] [edi] \
 									modify [eax ebx ecx edx esi edi ebp];
           
 
