@@ -39,8 +39,15 @@ CreateIntegralImage	proc
 	jz		integral_image_done
 
 	cmp		[SLI ptr esi.SLIIntegralImage],0
-	jnz		got_integral_image_buffer
-			; Allocate a buffer in the SLI for the integral image
+	jz		no_integral_image_buffer
+  ; If the integral image has the requested multiplier, leave.
+  cmp   ebx,[SLI ptr esi.SLIIntegralImageMultiplier]
+  je    integral_image_done
+  ; Otherwise, compute integral image with new multiplier.
+  mov   edx,ebx   ; Multiplier is in EDX from here on.
+  jmp   got_integral_image_buffer
+  no_integral_image_buffer:
+			; Allocate a buffer in the SLI for the integral image.
 			mov		eax,[SLI ptr esi.SLIXSize]
 			xor		edx,edx
 			imul	[SLI ptr esi.SLIYSize]
@@ -48,11 +55,13 @@ CreateIntegralImage	proc
 			mov		ecx,eax
 			push	esi ebx
 			call	malloc
-			pop		edx esi
+			pop		edx esi   ; Multiplier is in EDX from here on.
 			ErrorCode	MALLOC_ERROR
 			mov		[SLI ptr esi.SLIIntegralImage],ebx
 	got_integral_image_buffer:
-
+  ; Update multiplier.
+  mov   [SLI ptr esi.SLIIntegralImageMultiplier],edx
+  
   ; Create multiplication table.
   xor   ecx,ecx
   xor   eax,eax
@@ -170,10 +179,11 @@ imul  reg, ss:[ebp+4*var_offset]
 endm
 
 ;�����������������������������������������������������������������������������
-; Applies a box filter of the given size on the SLI contents
+; For each pixel, computes the integral in a neighborhood and scales it with
+; a divider
 ;
 ; The integral image must have been generated first for the SLI contents
-; with CreateIntegralImage. The time complexity does not depend on the filter
+; with CreateIntegralImage. The time complexity does not depend on the kernel
 ; size, only on the image dimensions. 
 ;
 ; Input and output SLIs must be the same size.
@@ -186,7 +196,7 @@ endm
 ; Throws: 
 ;   Input SLI does not have an integral image
 ;�����������������������������������������������������������������������������
-BoxFilter	proc
+ScaledBoxIntegral	proc
   ; The input must have an integral image.
   AssertDword [eax.SLIIntegralImage], _ne, 0
 
@@ -790,7 +800,62 @@ BoxFilter	proc
   pop   ebp
 
 	ret
-BoxFilter	endp
+ScaledBoxIntegral	endp
+
+;�����������������������������������������������������������������������������
+; Applies a box filter of the given size on the SLI contents
+;
+; Input and output SLIs must be the same size.
+;
+; The time complexity does not depend on the kernel size, only on the image
+; dimensions. 
+;
+; There's no need to create the integral image before calling this function.
+; It will be created internally if needed.
+;
+; Input:	EAX -> Input SLI
+;			EBX = Kernel width (rounded up to odd number)
+;     ECX = Kernel height (rounded up to odd number)
+;			EDI -> Output SLI
+;�����������������������������������������������������������������������������
+BoxFilter	proc
+  ; The normalizing factor 1/kernel_area is turned into Y/D, where D is a power of 2.
+  ; The highest value of the pre-multiplied integral image is W*H*255*D/K, which must be <= 2^32-1 (where W:image width, H:image height, K:kernel area).
+  ; Therefore D <= 2^(floor(log2(K*((2^32-1)/(W*H*255))))).
+  ; The highest possible D gives us the maximum accuracy for Y/D in integer math, so D = 2^(floor(log2(K*((2^32-1)/(W*H*255))))).
+  push  ebp
+  mov   esi,eax
+  push  eax edi ecx ebx
+  mov   ebx,[SLI ptr esi.SLIXSize]
+  imul  ebx,[SLI ptr esi.SLIYSize]
+  mov   eax,-1
+  xor   edx,edx
+  div   ebx
+  pop   ebx
+  push  ebx
+  imul  ebx,ecx
+  mov   ebp,ebx   ; EBP = K
+  imul  eax,ebx
+  mov   ebx,255
+  xor   edx,edx
+  div   ebx
+  bsr   ecx,eax   ; Takes 3 cycles per scanned bit position!
+  push  ecx
+  ; Now, Y, the multiplier is D/K.
+  mov   eax,1
+  shl   eax,cl
+  xor   edx,edx
+  div   ebp
+  ; Pre-multiply the integral image by Y.
+  mov   ebx,eax
+  mov   eax,esi
+  call  CreateIntegralImage
+  pop   edx       ; EDX = log2(D)
+  pop   ebx ecx edi eax 
+  call  ScaledBoxIntegral
+  pop   ebp
+  ret
+BoxFilter endp
 
 .data?
 multiplication_table    dd 256 dup(?)

@@ -12,11 +12,12 @@
 global CreateIntegralImage: NEAR
 
 ;�����������������������������������������������������������������������������
-; Applies a box filter of the given size on the SLI contents
+; For each pixel, computes the integral in a neighborhood and scales it with
+; a divider
 ;
 ; The integral image must have been generated first for the SLI contents
-; with CreateIntegralImage. The time complexity only depends on the image 
-; dimensions, and it does not depend on the filter size.
+; with CreateIntegralImage. The time complexity does not depend on the kernel
+; size, only on the image dimensions. 
 ;
 ; Input and output SLIs must be the same size.
 ;
@@ -27,5 +28,23 @@ global CreateIntegralImage: NEAR
 ;			EDI -> Output SLI
 ; Throws: 
 ;   Input SLI does not have an integral image
+;�����������������������������������������������������������������������������
+global ScaledBoxIntegral: NEAR
+
+;�����������������������������������������������������������������������������
+; Applies a box filter of the given size on the SLI contents
+;
+; Input and output SLIs must be the same size.
+;
+; The time complexity does not depend on the kernel size, only on the image
+; dimensions. 
+;
+; There's no need to create the integral image before calling this function.
+; It will be created internally if needed.
+;
+; Input:	EAX -> Input SLI
+;			EBX = Kernel width (rounded up to odd number)
+;     ECX = Kernel height (rounded up to odd number)
+;			EDI -> Output SLI
 ;�����������������������������������������������������������������������������
 global BoxFilter: NEAR

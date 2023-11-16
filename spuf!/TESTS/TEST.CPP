@@ -37,7 +37,7 @@ void NewTest(const char *name) {
 	printf(".");
 }
 
-void ReferenceBoxFilter(SLI *src, int kernel_width, int kernel_height, SLI *dst) {
+void ReferenceScaledBoxIntegral_(SLI *src, int kernel_width, int kernel_height, SLI *dst, DWORD divider) {
   BYTE *dst_pixels = (BYTE *)GetCurrentFramePtr(dst);
   BYTE *src_pixels = (BYTE *)GetCurrentFramePtr(src);
   for (int y = 0; y < dst->SLIYSize; ++y) {
@@ -56,12 +56,20 @@ void ReferenceBoxFilter(SLI *src, int kernel_width, int kernel_height, SLI *dst)
           sum += src_pixels[src_y * src->SLIPitch + src_x];
         }
       }
-      dst_pixels[y * dst->SLIPitch + x] = static_cast<BYTE>(sum);
+      dst_pixels[y * dst->SLIPitch + x] = static_cast<BYTE>(sum / divider);
     }
   }
 }
 
-void CheckBoxFilter(SLI *result, SLI *expected) {
+void ReferenceScaledBoxIntegral(SLI *src, int kernel_width, int kernel_height, SLI *dst) {
+  ReferenceScaledBoxIntegral_(src, kernel_width, kernel_height, dst, 1);
+}
+
+void ReferenceBoxFilter(SLI *src, int kernel_width, int kernel_height, SLI *dst) {
+  ReferenceScaledBoxIntegral_(src, kernel_width, kernel_height, dst, kernel_width * kernel_height);
+}
+
+void CheckExpectedSLI(SLI *result, SLI *expected, int max_error = 0) {
   BYTE *result_pixels = (BYTE *)GetCurrentFramePtr(result);
   BYTE *expected_pixels = (BYTE *)GetCurrentFramePtr(expected);
   if (result->SLIYSize != expected->SLIYSize) {
@@ -76,7 +84,8 @@ void CheckBoxFilter(SLI *result, SLI *expected) {
   bool are_equal = true;
   for (int y = 0; y < result->SLIYSize && are_equal; ++y) {
     for (int x = 0; x < result->SLIXSize; ++x) {
-      if (result_pixels[y * result->SLIPitch + x] != expected_pixels[y * expected->SLIPitch + x]) {
+      int error = static_cast<int>(result_pixels[y * result->SLIPitch + x]) - static_cast<int>(expected_pixels[y * expected->SLIPitch + x]);
+      if (error > max_error || error < -max_error) {
         are_equal = false;
         break;
       }
@@ -265,7 +274,7 @@ int main() {
 		DestroySLI(sli);
 	}
 
-  NewTest("BoxFilter works with 5x5 kernel on 6x6 constant image");
+  NewTest("ScaledBoxIntegral works with 5x5 kernel on 8x8 SLI");
   {
     SLI *input_sli = CreateSLI(8, 8, 8, 1);
     SLI *output_sli = CreateSLI(8, 8, 8, 1);
@@ -278,10 +287,32 @@ int main() {
     }
 		CreateIntegralImage(input_sli, 1);
 
-    ReferenceBoxFilter(input_sli, 5, 5, expected_sli);
-    BoxFilter(input_sli, 5, 5, 0, output_sli);
+    ReferenceScaledBoxIntegral(input_sli, 5, 5, expected_sli);
+    ScaledBoxIntegral(input_sli, 5, 5, 0, output_sli);
 
-    CheckBoxFilter(output_sli, expected_sli);
+    CheckExpectedSLI(output_sli, expected_sli);
+
+		DestroySLI(expected_sli);
+		DestroySLI(output_sli);
+		DestroySLI(input_sli);
+  }
+
+  NewTest("BoxFilter works with 5x5 kernel on 8x8 SLI");
+  {
+    SLI *input_sli = CreateSLI(8, 8, 8, 1);
+    SLI *output_sli = CreateSLI(8, 8, 8, 1);
+    SLI *expected_sli = CreateSLI(8, 8, 8, 1);
+		BYTE *pixels = (BYTE *)GetCurrentFramePtr(input_sli);
+    for (int y = 0; y < input_sli->SLIYSize; ++y) {
+      for (int x = 0; x < input_sli->SLIXSize; ++x) {
+        pixels[y * input_sli->SLIPitch + x] = x+2+y+3;
+      }
+    }
+
+    ReferenceBoxFilter(input_sli, 5, 5, expected_sli);
+    BoxFilter(input_sli, 5, 5, output_sli);
+
+    CheckExpectedSLI(output_sli, expected_sli, /*max_error=*/1);
 
 		DestroySLI(expected_sli);
 		DestroySLI(output_sli);

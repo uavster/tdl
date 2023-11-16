@@ -30,13 +30,14 @@ int CreateIntegralImage(SLI *sli, DWORD multiplier);
 
 /*
 ;�����������������������������������������������������������������������������
-; Applies a box filter of the given size on the SLI contents
+; For each pixel, computes the integral in a neighborhood and scales it with
+; a divider
 ;
 ; The integral image must have been generated first for the SLI contents
-; with CreateIntegralImage. The time complexity only depends on the image 
-; dimensions, and it does not depend on the filter size.
+; with CreateIntegralImage. The time complexity does not depend on the kernel
+; size, only on the image dimensions. 
 ;
-; Input:	EAX -> Input SLI (CreateIntegralImage must have been called first)
+; Input:	EAX -> Input SLI (CreateIntegralImage must have been called first with the right multiplier)
 ;			EBX = Kernel width (rounded up to odd number)
 ;     ECX = Kernel height (rounded up to odd number)
 ;     EDX = log2 of divider; the result for each pixel is divided by this value
@@ -45,10 +46,31 @@ int CreateIntegralImage(SLI *sli, DWORD multiplier);
 ;   Input SLI does not have an integral image
 ;�����������������������������������������������������������������������������
 */
-void BoxFilter(const SLI *input_sli, DWORD kernel_width, DWORD kernel_height, DWORD log2_divider, SLI *output_sli);
-#pragma aux BoxFilter "*" parm  [eax] [ebx] [ecx] [edx] [edi] \
+void ScaledBoxIntegral(const SLI *input_sli, DWORD kernel_width, DWORD kernel_height, DWORD log2_divider, SLI *output_sli);
+#pragma aux ScaledBoxIntegral "*" parm  [eax] [ebx] [ecx] [edx] [edi] \
 									modify [eax ebx ecx edx esi edi ebp];
-          
+
+/*
+;�����������������������������������������������������������������������������
+; Applies a box filter of the given size on the SLI contents
+;
+; Input and output SLIs must be the same size.
+;
+; The time complexity does not depend on the kernel size, only on the image
+; dimensions. 
+;
+; There's no need to create the integral image before calling this function.
+; It will be created internally if needed.
+;
+; Input:	EAX -> Input SLI
+;			EBX = Kernel width (rounded up to odd number)
+;     ECX = Kernel height (rounded up to odd number)
+;			EDI -> Output SLI
+;�����������������������������������������������������������������������������
+*/
+void BoxFilter(const SLI *input_sli, DWORD kernel_width, DWORD kernel_height, SLI *output_sli);
+#pragma aux BoxFilter "*" parm  [eax] [ebx] [ecx] [edi] \
+									modify [eax ebx ecx edx esi edi ebp];
 
 #ifdef __cplusplus
   }
