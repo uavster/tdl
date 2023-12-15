@@ -250,7 +250,7 @@ ScaledBoxIntegral	proc
   set   output_height_minus_half_kernel_height_minus_one_by_output_pitch,eax
   mov   eax,[SLI ptr esi.SLIYSize]
   dec   eax
-  imul  eax,[SLI ptr esi.SLIYSize]
+  imul  eax,[SLI ptr esi.SLIXSize]
   set   input_height_minus_one_by_input_width,eax
   lea   eax,[ecx*2+2]
   sub   eax,[SLI ptr esi.SLIYSize]
@@ -618,6 +618,8 @@ ScaledBoxIntegral	proc
   mov   dword ptr ds:[integral_image_bottom_right_br-4],edx
 
   ; ---- Iterate over the three bands ----
+
+  ; TODO: deal with image smaller than kernel in any dimension.
 
   ; Filter top pixels up to half the kernel height.
   ; edi: output image row offset
