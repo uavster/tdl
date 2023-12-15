@@ -217,7 +217,7 @@ void DestroyVideoSLI(int nmode);
 ;�      Salida:         nada.
 ;���������������������������������������������������������������������������
 */
-void SetPalette(SLI *punterosli, BYTE *paleta);
+void SetPalette(SLI *punterosli, DWORD *paleta);
 #pragma aux SetPalette "*" parm [eax] [ebx]\
                           modify [eax ebx ecx edx esi edi ebp];
 /*
