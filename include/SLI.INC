@@ -144,7 +144,7 @@ global  GetFrame : NEAR
 global  SetFrame : NEAR
 
 ;�����������������������������������������������������������������������������
-; Sets the frame rate of a multiframe SLI.
+; Updates a SLI animation with the current synchronization timer ticks.
 ;
 ; INPUT  : ESI -> SLI
 ;�����������������������������������������������������������������������������
