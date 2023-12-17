@@ -91,7 +91,9 @@ void CheckExpectedSLI(SLI *result, SLI *expected, int max_error = 0) {
       }
     }
   }
-  if (!are_equal) {
+  if (are_equal) {
+		printf("[OK]\n");
+  } else {
     printf(" [ERROR]\nActual (left) vs expected (right):\n");
 
     const int element_width = 4;
@@ -248,6 +250,35 @@ int main() {
 		DestroySLI(sli);
 	}
 
+	NewTest("CreateIntegralImage works with 4x3 SLI and premultipler of 256");
+	{
+		SLI *sli = CreateSLI(4, 3, 8, 1);
+		BYTE *pixels = (BYTE *)GetCurrentFramePtr(sli);
+    for (int y = 0; y < sli->SLIYSize; ++y) {
+      for (int x = 0; x < sli->SLIXSize; ++x) {
+        pixels[y * sli->SLIPitch + x] = x+2+y+3;
+      }
+    }
+
+    int expected[4 * 3];
+    {
+      for (int y = 0; y < sli->SLIYSize; ++y) {
+        for (int x = 0; x < sli->SLIXSize; ++x) {
+          expected[y * 4 + x] = 0;
+          for (int j = 0; j <= y; ++j) {
+            for (int i = 0; i <= x; ++i) {
+              expected[y * 4 + x] += 256 * pixels[j * sli->SLIPitch + i];
+            }
+          }
+        }
+      }
+    }
+		
+		CreateIntegralImage(sli, 256);
+		CheckIntegralmage(expected, sli);
+		DestroySLI(sli);
+	}
+
 	NewTest("CreateIntegralImage works with 3x4 SLI with multiplier of 23");
 	{
 		SLI *sli = CreateSLI(3, 4, 8, 1);
@@ -318,6 +349,34 @@ int main() {
 		DestroySLI(output_sli);
 		DestroySLI(input_sli);
   }
+
+  NewTest("BoxFilter works with 1x1 kernel on 4x3 SLI");
+  {
+    const int image_width = 4;
+    const int image_height = 3;
+    const int kernel_width = 1;
+    const int kernel_height = 1;
+
+    SLI *input_sli = CreateSLI(image_width, image_height, 8, 1);
+    SLI *output_sli = CreateSLI(image_width, image_height, 8, 1);
+
+    SLI *expected_sli = CreateSLI(image_width, image_height, 8, 1);
+		BYTE *pixels = (BYTE *)GetCurrentFramePtr(input_sli);
+    for (int y = 0; y < input_sli->SLIYSize; ++y) {
+      for (int x = 0; x < input_sli->SLIXSize; ++x) {
+        pixels[y * input_sli->SLIPitch + x] = x+2+y+3;
+      }
+    }
+
+    ReferenceBoxFilter(input_sli, kernel_width, kernel_height, expected_sli);
+    BoxFilter(input_sli, kernel_width, kernel_height, output_sli);
+
+    CheckExpectedSLI(output_sli, expected_sli, /*max_error=*/1);
+
+		DestroySLI(expected_sli);
+		DestroySLI(output_sli);
+		DestroySLI(input_sli);
+  }  
 
 	printf("[SUCCESS] %dn tests passed.", num_tests);
 
