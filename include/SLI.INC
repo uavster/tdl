@@ -320,7 +320,7 @@ SLI struc
     SLIXSize        dd  ?   ; Ancho
     SLIYSize        dd  ?   ; Alto
 
-    SLIPitch        dd  ?   ; ancho de la imagen que la contiene
+    SLIPitch        dd  ?   ; ancho en bytes de cada línea
     SLIColorBits    dd  ?   ; densidad de color
                             ; para  8, 16, 24, 32 bits
                             ; valor 1,  2,  3,  4

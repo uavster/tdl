@@ -99,7 +99,10 @@ NormalizeBits   endp
 SetDefProperties        proc
         mov     [SLI ptr edi.SLIXSize], eax
         mov     [SLI ptr edi.SLIYSize], ebx
+        push    eax
+        imul    eax,ecx
         mov     [SLI ptr edi.SLIPitch], eax
+        pop     eax
         shl     edx,16
         mov     [SLI ptr edi.SLITotalFrames], edx
         mov		[SLI ptr edi.SLILoopEnd],edx

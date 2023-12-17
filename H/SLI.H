@@ -53,7 +53,7 @@ typedef struct
     DWORD SLIXSize;// Ancho
     DWORD SLIYSize;// Alto
 
-    DWORD SLIPitch;// ancho de la imagen que la contiene
+    DWORD SLIPitch;// ancho en bytes de cada línea
     DWORD SLIColorBits;// densidad de color
                         //    ; para  8, 16, 24, 32 bits
                         //    ; valor 1,  2,  3,  4
