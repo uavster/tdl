@@ -17,6 +17,69 @@ include sli.inc
 include boxfiltr.inc
 
 ;�����������������������������������������������������������������������������
+; Creates a table in multiplication_table, where each element is index * multiplier
+;
+; Input:  EDX = Multiplier
+;�����������������������������������������������������������������������������
+_CreateMultiplicationTable proc
+  xor   ecx,ecx
+  xor   eax,eax
+  create_multiplication_table:
+      mov   [ecx*4+multiplication_table],eax
+      add   eax,edx
+  inc   cl
+  jnz   create_multiplication_table
+  ret
+endp
+
+;�����������������������������������������������������������������������������
+; Sets up the integral image creation common to all SLI formats
+;
+; Input:  ESI -> Input SLI
+;         EBX = Multiplier
+; Output:
+;   CF = 0 if success
+;     ESI -> Input SLI
+;     EDX = Multiplier
+;   CF = 1 if error
+;�����������������������������������������������������������������������������
+_SetUpIntegralImage proc
+	cmp		[SLI ptr esi.SLIYSize],0
+	jz		skip_integral_image_creation
+	cmp		[SLI ptr esi.SLIXSize],0
+	jz		skip_integral_image_creation
+
+	cmp		[SLI ptr esi.SLIIntegralImage],0
+	jz		no_integral_image_buffer
+  ; If the integral image has the requested multiplier, leave.
+  cmp   ebx,[SLI ptr esi.SLIIntegralImageMultiplier]
+  je    skip_integral_image_creation
+  ; Otherwise, compute integral image with new multiplier.
+  mov   edx,ebx   ; Multiplier is in EDX from here on.
+  jmp   got_integral_image_buffer
+  no_integral_image_buffer:
+			; Allocate a buffer in the SLI for the integral image.
+			mov		ecx,[SLI ptr esi.SLIXSize]
+			imul	ecx,[SLI ptr esi.SLIYSize]
+			imul  ecx,[SLI ptr esi.SLIColorBits]
+      shl   ecx,2
+			push	esi ebx
+			call	malloc
+			pop		edx esi   ; Multiplier is in EDX from here on.
+			ErrorCode	MALLOC_ERROR
+			mov		[SLI ptr esi.SLIIntegralImage],ebx
+	got_integral_image_buffer:
+  ; Update multiplier.
+  mov   [SLI ptr esi.SLIIntegralImageMultiplier],edx
+  clc
+  ret
+
+  skip_integral_image_creation:
+  stc
+  ret
+endp
+
+;�����������������������������������������������������������������������������
 ; Computes the integral image of an 8 bpp SLI
 ;
 ; It allocates a buffer for the integral image and stores it in the SLI, if it
@@ -33,43 +96,11 @@ CreateIntegralImage	proc
 	mov		eax,[SLI ptr esi.SLIColorBits]
 	AssertDword	eax,_eq,1
 
-	cmp		[SLI ptr esi.SLIYSize],0
-	jz		integral_image_done
-	cmp		[SLI ptr esi.SLIXSize],0
-	jz		integral_image_done
+  call  _SetUpIntegralImage
+  jc    integral_image_done
+  ; ESI -> input SLI, EDX = Multiplier
 
-	cmp		[SLI ptr esi.SLIIntegralImage],0
-	jz		no_integral_image_buffer
-  ; If the integral image has the requested multiplier, leave.
-  cmp   ebx,[SLI ptr esi.SLIIntegralImageMultiplier]
-  je    integral_image_done
-  ; Otherwise, compute integral image with new multiplier.
-  mov   edx,ebx   ; Multiplier is in EDX from here on.
-  jmp   got_integral_image_buffer
-  no_integral_image_buffer:
-			; Allocate a buffer in the SLI for the integral image.
-			mov		eax,[SLI ptr esi.SLIXSize]
-			xor		edx,edx
-			imul	[SLI ptr esi.SLIYSize]
-			shl		eax,2
-			mov		ecx,eax
-			push	esi ebx
-			call	malloc
-			pop		edx esi   ; Multiplier is in EDX from here on.
-			ErrorCode	MALLOC_ERROR
-			mov		[SLI ptr esi.SLIIntegralImage],ebx
-	got_integral_image_buffer:
-  ; Update multiplier.
-  mov   [SLI ptr esi.SLIIntegralImageMultiplier],edx
-  
-  ; Create multiplication table.
-  xor   ecx,ecx
-  xor   eax,eax
-  create_multiplication_table:
-      mov   [ecx*4+multiplication_table],eax
-      add   eax,edx
-  inc   cl
-  jnz   create_multiplication_table
+  call  _CreateMultiplicationTable
 
 	push	ebp
 
@@ -159,43 +190,11 @@ CreateIntegralImage32	proc
 	mov		eax,[SLI ptr esi.SLIColorBits]
 	AssertDword	eax,_eq,4
 
-	cmp		[SLI ptr esi.SLIYSize],0
-	jz		integral_image_done
-	cmp		[SLI ptr esi.SLIXSize],0
-	jz		integral_image_done
-
-	cmp		[SLI ptr esi.SLIIntegralImage],0
-	jz		no_integral_image_buffer32
-  ; If the integral image has the requested multiplier, leave.
-  cmp   ebx,[SLI ptr esi.SLIIntegralImageMultiplier]
-  je    integral_image_done32
-  ; Otherwise, compute integral image with new multiplier.
-  mov   edx,ebx   ; Multiplier is in EDX from here on.
-  jmp   got_integral_image_buffer32
-  no_integral_image_buffer32:
-			; Allocate a buffer in the SLI for the integral image.
-			mov		eax,[SLI ptr esi.SLIXSize]
-			xor		edx,edx
-			imul	[SLI ptr esi.SLIYSize]
-			shl		eax,4
-			mov		ecx,eax
-			push	esi ebx
-			call	malloc
-			pop		edx esi   ; Multiplier is in EDX from here on.
-			ErrorCode	MALLOC_ERROR
-			mov		[SLI ptr esi.SLIIntegralImage],ebx
-	got_integral_image_buffer32:
-  ; Update multiplier.
-  mov   [SLI ptr esi.SLIIntegralImageMultiplier],edx
+  call  _SetUpIntegralImage
+  jc    integral_image_done
+  ; ESI -> input SLI, EDX = Multiplier
   
-  ; Create multiplication table.
-  xor   ecx,ecx
-  xor   eax,eax
-  create_multiplication_table32:
-      mov   [ecx*4+multiplication_table],eax
-      add   eax,edx
-  inc   cl
-  jnz   create_multiplication_table32
+  call  _CreateMultiplicationTable
 
 	push	ebp
 
