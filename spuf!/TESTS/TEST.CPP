@@ -28,6 +28,33 @@ void CheckIntegralmage(const int *expected, const SLI *actual_sli) {
 	}
 }
 
+void CheckIntegralmage32(const int *expected, const SLI *actual_sli) {
+	const int *actual = actual_sli->SLIIntegralImage;
+	const int len = actual_sli->SLIXSize * actual_sli->SLIYSize;
+	bool are_equal = true;
+	for (int i = 0; i < len; ++i) {
+		if (expected[i*4] != actual[i*4] || expected[i*4+1] != actual[i*4+1] || expected[i*4+2] != actual[i*4+2]) {
+			are_equal = false;
+			break;
+		}
+	}	
+	
+	printf(" ");
+	if (are_equal) {
+		printf("[OK]\n");
+	} else {
+		printf(" [ERROR]\nExpected: ");
+		for (i = 0; i < len; ++i) {
+			printf("(%dn %dn %dn) ", expected[i*4], expected[i*4+1], expected[i*4+2]);
+		}
+		printf("\nActual: ");
+		for (i = 0; i < len; ++i) {
+			printf("(%dn %dn %dn) ", actual[i*4], actual[i*4+1], actual[i*4+2]);
+		}
+		exit(1);
+	}
+}
+
 int num_tests = 0;
 
 void NewTest(const char *name) {
@@ -376,7 +403,184 @@ int main() {
 		DestroySLI(expected_sli);
 		DestroySLI(output_sli);
 		DestroySLI(input_sli);
-  }  
+  }
+
+	NewTest("CreateIntegralImage32 does nothing with zero width and height SLI");
+	{
+		SLI *sli = CreateSLI(0, 0, 32, 1);
+		CreateIntegralImage32(sli, 1);
+		DestroySLI(sli);
+		printf(" [OK]\n");
+	}
+
+	NewTest("CreateIntegralImage32 does nothing with zero height SLI");
+	{
+		SLI *sli = CreateSLI(2, 0, 32, 1);
+		CreateIntegralImage32(sli, 1);
+		DestroySLI(sli);
+		printf(" [OK]\n");
+	}
+
+	NewTest("CreateIntegralImage32 does nothing with zero width SLI");
+	{
+		SLI *sli = CreateSLI(0, 2, 32, 1);
+		CreateIntegralImage32(sli, 1);
+		DestroySLI(sli);
+		printf(" [OK]\n");
+	}
+
+	NewTest("CreateIntegralImage32 works with 1x1 SLI");
+	{
+		SLI *sli = CreateSLI(1, 1, 32, 1);
+		BYTE *pixels = (BYTE *)GetCurrentFramePtr(sli);
+		pixels[0] = 1;
+		pixels[1] = 2;
+		pixels[2] = 3;
+		pixels[3] = 0xff;
+		CreateIntegralImage32(sli, 1);
+		const int expected[] = { 1, 2, 3 };
+		CheckIntegralmage32(expected, sli);
+		DestroySLI(sli);
+	}  
+
+	NewTest("CreateIntegralImage32 works with 3x1 SLI");
+	{
+		SLI *sli = CreateSLI(3, 1, 32, 1);
+		BYTE *pixels = (BYTE *)GetCurrentFramePtr(sli);
+		pixels[0] = 1;
+		pixels[1] = 2;
+		pixels[2] = 3;
+		pixels[3] = 0xff;
+		pixels[4] = 4;
+		pixels[5] = 5;
+		pixels[6] = 6;
+		pixels[7] = 0xff;
+		pixels[8] = 7;
+		pixels[9] = 8;
+		pixels[10] = 9;
+		pixels[11] = 0xff;
+		CreateIntegralImage32(sli, 1);
+		const int expected[] = { 1, 2, 3, 0xff, 5, 7, 9, 2*0xff, 12, 15, 18, 3*0xff };
+		CheckIntegralmage32(expected, sli);
+		DestroySLI(sli);
+	}
+
+	NewTest("CreateIntegralImage32 works with 1x3 SLI");
+	{
+		SLI *sli = CreateSLI(1, 3, 32, 1);
+		BYTE *pixels = (BYTE *)GetCurrentFramePtr(sli);
+		pixels[0] = 1;
+		pixels[1] = 2;
+		pixels[2] = 3;
+		pixels[3] = 0xff;
+		pixels[4] = 4;
+		pixels[5] = 5;
+		pixels[6] = 6;
+		pixels[7] = 0xff;
+		pixels[8] = 7;
+		pixels[9] = 8;
+		pixels[10] = 9;
+		pixels[11] = 0xff;
+		CreateIntegralImage32(sli, 1);
+		const int expected[] = { 1, 2, 3, 0xff, 5, 7, 9, 2*0xff, 12, 15, 18, 3*0xff };
+		CheckIntegralmage32(expected, sli);
+		DestroySLI(sli);
+	}
+
+	NewTest("CreateIntegralImage32 works with 3x3 SLI");
+	{
+		SLI *sli = CreateSLI(3, 3, 32, 1);
+		BYTE *pixels = (BYTE *)GetCurrentFramePtr(sli);
+    int j = 0;
+    for (int y = 0; y < sli->SLIYSize; ++y) {
+      for (int x = 0; x < sli->SLIYSize; ++x) {
+        pixels[y * sli->SLIPitch + x * 4] = ++j;
+        pixels[y * sli->SLIPitch + x * 4 + 1] = ++j;
+        pixels[y * sli->SLIPitch + x * 4 + 2] = ++j;
+        pixels[y * sli->SLIPitch + x * 4 + 3] = 0xff;
+      }
+    }
+		CreateIntegralImage32(sli, 1);
+		const int expected[] = { 	
+      /*p00=*/1, 2, 3, 0xff, /*p01=*/5, 7, 9, 0xff*2, /*p02=*/12, 15, 18, 0xff*3, 
+      /*p10=*/11, 13, 15, 0xff*2, /*p11=*/28, 32, 36, 0xff*3, /*p12=*/51, 57, 63, 0xff*4, 
+      /*p20=*/30, 33, 36, 0xff*3, /*p21=*/69, 75, 81, 0xff*4, /*p22=*/117, 126, 135, 0xff*5, 
+		};
+		CheckIntegralmage32(expected, sli);
+		DestroySLI(sli);
+	}
+
+	NewTest("CreateIntegralImage32 works with 4x3 SLI and premultipler of 256");
+	{
+		SLI *sli = CreateSLI(4, 3, 32, 1);
+		BYTE *pixels = (BYTE *)GetCurrentFramePtr(sli);
+    for (int y = 0; y < sli->SLIYSize; ++y) {
+      for (int x = 0; x < sli->SLIXSize; ++x) {
+        pixels[y * sli->SLIPitch + x * 3] = x+y+5;
+        pixels[y * sli->SLIPitch + x * 3 + 1] = y-x+3;
+        pixels[y * sli->SLIPitch + x * 3 + 2] = x*2+y;
+        pixels[y * sli->SLIPitch + x * 3 + 3] = 0xff;
+      }
+    }
+
+    int expected[4 * 3 * 4];
+    {
+      for (int y = 0; y < sli->SLIYSize; ++y) {
+        for (int x = 0; x < sli->SLIXSize; ++x) {
+          expected[(y * 4 + x) * 4] = 0;
+          expected[(y * 4 + x) * 4 + 1] = 0;
+          expected[(y * 4 + x) * 4 + 2] = 0;
+          for (int j = 0; j <= y; ++j) {
+            for (int i = 0; i <= x; ++i) {
+              expected[(y * 4 + x) * 4] += 256 * pixels[j * sli->SLIPitch + i * 4];
+              expected[(y * 4 + x) * 4 + 1] += 256 * pixels[j * sli->SLIPitch + i * 4 + 1];
+              expected[(y * 4 + x) * 4 + 2] += 256 * pixels[j * sli->SLIPitch + i * 4 + 2];
+            }
+          }
+        }
+      }
+    }
+		
+		CreateIntegralImage32(sli, 256);
+		CheckIntegralmage32(expected, sli);
+		DestroySLI(sli);
+	}
+
+	NewTest("CreateIntegralImage works with 3x4 SLI with multiplier of 23");
+	{
+		SLI *sli = CreateSLI(3, 4, 32, 1);
+		BYTE *pixels = (BYTE *)GetCurrentFramePtr(sli);
+    for (int y = 0; y < sli->SLIYSize; ++y) {
+      for (int x = 0; x < sli->SLIXSize; ++x) {
+        pixels[y * sli->SLIPitch + x * 3] = x+y+5;
+        pixels[y * sli->SLIPitch + x * 3 + 1] = y-x+3;
+        pixels[y * sli->SLIPitch + x * 3 + 2] = 255-x*2+y;
+        pixels[y * sli->SLIPitch + x * 3 + 3] = 0xff;
+      }
+    }
+
+    int expected[3 * 4 * 4];
+    {
+      for (int y = 0; y < sli->SLIYSize; ++y) {
+        for (int x = 0; x < sli->SLIXSize; ++x) {
+          expected[(y * sli->SLIXSize + x) * 4] = 0;
+          expected[(y * sli->SLIXSize + x) * 4 + 1] = 0;
+          expected[(y * sli->SLIXSize + x) * 4 + 2] = 0;
+          for (int j = 0; j <= y; ++j) {
+            for (int i = 0; i <= x; ++i) {
+              expected[(y * sli->SLIXSize + x) * 4] += 23 * pixels[j * sli->SLIPitch + i * 4];
+              expected[(y * sli->SLIXSize + x) * 4 + 1] += 23 * pixels[j * sli->SLIPitch + i * 4 + 1];
+              expected[(y * sli->SLIXSize + x) * 4 + 2] += 23 * pixels[j * sli->SLIPitch + i * 4 + 2];
+            }
+          }
+        }
+      }
+    }
+		
+		CreateIntegralImage32(sli, 23);
+		CheckIntegralmage32(expected, sli);
+		DestroySLI(sli);
+	}
 
 	printf("[SUCCESS] %dn tests passed.", num_tests);
 

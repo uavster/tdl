@@ -13,19 +13,36 @@
 
 /*
 ;�����������������������������������������������������������������������������
-; Computes the integral image of a SLI
+; Computes the integral image of an 8 bpp SLI
 ;
 ; It allocates a buffer for the integral image and stores it in the SLI, if it
 ; had not been allocated already.
 ;
 ; Input:	EAX -> Input SLI
 ;         EBX = Multiplier
-; Throws: 
-;   Input SLI is not 8bpp
+; Asserts: 
+;   Input SLI is 8 bpp
 ;�����������������������������������������������������������������������������
 */
-int CreateIntegralImage(SLI *sli, DWORD multiplier);
+void CreateIntegralImage(SLI *sli, DWORD multiplier);
 #pragma aux CreateIntegralImage "*" parm   [eax] [ebx] \
+									modify [eax ebx ecx edx esi edi ebp];
+
+/*
+;�����������������������������������������������������������������������������
+; Computes the integral image of an 32 bpp SLI
+;
+; It allocates a buffer for the integral image and stores it in the SLI, if it
+; had not been allocated already.
+;
+; Input:	EAX -> Input SLI
+;         EBX = Multiplier
+; Asserts: 
+;   Input SLI is 32 bpp
+;�����������������������������������������������������������������������������
+*/
+void CreateIntegralImage32(SLI *sli, DWORD multiplier);
+#pragma aux CreateIntegralImage32 "*" parm   [eax] [ebx] \
 									modify [eax ebx ecx edx esi edi ebp];
 
 /*

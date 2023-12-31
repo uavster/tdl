@@ -17,15 +17,15 @@ include sli.inc
 include boxfiltr.inc
 
 ;�����������������������������������������������������������������������������
-; Computes the integral image of an 8bpp SLI
+; Computes the integral image of an 8 bpp SLI
 ;
 ; It allocates a buffer for the integral image and stores it in the SLI, if it
 ; had not been allocated already.
 ;
 ; Input:	EAX -> Input SLI
 ;         EBX = Multiplier
-; Throws: 
-;   Input SLI is not 8bpp
+; Asserts: 
+;   Input SLI is 8 bpp
 ;�����������������������������������������������������������������������������
 CreateIntegralImage	proc
 	; Only 8 bpp supported.
@@ -141,6 +141,190 @@ CreateIntegralImage	proc
 	integral_image_done:
 	ret
 CreateIntegralImage	endp
+
+;�����������������������������������������������������������������������������
+; Computes the integral image of an 32 bpp SLI
+;
+; It allocates a buffer for the integral image and stores it in the SLI, if it
+; had not been allocated already.
+;
+; Input:	EAX -> Input SLI
+;         EBX = Multiplier
+; Asserts: 
+;   Input SLI is 32 bpp
+;�����������������������������������������������������������������������������
+CreateIntegralImage32	proc
+	; Only 32 bpp supported.
+	mov		esi,eax
+	mov		eax,[SLI ptr esi.SLIColorBits]
+	AssertDword	eax,_eq,4
+
+	cmp		[SLI ptr esi.SLIYSize],0
+	jz		integral_image_done
+	cmp		[SLI ptr esi.SLIXSize],0
+	jz		integral_image_done
+
+	cmp		[SLI ptr esi.SLIIntegralImage],0
+	jz		no_integral_image_buffer32
+  ; If the integral image has the requested multiplier, leave.
+  cmp   ebx,[SLI ptr esi.SLIIntegralImageMultiplier]
+  je    integral_image_done32
+  ; Otherwise, compute integral image with new multiplier.
+  mov   edx,ebx   ; Multiplier is in EDX from here on.
+  jmp   got_integral_image_buffer32
+  no_integral_image_buffer32:
+			; Allocate a buffer in the SLI for the integral image.
+			mov		eax,[SLI ptr esi.SLIXSize]
+			xor		edx,edx
+			imul	[SLI ptr esi.SLIYSize]
+			shl		eax,4
+			mov		ecx,eax
+			push	esi ebx
+			call	malloc
+			pop		edx esi   ; Multiplier is in EDX from here on.
+			ErrorCode	MALLOC_ERROR
+			mov		[SLI ptr esi.SLIIntegralImage],ebx
+	got_integral_image_buffer32:
+  ; Update multiplier.
+  mov   [SLI ptr esi.SLIIntegralImageMultiplier],edx
+  
+  ; Create multiplication table.
+  xor   ecx,ecx
+  xor   eax,eax
+  create_multiplication_table32:
+      mov   [ecx*4+multiplication_table],eax
+      add   eax,edx
+  inc   cl
+  jnz   create_multiplication_table32
+
+	push	ebp
+
+	mov		eax,esi
+	call	GetCurrentFramePtr
+	mov		ebp,eax
+	mov		edx,[SLI ptr esi.SLIYSize]
+	xor		eax,eax
+	mov		edi,[SLI ptr esi.SLIIntegralImage]
+		
+	; First line.
+	mov		ecx,[SLI ptr esi.SLIXSize]
+  shl   ecx,2
+	; ebp -> source image, edi -> integral image, edx = height, ecx = width
+	lea		ebp,[ebp+ecx]
+	lea		edi,[edi+ecx*4]
+	neg		ecx
+	xor		ebx,ebx
+	xor		eax,eax ; r
+  xor   edx,edx ; g
+  push  esi
+  xor   esi,esi ; b
+	create_integral_image_x_loop_0_32:
+      ; Red
+			mov		bl,ds:[ebp+ecx]
+			add		eax,[multiplication_table+4*ebx]
+			mov		[edi+ecx*4],eax
+      ; Green
+			mov		bl,ds:[ebp+ecx+1]
+			add		edx,[multiplication_table+4*ebx]
+			mov		[edi+ecx*4+4],edx
+      ; Blue
+			mov		bl,ds:[ebp+ecx+2]
+			add		esi,[multiplication_table+4*ebx]
+			mov		[edi+ecx*4+8],esi
+	add		ecx,4
+	jnz		create_integral_image_x_loop_0_32
+  pop   esi
+
+	; Lines after first.
+	mov		edx,[SLI ptr esi.SLIYSize]
+	dec		edx
+	jz		integral_image_done_pop32
+
+  mov		eax,[SLI ptr esi.SLIXSize]
+  inc   eax
+  shl   eax,4
+  neg   eax  
+  mov		dword ptr top_left_cell_offset_r-4,eax
+  add   eax,4
+  mov		dword ptr top_left_cell_offset_g-4,eax
+  add   eax,4
+  mov		dword ptr top_left_cell_offset_b-4,eax
+  add   eax,8
+  mov		dword ptr top_cell_offset_r-4,eax
+  add   eax,4
+  mov		dword ptr top_cell_offset_g-4,eax
+  add   eax,4
+  mov		dword ptr top_cell_offset_b-4,eax
+	create_integral_image_y_loop32:			
+			mov		ecx,[SLI ptr esi.SLIXSize]
+      shl   ecx,2
+			lea		ebp,[ebp+ecx]
+			lea		edi,[edi+ecx*4]
+			neg		ecx
+			; Set first element in the row as top element + first row pixel.
+      xor   ebx,ebx
+      ; Red
+			mov		eax,[edi+ecx*8]
+			mov		bl,ds:[ebp+ecx]
+			add		eax,[multiplication_table+4*ebx]
+			mov		[edi+ecx*4],eax
+      ; Green
+			mov		eax,[edi+ecx*8+4]
+			mov		bl,ds:[ebp+ecx+1]
+			add		eax,[multiplication_table+4*ebx]
+			mov		[edi+ecx*4+4],eax
+      ; Blue
+			mov		eax,[edi+ecx*8+8]
+			mov		bl,ds:[ebp+ecx+2]
+			add		eax,[multiplication_table+4*ebx]
+			mov		[edi+ecx*4+8],eax
+
+			add		ecx,4
+			jz		create_integral_image_x_loop_done32
+			create_integral_image_x_loop32:
+					; Each element is previous element + top element - top_left element + current pixel.
+          ; Red
+					mov		eax,[edi+ecx*4-16]
+					sub		eax,[edi+ecx*4-12345678h]
+					top_left_cell_offset_r:
+					add		eax,[edi+ecx*4-12345678h]
+					top_cell_offset_r:
+          xor   ebx,ebx
+					mov		bl,ds:[ebp+ecx]
+					add		eax,[multiplication_table+4*ebx]
+					mov		[edi+ecx*4],eax
+          ; Green
+					mov		eax,[edi+ecx*4-16+4]
+					sub		eax,[edi+ecx*4-12345678h]
+					top_left_cell_offset_g:
+					add		eax,[edi+ecx*4-12345678h]
+					top_cell_offset_g:
+          xor   ebx,ebx
+					mov		bl,ds:[ebp+ecx+1]
+					add		eax,[multiplication_table+4*ebx]
+					mov		[edi+ecx*4+4],eax
+          ; Blue
+					mov		eax,[edi+ecx*4-16+8]
+					sub		eax,[edi+ecx*4-12345678h]
+					top_left_cell_offset_b:
+					add		eax,[edi+ecx*4-12345678h]
+					top_cell_offset_b:
+          xor   ebx,ebx
+					mov		bl,ds:[ebp+ecx+2]
+					add		eax,[multiplication_table+4*ebx]
+					mov		[edi+ecx*4+8],eax
+			add		ecx,4
+			jnz		create_integral_image_x_loop32
+			create_integral_image_x_loop_done32:
+	dec		edx
+	jnz		create_integral_image_y_loop32
+	
+	integral_image_done_pop32:
+	pop		ebp
+	
+	integral_image_done32:
+	ret
+CreateIntegralImage32	endp
 
 
 output_width      equ 0
