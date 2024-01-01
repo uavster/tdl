@@ -26,7 +26,7 @@ global CreateIntegralImage: NEAR
 ;     ECX = Kernel height (rounded up to odd number)
 ;     EDX = log2 of divider; the result for each pixel is divided by this value
 ;			EDI -> Output SLI
-; Throws: 
+; Asserts: 
 ;   Input SLI does not have an integral image
 ;�����������������������������������������������������������������������������
 global ScaledBoxIntegral: NEAR

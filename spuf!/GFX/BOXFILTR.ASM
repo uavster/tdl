@@ -384,51 +384,16 @@ imul  reg, ss:[ebp+4*var_offset]
 endm
 
 ;�����������������������������������������������������������������������������
-; For each pixel, computes the integral in a neighborhood and scales it with
-; a divider
+; Initializes the stack variables for the scaled box integral functions
 ;
-; The integral image must have been generated first for the SLI contents
-; with CreateIntegralImage. The time complexity does not depend on the kernel
-; size, only on the image dimensions. 
-;
-; Input and output SLIs must be the same size.
-;
-; Input:	EAX -> Input SLI (CreateIntegralImage must have been called first)
-;			EBX = Kernel width (rounded up to odd number)
-;     ECX = Kernel height (rounded up to odd number)
-;     EDX = log2 of divider; the result for each pixel is divided by this value
+; Input:	
+;			EBX = Half kernel width
+;     ECX = Half kernel height
+;     ESI -> Input SLI
 ;			EDI -> Output SLI
-; Throws: 
-;   Input SLI does not have an integral image
+;     EBP -> Stack frame
 ;�����������������������������������������������������������������������������
-_ScaledBoxIntegral8	proc
-  ; The input must have an integral image.
-  AssertDword [eax.SLIIntegralImage], _ne, 0
-
-  ; ebx = Half kernel width (rounded up to odd number).
-  ; ecx = Half kernel height (rounded up to odd number).
-  shr   ebx,1
-  shr   ecx,1
-  ; edi -> output SLI
-  ; esi -> input SLI
-  mov   esi,eax
-
-  ; Update right shift opcodes with log2(divider).
-  mov   byte ptr ds:[divider_top_left-1],dl
-  mov   byte ptr ds:[divider_top_center-1],dl
-  mov   byte ptr ds:[divider_top_right-1],dl
-  mov   byte ptr ds:[divider_center_left-1],dl
-  mov   byte ptr ds:[divider_center_center-1],dl
-  mov   byte ptr ds:[divider_center_right-1],dl
-  mov   byte ptr ds:[divider_bottom_left-1],dl
-  mov   byte ptr ds:[divider_bottom_center-1],dl
-  mov   byte ptr ds:[divider_bottom_right-1],dl
-
-  ; Make space for stack variables.
-  push  ebp
-  sub   esp,num_variables*4
-  mov   ebp,esp
-  ; Init stack variables.
+_InitScaledBoxIntegralVariables  proc
   mov   eax,[SLI ptr edi.SLIXSize]
   set   output_width,eax
   mov   eax,[SLI ptr edi.SLIYSize]
@@ -469,6 +434,56 @@ _ScaledBoxIntegral8	proc
   lea   eax,[ebx*2+2]  
   sub_  eax,output_width
   set   half_kernel_width_plus_one_by_two_minus_output_width,eax
+  ret
+_InitScaledBoxIntegralVariables endp
+
+;�����������������������������������������������������������������������������
+; For each pixel, computes the integral in a neighborhood and scales it with
+; a divider
+;
+; The integral image must have been generated first for the SLI contents
+; with CreateIntegralImage. The time complexity does not depend on the kernel
+; size, only on the image dimensions. 
+;
+; Input and output SLIs must be the same size.
+;
+; Input:	EAX -> Input SLI (CreateIntegralImage must have been called first)
+;			EBX = Kernel width (rounded up to odd number)
+;     ECX = Kernel height (rounded up to odd number)
+;     EDX = log2 of divider; the result for each pixel is divided by this value
+;			EDI -> Output SLI
+; Asserts: 
+;   Input SLI does not have an integral image
+;�����������������������������������������������������������������������������
+_ScaledBoxIntegral8	proc
+  ; The input must have an integral image.
+  AssertDword [eax.SLIIntegralImage], _ne, 0
+
+  ; ebx = Half kernel width (rounded up to odd number).
+  ; ecx = Half kernel height (rounded up to odd number).
+  shr   ebx,1
+  shr   ecx,1
+  ; edi -> output SLI
+  ; esi -> input SLI
+  mov   esi,eax
+
+  ; Update right shift opcodes with log2(divider).
+  mov   byte ptr ds:[divider_top_left-1],dl
+  mov   byte ptr ds:[divider_top_center-1],dl
+  mov   byte ptr ds:[divider_top_right-1],dl
+  mov   byte ptr ds:[divider_center_left-1],dl
+  mov   byte ptr ds:[divider_center_center-1],dl
+  mov   byte ptr ds:[divider_center_right-1],dl
+  mov   byte ptr ds:[divider_bottom_left-1],dl
+  mov   byte ptr ds:[divider_bottom_center-1],dl
+  mov   byte ptr ds:[divider_bottom_right-1],dl
+
+  ; Make space for stack variables.
+  push  ebp
+  sub   esp,num_variables*4
+  mov   ebp,esp
+
+  call  _InitScaledBoxIntegralVariables
 
   ; ---- Modify code for pointers of top band ----
 
@@ -1024,7 +1039,7 @@ _ScaledBoxIntegral8	endp
 ;     ECX = Kernel height (rounded up to odd number)
 ;     EDX = log2 of divider; the result for each pixel is divided by this value
 ;			EDI -> Output SLI
-; Throws: 
+; Asserts: 
 ;   Input SLI does not have an integral image
 ;�����������������������������������������������������������������������������
 _ScaledBoxIntegral32	proc
@@ -1074,47 +1089,8 @@ _ScaledBoxIntegral32	proc
   push  ebp
   sub   esp,num_variables*4
   mov   ebp,esp
-  ; Init stack variables.
-  mov   eax,[SLI ptr edi.SLIXSize]
-  set   output_width,eax
-  mov   eax,[SLI ptr edi.SLIYSize]
-  set   output_height,eax
-  mov   eax,[SLI ptr edi.SLIPitch]
-  set   output_pitch,eax
-  mov   eax,edi
-  call  GetCurrentFramePtr
-  set   output_frame_ptr,eax
-  mov   eax,ecx
-  inc   eax
-  imul  eax,[SLI ptr edi.SLIPitch]
-  set   half_kernel_height_plus_one_by_output_pitch,eax
-  mov   eax,ecx
-  imul  eax,[SLI ptr esi.SLIXSize]
-  set   half_kernel_height_by_input_width,eax
-  shl   eax,1
-  add   eax,[SLI ptr esi.SLIXSize]
-  set   half_kernel_height_by_two_plus_one_by_input_width,eax
-  mov   eax,[SLI ptr edi.SLIYSize]
-  imul  eax,[SLI ptr edi.SLIPitch]
-  set   output_height_by_output_pitch,eax
-  sub_  eax,half_kernel_height_plus_one_by_output_pitch
-  set   output_height_minus_half_kernel_height_minus_one_by_output_pitch,eax
-  mov   eax,[SLI ptr esi.SLIYSize]
-  dec   eax
-  imul  eax,[SLI ptr esi.SLIXSize]
-  set   input_height_minus_one_by_input_width,eax
-  lea   eax,[ecx*2+2]
-  sub   eax,[SLI ptr esi.SLIYSize]
-  neg   eax
-  imul  eax,[SLI ptr esi.SLIXSize]
-  set   input_height_minus_half_kernel_height_by_two_minus_two_by_input_width,eax
-  mov   eax,ebx
-  inc   eax
-  neg   eax
-  set   minus_half_width_minus_one,eax   
-  lea   eax,[ebx*2+2]  
-  sub_  eax,output_width
-  set   half_kernel_width_plus_one_by_two_minus_output_width,eax
+
+  call  _InitScaledBoxIntegralVariables
 
   ; ---- Modify code for pointers of top band ----
 
@@ -2064,7 +2040,7 @@ _ScaledBoxIntegral32	endp
 ;     ECX = Kernel height (rounded up to odd number)
 ;     EDX = log2 of divider; the result for each pixel is divided by this value
 ;			EDI -> Output SLI
-; Throws: 
+; Asserts: 
 ;   Input SLI does not have an integral image
 ;�����������������������������������������������������������������������������
 ScaledBoxIntegral	proc
