@@ -1,8 +1,8 @@
 ;�����������������������������������������������������������������������������
-; Computes the integral image of an 8 bpp SLI
+; Computes the integral image of a SLI
 ;
-; It allocates a buffer for the integral image and stores it in the SLI, if it
-; had not been allocated already.
+; Supports 8 bpp and 32 bpp SLIs. It allocates a buffer for the integral image 
+; and stores it in the SLI, if it had not been allocated already.
 ;
 ; Input:	EAX -> Input SLI
 ;         EBX = Multiplier
@@ -12,25 +12,12 @@
 global CreateIntegralImage: NEAR
 
 ;�����������������������������������������������������������������������������
-; Computes the integral image of an 32 bpp SLI
-;
-; It allocates a buffer for the integral image and stores it in the SLI, if it
-; had not been allocated already.
-;
-; Input:	EAX -> Input SLI
-;         EBX = Multiplier
-; Asserts: 
-;   Input SLI is 32 bpp
-;�����������������������������������������������������������������������������
-global CreateIntegralImage32: NEAR
-
-;�����������������������������������������������������������������������������
 ; For each pixel, computes the integral in a neighborhood and scales it with
 ; a divider
 ;
-; The integral image must have been generated first for the SLI contents
-; with CreateIntegralImage. The time complexity does not depend on the kernel
-; size, only on the image dimensions. 
+; It supports 8 bpp and 32 bpp SLIs. The integral image must have been generated 
+; first for the SLI contents with CreateIntegralImage. The time complexity does 
+; not depend on the kernel size, only on the image dimensions. 
 ;
 ; Input and output SLIs must be the same size.
 ;
@@ -47,7 +34,8 @@ global ScaledBoxIntegral: NEAR
 ;�����������������������������������������������������������������������������
 ; Applies a box filter of the given size on the SLI contents
 ;
-; Input and output SLIs must be the same size.
+; It supports 8 bpp and 32 bpp SLIs. Input and output SLIs must be the same
+; size and type.
 ;
 ; The time complexity does not depend on the kernel size, only on the image
 ; dimensions. 

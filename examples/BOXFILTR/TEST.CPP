@@ -49,7 +49,7 @@ int main() {
     return 1;
   }
 
-  SLI *image = LoadGFX("mercury.fli", 8);
+  SLI *image = LoadGFX("mercury.fli", 32);
   if (image == NULL) {
     DestroyVideoSLI(3);
     printf("ERROR: Unable to load image.");

@@ -92,6 +92,36 @@ void ReferenceScaledBoxIntegral(SLI *src, int kernel_width, int kernel_height, S
   ReferenceScaledBoxIntegral_(src, kernel_width, kernel_height, dst, 1);
 }
 
+void ReferenceScaledBoxIntegral32_(SLI *src, int kernel_width, int kernel_height, SLI *dst, DWORD divider) {
+  BYTE *dst_pixels = (BYTE *)GetCurrentFramePtr(dst);
+  BYTE *src_pixels = (BYTE *)GetCurrentFramePtr(src);
+  for (int y = 0; y < dst->SLIYSize; ++y) {
+    for (int x = 0; x < dst->SLIXSize; ++x) {
+      for (int c = 0; c < 3; ++c) {
+        DWORD sum = 0;
+        for (int v = 0; v < kernel_height; ++v) {
+          int src_y = y - kernel_height / 2 + v;
+          if (src_y < 0 || src_y >= src->SLIYSize) {
+            continue;
+          }
+          for (int u = 0; u < kernel_width; ++u) {
+            int src_x = x - kernel_width / 2 + u;
+            if (src_x < 0 || src_x >= src->SLIXSize) {
+              continue;
+            }
+            sum += src_pixels[src_y * src->SLIPitch + src_x * 4 + c];
+          }
+        }
+        dst_pixels[y * dst->SLIPitch + x * 4 + c] = static_cast<BYTE>(sum / divider);
+      }
+    }
+  }
+}
+
+void ReferenceScaledBoxIntegral32(SLI *src, int kernel_width, int kernel_height, SLI *dst) {
+  ReferenceScaledBoxIntegral32_(src, kernel_width, kernel_height, dst, 1);
+}
+
 void ReferenceBoxFilter(SLI *src, int kernel_width, int kernel_height, SLI *dst) {
   ReferenceScaledBoxIntegral_(src, kernel_width, kernel_height, dst, kernel_width * kernel_height);
 }
@@ -164,6 +194,98 @@ void CheckExpectedSLI(SLI *result, SLI *expected, int max_error = 0) {
 
       printf("\n");
     }
+    exit(5);
+  }
+}
+
+void CheckExpectedSLI32(SLI *result, SLI *expected, int max_error = 0) {
+  BYTE *result_pixels = (BYTE *)GetCurrentFramePtr(result);
+  BYTE *expected_pixels = (BYTE *)GetCurrentFramePtr(expected);
+  if (result->SLIYSize != expected->SLIYSize) {
+    printf(" [ERROR]\nResult and expectation SLI heights do not match.\n");
+    exit(3);
+  }
+  if (result->SLIXSize != expected->SLIXSize) {
+    printf(" [ERROR]\nResult and expectation SLI widths do not match.\n");
+    exit(4);
+  }
+
+  bool are_equal = true;
+  for (int y = 0; y < result->SLIYSize && are_equal; ++y) {
+    for (int x = 0; x < result->SLIXSize; ++x) {
+      int error = static_cast<int>(result_pixels[y * result->SLIPitch + x * 4]) - static_cast<int>(expected_pixels[y * expected->SLIPitch + x * 4]);
+      if (error > max_error || error < -max_error) {
+        are_equal = false;
+        break;
+      }
+      error = static_cast<int>(result_pixels[y * result->SLIPitch + x * 4 + 1]) - static_cast<int>(expected_pixels[y * expected->SLIPitch + x * 4 + 1]);
+      if (error > max_error || error < -max_error) {
+        are_equal = false;
+        break;
+      }
+      error = static_cast<int>(result_pixels[y * result->SLIPitch + x * 4 + 2]) - static_cast<int>(expected_pixels[y * expected->SLIPitch + x * 4 + 2]);
+      if (error > max_error || error < -max_error) {
+        are_equal = false;
+        break;
+      }
+    }
+  }
+  if (are_equal) {
+		printf("[OK]\n");
+  } else {
+    printf(" [ERROR]\nActual:\n");
+
+    const int element_width = 4;
+    const int spaces_between_matrices = element_width * 2;
+
+    for (int y = 0; y < result->SLIYSize; ++y) {
+      // Actual row.
+      for (int x = 0; x < result->SLIXSize; ++x) {
+        printf("(");
+        for (int c = 0; c < 3; ++c) {
+          const DWORD value = static_cast<DWORD>(result_pixels[y * result->SLIPitch + x * 4 + c]);
+          char tmp[4];
+          sprintf(tmp, "%dn", value);
+          int num_spaces = element_width - strlen(tmp);
+          bool pixels_match = result_pixels[y * result->SLIPitch + x * 4 + c] == expected_pixels[y * expected->SLIPitch + x * 4 + c];
+          if (!pixels_match) {
+            --num_spaces;
+          }
+          for (int i = 0; i < num_spaces; ++i) {
+            printf(" ");
+          }
+          if (!pixels_match) {
+            printf("*");
+          }
+          printf(tmp);
+        }
+        printf(") ");
+      }
+      printf("\n");
+    }
+
+    printf("\nExpected:\n");
+
+    for (y = 0; y < result->SLIYSize; ++y) {
+      // Expected row.
+      for (int x = 0; x < result->SLIXSize; ++x) {
+        printf("(");
+        for (int c = 0; c < 3; ++c) {
+          DWORD value = static_cast<DWORD>(expected_pixels[y * expected->SLIPitch + x * 4 + c]);
+          char tmp[4];
+          sprintf(tmp, "%dn", value);
+          const int num_spaces = element_width - strlen(tmp);
+          for (int i = 0; i < num_spaces; ++i) {
+            printf(" ");
+          }
+          printf(tmp);
+        }
+        printf(") ");
+      }
+
+      printf("\n");
+    }
+
     exit(5);
   }
 }
@@ -405,31 +527,31 @@ int main() {
 		DestroySLI(input_sli);
   }
 
-	NewTest("CreateIntegralImage32 does nothing with zero width and height SLI");
+	NewTest("CreateIntegralImage does nothing with zero width and height SLI");
 	{
 		SLI *sli = CreateSLI(0, 0, 32, 1);
-		CreateIntegralImage32(sli, 1);
+		CreateIntegralImage(sli, 1);
 		DestroySLI(sli);
 		printf(" [OK]\n");
 	}
 
-	NewTest("CreateIntegralImage32 does nothing with zero height SLI");
+	NewTest("CreateIntegralImage does nothing with zero height SLI");
 	{
 		SLI *sli = CreateSLI(2, 0, 32, 1);
-		CreateIntegralImage32(sli, 1);
+		CreateIntegralImage(sli, 1);
 		DestroySLI(sli);
 		printf(" [OK]\n");
 	}
 
-	NewTest("CreateIntegralImage32 does nothing with zero width SLI");
+	NewTest("CreateIntegralImage does nothing with zero width SLI");
 	{
 		SLI *sli = CreateSLI(0, 2, 32, 1);
-		CreateIntegralImage32(sli, 1);
+		CreateIntegralImage(sli, 1);
 		DestroySLI(sli);
 		printf(" [OK]\n");
 	}
 
-	NewTest("CreateIntegralImage32 works with 1x1 SLI");
+	NewTest("CreateIntegralImage works with 1x1 SLI");
 	{
 		SLI *sli = CreateSLI(1, 1, 32, 1);
 		BYTE *pixels = (BYTE *)GetCurrentFramePtr(sli);
@@ -437,13 +559,13 @@ int main() {
 		pixels[1] = 2;
 		pixels[2] = 3;
 		pixels[3] = 0xff;
-		CreateIntegralImage32(sli, 1);
+		CreateIntegralImage(sli, 1);
 		const int expected[] = { 1, 2, 3 };
 		CheckIntegralmage32(expected, sli);
 		DestroySLI(sli);
 	}  
 
-	NewTest("CreateIntegralImage32 works with 3x1 SLI");
+	NewTest("CreateIntegralImage works with 3x1 SLI");
 	{
 		SLI *sli = CreateSLI(3, 1, 32, 1);
 		BYTE *pixels = (BYTE *)GetCurrentFramePtr(sli);
@@ -459,13 +581,13 @@ int main() {
 		pixels[9] = 8;
 		pixels[10] = 9;
 		pixels[11] = 0xff;
-		CreateIntegralImage32(sli, 1);
+		CreateIntegralImage(sli, 1);
 		const int expected[] = { 1, 2, 3, 0xff, 5, 7, 9, 2*0xff, 12, 15, 18, 3*0xff };
 		CheckIntegralmage32(expected, sli);
 		DestroySLI(sli);
 	}
 
-	NewTest("CreateIntegralImage32 works with 1x3 SLI");
+	NewTest("CreateIntegralImage works with 1x3 SLI");
 	{
 		SLI *sli = CreateSLI(1, 3, 32, 1);
 		BYTE *pixels = (BYTE *)GetCurrentFramePtr(sli);
@@ -481,13 +603,13 @@ int main() {
 		pixels[9] = 8;
 		pixels[10] = 9;
 		pixels[11] = 0xff;
-		CreateIntegralImage32(sli, 1);
+		CreateIntegralImage(sli, 1);
 		const int expected[] = { 1, 2, 3, 0xff, 5, 7, 9, 2*0xff, 12, 15, 18, 3*0xff };
 		CheckIntegralmage32(expected, sli);
 		DestroySLI(sli);
 	}
 
-	NewTest("CreateIntegralImage32 works with 3x3 SLI");
+	NewTest("CreateIntegralImage works with 3x3 SLI");
 	{
 		SLI *sli = CreateSLI(3, 3, 32, 1);
 		BYTE *pixels = (BYTE *)GetCurrentFramePtr(sli);
@@ -500,7 +622,7 @@ int main() {
         pixels[y * sli->SLIPitch + x * 4 + 3] = 0xff;
       }
     }
-		CreateIntegralImage32(sli, 1);
+		CreateIntegralImage(sli, 1);
 		const int expected[] = { 	
       /*p00=*/1, 2, 3, 0xff, /*p01=*/5, 7, 9, 0xff*2, /*p02=*/12, 15, 18, 0xff*3, 
       /*p10=*/11, 13, 15, 0xff*2, /*p11=*/28, 32, 36, 0xff*3, /*p12=*/51, 57, 63, 0xff*4, 
@@ -510,7 +632,7 @@ int main() {
 		DestroySLI(sli);
 	}
 
-	NewTest("CreateIntegralImage32 works with 4x3 SLI and premultipler of 256");
+	NewTest("CreateIntegralImage works with 4x3 SLI and premultipler of 256");
 	{
 		SLI *sli = CreateSLI(4, 3, 32, 1);
 		BYTE *pixels = (BYTE *)GetCurrentFramePtr(sli);
@@ -541,7 +663,7 @@ int main() {
       }
     }
 		
-		CreateIntegralImage32(sli, 256);
+		CreateIntegralImage(sli, 256);
 		CheckIntegralmage32(expected, sli);
 		DestroySLI(sli);
 	}
@@ -577,10 +699,36 @@ int main() {
       }
     }
 		
-		CreateIntegralImage32(sli, 23);
+		CreateIntegralImage(sli, 23);
 		CheckIntegralmage32(expected, sli);
 		DestroySLI(sli);
 	}
+
+  NewTest("ScaledBoxIntegral works with 3x3 kernel on 5x5 SLI");
+  {
+    SLI *input_sli = CreateSLI(5, 5, 32, 1);
+    SLI *output_sli = CreateSLI(5, 5, 32, 1);
+    SLI *expected_sli = CreateSLI(5, 5, 32, 1);
+		BYTE *pixels = (BYTE *)GetCurrentFramePtr(input_sli);
+    for (int y = 0; y < input_sli->SLIYSize; ++y) {
+      for (int x = 0; x < input_sli->SLIXSize; ++x) {
+        pixels[y * input_sli->SLIPitch + x * 3] = x+y+5;
+        pixels[y * input_sli->SLIPitch + x * 3 + 1] = y-x+3;
+        pixels[y * input_sli->SLIPitch + x * 3 + 2] = 255-x*2+y;
+        pixels[y * input_sli->SLIPitch + x * 3 + 3] = 0xff;
+      }
+    }
+		CreateIntegralImage(input_sli, 1);
+
+    ReferenceScaledBoxIntegral32(input_sli, 3, 3, expected_sli);
+    ScaledBoxIntegral(input_sli, 3, 3, 0, output_sli);
+
+    CheckExpectedSLI32(output_sli, expected_sli);
+
+		DestroySLI(expected_sli);
+		DestroySLI(output_sli);
+		DestroySLI(input_sli);
+  }  
 
 	printf("[SUCCESS] %dn tests passed.", num_tests);
 
