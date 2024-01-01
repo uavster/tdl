@@ -1,8 +1,9 @@
 ;�����������������������������������������������������������������������������
 ; Box filter
 ;
-; The filter has arbitrary kernel size and constant cost. This is achieved 
-; computing the integral image first, and the filter with four reads per pixel.
+; The filter has arbitrary kernel size and constant cost per pixel. This is 
+; achieved computing the integral image first, and the filter with four reads
+; per pixel.
 ;�����������������������������������������������������������������������������
 
 .386p
