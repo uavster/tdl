@@ -1,48 +1,17 @@
 #include "tdl.h"
+#include "tinymath.h"
 #include "boxfiltr.h"
 #include "except.hpp"
 
 volatile bool do_loop = true;
-volatile int kernel_width = 1;
-volatile int kernel_height = 1;
 
 int KeyESCHandler() {
 	do_loop = false;
 	return 0;
 }
 
-int KeyLeftHandler() {
-  kernel_width -= 2;
-  if (kernel_width <= 0) {
-    kernel_width = 1;
-  }
-	return 0;
-}
-
-int KeyRightHandler() {
-  kernel_width += 2;
-	return 0;
-}
-
-int KeyUpHandler() {
-  kernel_height += 2;
-	return 0;
-}
-
-int KeyDownHandler() {
-  kernel_height -= 2;
-  if (kernel_height <= 0) {
-    kernel_height = 1;
-  }
-	return 0;
-}
-
 int main() {
 	add_key(&KeyESCHandler, Key_ESC);
-	add_key(&KeyLeftHandler, Key_Left);
-	add_key(&KeyRightHandler, Key_Right);
-	add_key(&KeyUpHandler, Key_Up);
-	add_key(&KeyDownHandler, Key_Down);
 
   if (CreateVideoSLI(320, 200, 32) != SGL_OK) {
     printf("Error initializing videomode!\r\n");
@@ -56,20 +25,22 @@ int main() {
     return 2;
   }
 
-  SLI *filtered = CreateSLI(image->SLIXSize, image->SLIYSize, image->SLIColorBits * 8, /*nframes=*/1);
-  if (filtered == NULL) {
-    DestroyVideoSLI(3);
-    printf("ERROR: Unable to create output SLI.");
-    return 3;
-  }
-
   SetAnimMode(image, SLIAnimForwardLoop);
+  float t = 0.0f;
+  float t_inc = 0.01f;
+	StartFrameRate();
   while(do_loop) {
-    BoxFilter(image, kernel_width, kernel_height, filtered);
-    SetPalette(filtered, image->SLIPalette);
-    Blit(GetVideoSLI(), filtered);
+    const int kernel_size = static_cast<int>(32.0f * (cos(3.14159f * (0.35f * t + 1.0f)) + 1.0f) / 2.0f);
+    const int odd_kernel_size = 2 * kernel_size + 1;
+    BoxFilter(image, odd_kernel_size, odd_kernel_size, GetVideoSLI());
     AnimateSLI(image);
     ShowVideoSLI();
+		IncFloat(&t, &t_inc);
+		GetElapsedTime();
+		IncFrameCounter();
   }  
+	StopFrameRate();
+  DestroyVideoSLI(3);
+	ShowFrameRateResult();
 	return 0;
 }
