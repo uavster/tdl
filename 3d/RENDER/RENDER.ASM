@@ -704,6 +704,87 @@ comment #
 HandleVisibility        endp
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Zero light intensity in mesh elements
+;
+; INPUT : ECX = Number of elements
+;         ESI -> Elements
+;		  EBP = Offset where to store light intensity (float) in each element
+;		  EDX = Element size
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ZeroLightIntensities	proc
+	xor		eax,eax
+	zero_light_intensities_loop:
+			mov		dword ptr [esi+ebp],eax
+			add     esi,edx		; Next element
+	dec     ecx
+	jnz     zero_light_intensities_loop
+	ret
+endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Satures light intensity in mesh elements
+;
+; INPUT : ECX = Number of elements
+;         ESI -> Elements
+;		  EBP = Offset where to store light intensity (float) in each element
+;		  EDX = Element size
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+SaturateLightIntensities	proc
+	saturate_light_intensities_loop:
+			fld		dword ptr [esi+ebp]
+			fcom    light_constant
+			fnstsw  ax
+			sahf
+			jb      do_not_saturate
+					fstp    trash
+					fld     light_constant
+			do_not_saturate:
+			fstp	dword ptr [esi+ebp]
+			
+			add     esi,edx		; Next element
+	dec     ecx
+	jnz     saturate_light_intensities_loop
+	ret
+endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Applies directional light to mesh elements
+;
+; INPUT : ECX = Number of elements
+;         ESI -> Elements
+;		  EBX = Offset of element normal (POINT3D)
+;		  EBP = Offset where to store light intensity (float) in each element
+;		  EDX = Element size
+;		  EDI -> RENDERLIGHT
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ApplyDirectionalLight	proc
+	apply_directional_light_loop:
+			fld     [edi.LightVector.x]
+			fmul    [POINT3D ptr ebx.x + esi]
+			fld     [edi.LightVector.y]
+			fmul    [POINT3D ptr ebx.y + esi]
+			faddp
+			fld     [edi.LightVector.z]
+			fmul    [POINT3D ptr ebx.z + esi]
+			faddp
+			ftst
+			fnstsw  ax
+			sahf
+			jae     normal_faces_light_source
+					; Normal not facing light source does not get any light
+					fstp    trash
+					fldz
+			normal_faces_light_source:
+			fmul    light_constant
+			fadd    dword ptr [esi+ebp]
+			fstp    dword ptr [esi+ebp]
+			add     esi,edx		; Next element
+	dec     ecx
+	jnz     apply_directional_light_loop
+	ret
+endp
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; Calculates ilumination of the vertices of a polygon
 ; with the RENDERLIGHTs array
 ;
@@ -715,75 +796,39 @@ Iluminate       proc
 		push	ebp
 		test	ecx,ecx
 		jz		no_more_lights
+		
 		push	eax ebx ecx
-        mov     edi,eax
-                mov     edx,[edi.points]
-                mov     esi,[edi.pointdata]
-                ilum_points:
-                        fld     [ebx.LightVector.x]
-                        fmul    [esi.Normal.x]
-                        fld     [ebx.LightVector.y]
-                        fmul    [esi.Normal.y]
-                        faddp
-                        fld     [ebx.LightVector.z]
-                        fmul    [esi.Normal.z]
-                        faddp
-                        ftst
-                        fnstsw  ax
-                        sahf
-                        jae     with_light
-                                fstp    trash
-                                fldz
-                        with_light:
-                        fmul    light_constant
-                        fstp    [esi.Properties.Light1]
-                        add     esi,size RENDERPOINT                        
-                dec     edx
-                jnz     ilum_points
-
-                add     ebx,size RENDERLIGHT
-        dec     ecx
-        jz      illuminate_poly_faces
-        walk_renderlights:
-                mov     edx,[edi.points]
-                mov     esi,[edi.pointdata]
-                ilum_points1:
-                        fld     [ebx.LightVector.x]
-                        fmul    [esi.Normal.x]
-                        fld     [ebx.LightVector.y]
-                        fmul    [esi.Normal.y]
-                        faddp
-                        fld     [ebx.LightVector.z]
-                        fmul    [esi.Normal.z]
-                        faddp
-                        ftst
-                        fnstsw  ax
-                        sahf
-                        jae     with_light1
-                                fstp    trash
-                                fldz
-                        with_light1:
-                        fmul    light_constant
-                        fadd    [esi.Properties.Light1]
-                        fcom    light_constant
-                        fnstsw  ax
-                        sahf
-                        jb      more_lights
-                                fstp    trash
-                                fld     light_constant
-                        more_lights:
-                        fstp    [esi.Properties.Light1]
-                        add     esi,size RENDERPOINT                        
-                dec     edx
-                jnz     ilum_points1
-
-                add     ebx,size RENDERLIGHT
-        dec     ecx
-        jnz     walk_renderlights
-		
-		illuminate_poly_faces:
+		mov		esi,[eax.pointdata]
+		mov		ecx,[eax.points]
+		mov		ebp,offset Properties.Light1
+		mov		edx,size RENDERPOINT
+		call	ZeroLightIntensities
 		pop		ecx ebx eax
-		
+
+		push	eax ebx ecx
+		apply_lights_to_vertices:
+				push	eax ebx ecx
+				mov		edi,ebx
+				mov		ecx,[eax.points]
+				mov		esi,[eax.pointdata]
+				mov		ebx,offset Normal
+				mov		ebp,offset Properties.Light1
+				mov		edx,size RENDERPOINT
+				call	ApplyDirectionalLight
+				pop		ecx ebx eax
+		add		ebx,size RENDERLIGHT
+		dec		ecx
+		jnz		apply_lights_to_vertices
+		pop		ecx ebx eax
+
+		push	eax ebx ecx
+		mov		ecx,[eax.points]
+		mov		esi,[eax.pointdata]
+		mov		ebp,offset Properties.Light1
+		mov		edx,size RENDERPOINT
+		call	SaturateLightIntensities
+		pop		ecx ebx eax
+				
 		; Illuminate face normals
         mov     edi,eax
 		mov     edx,[edi.polygons]
