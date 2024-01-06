@@ -25,14 +25,32 @@ Clip    proc
         ; Gonna clip source into target!!
         mov     [esi.SOURCE_PTR_INC_Y],0
         mov     [esi.SOURCE_PTR_INIT],0
+
+		cmp		[esi.SLIBlitType],SLIScaled
+		jae		x_increment_scaled
+				mov		[esi.SOURCE_PTR_INC_X],1
+				jmp		x_increment_done
+		x_increment_scaled:
+				mov		[esi.SOURCE_PTR_INC_X],10000h	; 1.0 in fixed point 16.16
+		x_increment_done:
+		
+		mov		eax,[esi.SLIXSize]
+		mov		ebx,[esi.SLIPos.SLRR2.SLPX]
+		sub		ebx,[esi.SLIPos.SLRR1.SLPX]
+		xor		edx,edx
+		div		ebx
+		mov		[esi.SOURCE_PTR_INC_X],eax
+		
         ;---
         mov     eax,[esi.SLIPos.SLRR1.SLPX]
         sub     eax,[edi.SLIClip.SLRR1.SLPX]
         mov     ebx,[esi.SLIPos.SLRR1.SLPY]
         sub     ebx,[edi.SLIClip.SLRR1.SLPY]
         ;---
-        mov     ecx,eax                
-        add     ecx,[esi.SLIXSize]
+        mov     ecx,eax
+		inc		ecx
+        add     ecx,[esi.SLIPos.SLRR2.SLPX]
+        sub     ecx,[esi.SLIPos.SLRR1.SLPX]
         mov     edx,ebx
         add     edx,[esi.SLIYSize]
         ;---
@@ -43,6 +61,15 @@ Clip    proc
         jb      X0_ok
                 or      eax,eax
                 jns     leave_clipping
+
+				cmp		[esi.SLIBlitType],SLIScaled
+				jb		y_increment_scaled
+						push	edx
+						imul	[esi.SOURCE_PTR_INC_X]
+						shr		eax,16
+						pop		edx
+				y_increment_scaled:
+				
                 sub     [esi.SOURCE_PTR_INIT],eax
                 sub     [esi.SOURCE_PTR_INC_Y],eax
                 xor     eax,eax
@@ -51,9 +78,22 @@ Clip    proc
         jb      X1_ok
                 or      ecx,ecx
                 js      leave_clipping
-                add     [esi.SOURCE_PTR_INC_Y],ecx                
+				
+				sub		ecx,ebp
+				cmp		[esi.SLIBlitType],SLIScaled
+				jb		y_increment_scaled_end
+						push	eax edx
+						mov		eax,ebp
+						imul	[esi.SOURCE_PTR_INC_X]
+						shr		eax,16
+						mov		ebp,eax
+						mov		ecx,[esi.SLIXSize]
+						sub		ecx,eax
+						pop		edx eax
+				y_increment_scaled_end:
+
+                add     [esi.SOURCE_PTR_INC_Y],ecx
                 mov     ecx,ebp
-                sub     [esi.SOURCE_PTR_INC_Y],ecx
         X1_ok:
         mov     ebp,[edi.SLIClip.SLRR2.SLPY]
         sub     ebp,[edi.SLIClip.SLRR1.SLPY]

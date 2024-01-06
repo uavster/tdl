@@ -7,3 +7,4 @@
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
 global  BlitCopy_8_8: NEAR
+global 	BlitCopyScaled_8_8 : NEAR

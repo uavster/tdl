@@ -9,8 +9,8 @@ SOURCE_PTR_INIT         EQU SLITemp.tmp1
 TARGET_PTR_INIT         EQU SLITemp.tmp2
 SOURCE_SIZE_Y           EQU SLITemp.tmp3
 SOURCE_SIZE_X           EQU SLITemp.tmp4
-SOURCE_PTR_INC_X        EQU SLITemp.tmp5
-SOURCE_PTR_INC_Y        EQU SLITemp.tmp6
+SOURCE_PTR_INC_X        EQU SLITemp.tmp5	; Fixed point 16.16 coordinate increment, if scaled; integer pointer increment, otherwise.
+SOURCE_PTR_INC_Y        EQU SLITemp.tmp6	; Fixed point 16.16 coordinate increment, if scaled; integer pointer increment, otherwise.
 TARGET_PTR_INC_Y        EQU SLITemp.tmp7
 ;TARGET_PTR_INC_Y1       EQU SLITemp.tmp8        ; X size in bytes
 

@@ -118,7 +118,7 @@ Blits   LABEL
         ; 8 bits -> 24 bits
         BlitProc <offset BlitCopy_8_24,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0>
         ; 8 bits -> 32 bits
-        BlitProc <offset BlitCopy_8_32,offset BlitAlpha_8_32,offset BlitAlphaMap_8_32,offset BlitAddSaturate_8_32, offset BlitCopyMask_8_32,offset BlitAlphaMask_8_32,offset BlitAlphaMapMask_8_32,0, 0,0,0,0, 0,0,0,0>
+        BlitProc <offset BlitCopy_8_32,offset BlitAlpha_8_32,offset BlitAlphaMap_8_32,offset BlitAddSaturate_8_32, offset BlitCopyMask_8_32,offset BlitAlphaMask_8_32,offset BlitAlphaMapMask_8_32,0, BlitCopyScaled_8_8,0,0,0, 0,0,0,0>
 
         ; 16 bits -> 8 bits
         BlitProc <0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0>

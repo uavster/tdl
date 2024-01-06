@@ -38,7 +38,7 @@ start:
         call    SetAlpha
         
         mov     eax,offset file_name        
-        mov     ebx,32
+        mov     ebx,8
         call    LoadGFX
         ErrorExit "Error loading graphics in 32 bits!"
         mov     dword ptr imagenes+4,ebx
@@ -215,6 +215,26 @@ start:
 				ErrorExit "Error setting frame"
 				jmp bucle
         no_minus:
+		cmp		al,'q'
+		jnz		no_bigger
+				mov		eax,source
+				add		[SLI ptr eax.SLIPos.SLRR2.SLPX],10
+                mov     ebx,current_blit
+                mov     ebx,[ebx*4+tipos_de_blit]
+				add		ebx,SLIScaled
+				call	SetBlitType
+				jmp		bucle
+		no_bigger:
+		cmp		al,'a'
+		jnz		no_smaller
+				mov		eax,source
+				inc		[SLI ptr eax.SLIPos.SLRR2.SLPX]
+                mov     ebx,current_blit
+                mov     ebx,[ebx*4+tipos_de_blit]
+				add		ebx,SLIScaled
+				call	SetBlitType
+				jmp		bucle
+		no_smaller:
         dec     ah
         jnz     bucle
 

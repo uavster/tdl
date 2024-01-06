@@ -77,6 +77,46 @@ BlitCopy_8_8   proc
         ret
 BlitCopy_8_8   endp
 
+BlitCopyScaled_8_8	proc
+        mov     eax,[esi.SLIFramePtr]
+        add     eax,[esi.SOURCE_PTR_INIT]
+        push    eax
+
+        mov     ebp,[esi.TARGET_PTR_INC_Y]
+
+        mov     eax,[esi.SOURCE_SIZE_Y]
+        mov     CopySourceSizeY,eax
+
+        mov     eax,[esi.SOURCE_PTR_INC_Y]
+        mov     ebx,[esi.SOURCE_SIZE_X]
+
+        ; Need to copy palette, first
+        push    edi esi
+        mov     ecx,256
+        lea     esi,[esi.SLIPalette]
+        lea     edi,[edi.SLIPalette]
+        rep     movsd           
+        pop     esi edi
+
+        mov     edi,[edi.SLIFramePtr]
+        add     edi,[esi.TARGET_PTR_INIT]
+
+        pop     esi
+        copy_8_8_y_scaled:
+                mov     ecx,ebx
+                shr     ecx,2
+                ; (1 cycle!!)
+                rep     movsd
+                mov     ecx,ebx
+                and     ecx,11b
+                rep     movsb
+                add     esi,eax
+                add     edi,ebp
+        dec     CopySourceSizeY
+        jnz     copy_8_8_y_scaled
+        ret
+BlitCopyScaled_8_8	endp
+
 .data?
 ; ---Blit copy data---
 CopySourceSizeY dd ?
