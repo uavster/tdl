@@ -1589,8 +1589,8 @@ _ScaledBoxIntegral32	proc
               mov   cl,al
               ror   ecx,8
 
-              ; Alpha
-              mov   cl,0ffh
+              ; Alpha must be zero for compatibility with 32-bit blit methods.
+              xor   cl,cl
               ror   ecx,8
 
               mov   [edi+edx+12345678h],ecx
@@ -1631,8 +1631,8 @@ _ScaledBoxIntegral32	proc
               mov   cl,al
               ror   ecx,8
 
-              ; Alpha
-              mov   cl,0ffh
+              ; Alpha must be zero for compatibility with 32-bit blit methods.
+              xor   cl,cl
               ror   ecx,8
 
               mov   [edi+edx+12345678h],ecx
@@ -1674,8 +1674,8 @@ _ScaledBoxIntegral32	proc
               mov   cl,al
               ror   ecx,8
 
-              ; Alpha
-              mov   cl,0ffh
+              ; Alpha must be zero for compatibility with 32-bit blit methods.
+              xor   cl,cl
               ror   ecx,8
 
               mov   [edi+edx+12345678h],ecx
@@ -1730,8 +1730,8 @@ _ScaledBoxIntegral32	proc
               mov   cl,al
               ror   ecx,8
 
-              ; Alpha
-              mov   cl,0ffh
+              ; Alpha must be zero for compatibility with 32-bit blit methods.
+              xor   cl,cl
               ror   ecx,8
 
               mov   [edi+edx+12345678h],ecx
@@ -1784,8 +1784,8 @@ _ScaledBoxIntegral32	proc
               mov   cl,al
               ror   ecx,8
 
-              ; Alpha
-              mov   cl,0ffh
+              ; Alpha must be zero for compatibility with 32-bit blit methods.
+              xor   cl,cl
               ror   ecx,8
 
               mov   [edi+edx+12345678h],ecx
@@ -1839,8 +1839,8 @@ _ScaledBoxIntegral32	proc
               mov   cl,al
               ror   ecx,8
 
-              ; Alpha
-              mov   cl,0ffh
+              ; Alpha must be zero for compatibility with 32-bit blit methods.
+              xor   cl,cl
               ror   ecx,8
 
               mov   [edi+edx+12345678h],ecx
@@ -1895,8 +1895,8 @@ _ScaledBoxIntegral32	proc
               mov   cl,al
               ror   ecx,8
 
-              ; Alpha
-              mov   cl,0ffh
+              ; Alpha must be zero for compatibility with 32-bit blit methods.
+              xor   cl,cl
               ror   ecx,8
 
               mov   [edi+edx+12345678h],ecx
@@ -1949,8 +1949,8 @@ _ScaledBoxIntegral32	proc
               mov   cl,al
               ror   ecx,8
 
-              ; Alpha
-              mov   cl,0ffh
+              ; Alpha must be zero for compatibility with 32-bit blit methods.
+              xor   cl,cl
               ror   ecx,8
 
               mov   [edi+edx+12345678h],ecx
@@ -2004,8 +2004,8 @@ _ScaledBoxIntegral32	proc
               mov   cl,al
               ror   ecx,8
 
-              ; Alpha
-              mov   cl,0ffh
+              ; Alpha must be zero for compatibility with 32-bit blit methods.
+              xor   cl,cl
               ror   ecx,8
 
               mov   [edi+edx+12345678h],ecx
