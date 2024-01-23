@@ -1,0 +1,34 @@
+#DEBUG = 1 
+INCDIR = $(TDLPATH)\h
+LIBDIR = $(TDLPATH)\lib
+
+!ifdef DEBUG
+
+CFLAGS = -4r -hw -db -d2 -fpi87 -fp3 -i$(INCDIR) -mf -w5 -ze -zp4 -zdp -xs
+AFLAGS = -f obj
+LFLAGS = system DarkX
+
+!else
+
+CFLAGS = -4r -fpi87 -fp3 -i$(INCDIR) -mf -w5 -ze -zdp -d2 -xs
+AFLAGS = -f obj
+LFLAGS = system DarkX
+
+!endif
+
+.asm.obj:
+        tasm $(AFLAGS) $?
+.c.obj:
+        wcc386 $(CFLAGS) $?
+.cpp.obj:
+        wpp386 $(CFLAGS) $?
+
+# 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+all: test.exe
+
+test.obj: test.cpp $(INCDIR)\tdl.h
+
+test.exe: test.obj $(LIBDIR)\tdl.lib
+        wlink $(LFLAGS) file $(LIBDIR)\c0tt, $(LIBDIR)\wpp, test library $(LIBDIR)\tdl.lib name test
+
