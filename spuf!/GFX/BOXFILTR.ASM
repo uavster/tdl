@@ -1901,7 +1901,7 @@ _ScaledBoxIntegral32	proc
 
               mov   [edi+edx+12345678h],ecx
               destination_bottom_left32:
-        inc   edx
+        add   edx,4
         jnz   filter_bottom_left_pixels32
 
         get   edx,half_kernel_width_plus_one_by_two_minus_output_width
@@ -1955,7 +1955,7 @@ _ScaledBoxIntegral32	proc
 
               mov   [edi+edx+12345678h],ecx
               destination_bottom_center32:
-        inc   edx
+        add   edx,4
         jnz   filter_bottom_central_pixels32
 
         ; edx: column offset
