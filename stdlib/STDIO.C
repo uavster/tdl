@@ -1,6 +1,6 @@
-/* ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+/* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
    Standard input/output functions for C language
-   ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ */
+   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
 
 #include "c:\twcc\h\stdarg.h"
 
@@ -66,23 +66,23 @@ void prepare_args(va_list la, const char *cadena, char *tmpstr) {
         tmpstr[j]='\0';
 }
 
-void printf(char *cadena, ...) {
-        va_list la;
-        char    tmpstr[MAX_STRING_LENGTH];
+void printf(const char *cadena, ...) {
+    va_list la;
+    char    tmpstr[MAX_STRING_LENGTH];
 
-        va_start(la,cadena);
-		prepare_args(la, cadena, tmpstr);
-        va_end(la);
-        PrintFormatted(tmpstr);
+    va_start(la,cadena);
+    prepare_args(la, cadena, tmpstr);
+    va_end(la);
+    PrintFormatted(tmpstr);
 }
 
-int sprintf(char *str, const char *format, ...) {
-        va_list la;
-        char    tmp_format[MAX_STRING_LENGTH];
+int sprintf(const char *str, const char *format, ...) {
+    va_list la;
+    char    tmp_format[MAX_STRING_LENGTH];
 
-        va_start(la, format);
-		prepare_args(la, format, tmp_format);
-        va_end(la);
-        FormatString(str, tmp_format);
-		return strlen(str);
+    va_start(la, format);
+    prepare_args(la, format, tmp_format);
+    va_end(la);
+    FormatString(str, tmp_format);
+    return strlen(str);
 }
