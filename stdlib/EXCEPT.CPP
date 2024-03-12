@@ -1,23 +1,19 @@
 #include "except.hpp"
-#include "string.h"
+#include "string.hpp"
 
-Exception::Exception(const char *description) {
-	int len = strlen(description);
-	if (len == 0) {
-		description_ = NULL;
-		return;
-	}
-	description_ = new char[len + 1];
-	strcpy(description, description_);
+const char *ExceptionWithoutContext::Description() const {
+	const static char unknown_error[] = "Unknown exception";
+  return unknown_error;
 }
 
-Exception::~Exception() {
-	if (description_ == NULL) {
-		return;
-	}
-	delete [] description_;
+const char *MallocException::Description() const {
+	const static char malloc_error[] = "Unable to allocate memory";
+  return malloc_error;
 }
+
+Exception::Exception(const char *description) : description_(description) {}
+Exception::Exception(const std::string &description) : description_(description) {}
 
 const char *Exception::Description() const {
-	return description_;
+	return description_.c_str();
 }

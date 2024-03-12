@@ -1,8 +1,8 @@
-# ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
-# ³ MAKEFILE                                         Copyright [tDR], 1999 ³
-# ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
-# ³                                                                        ³
-# ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿
+# ï¿½ MAKEFILE                                         Copyright [tDR], 1999 ï¿½
+# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä´
+# ï¿½                                                                        ï¿½
+# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 HDIR   = $(TDLPATH)\h;$(TDLPATH)\interp
 INCDIR = $(TDLPATH)\include
@@ -61,11 +61,11 @@ ASMOPTS = /m6 /mx /w-aln /t /i. /i$(INCDIR) /i$(DEFDIR) /i$(TDLPATH)\NEWSGL /d__
         -fo=$@
 !
 
-# ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 all:            tdl.lib         $(TDLPATH)\lib\c0tt.obj	$(TDLPATH)\lib\wpp.obj         c0tt.obj	wpp.obj
 
-# ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 $(TDLPATH)\lib\c0tt.obj:        c0tt.obj
         @echo Copying ... [$?]
         @copy $(TDLPATH)\objs\c0tt.obj $(TDLPATH)\lib\c0tt.obj >nul
@@ -93,6 +93,8 @@ vga.obj:        vga.asm         vga.inc
 filesys.obj:    filesys.asm     filesys.inc     alloc.inc       memmgr.asm
 memmgr.obj:     memmgr.asm      alloc.inc
 
+except.obj:		except.cpp		except.hpp		string.h		utils.asm
+string.obj:		string.cpp		string.hpp		except.hpp	except.cpp
 #gfiles.obj:     gfiles.c        ttl.h
 
 pcxread.obj:    pcxread.asm     pcxread.inc     memmgr.asm      alloc.inc       filesys.inc     filesys.asm
@@ -181,7 +183,6 @@ mixer.obj:      mixer.asm       mixer.inc       wuf!.inc
 waveload.obj:   waveload.asm    waveload.inc    wav.asm         wav.inc			waveload.h
 wav.obj:        wav.asm         wav.inc         memmgr.asm      alloc.inc       filesys.asm     filesys.inc     waveload.asm     waveload.inc
 s3m_.obj:		s3m_.cpp		s3m.h
-except.obj:		except.cpp		except.hpp		string.h		utils.asm
 s3m.obj:		s3m.cpp			s3m.hpp			s3m_.cpp		s3m.h			except.cpp		except.hpp
 s3mplay.obj:	s3mplay.cpp		s3mplay.hpp		wuf!.h			playable.hpp
 player.obj:		player.cpp		player.hpp		s3mplay.hpp
@@ -194,7 +195,7 @@ player.obj:		player.cpp		player.hpp		s3mplay.hpp
 #load_xm.obj:    load_xm.asm
 #sb.obj:         sb.asm          sb.inc
 
-tdl.lib:        stdc.obj        new.obj		except.obj	stdio.obj       count.obj       dpmi.obj	irq.obj\
+tdl.lib:        stdc.obj        new.obj		except.obj	string.obj	stdio.obj       count.obj       dpmi.obj	irq.obj\
                 litt16.obj      framerat.obj    sglmain.obj\
                 utils.obj       assert.obj		vga.obj         draw8x8g.obj\
                 draw4x4g.obj    grid.obj		boxfiltr.obj\
@@ -224,4 +225,4 @@ tdl.lib:        stdc.obj        new.obj		except.obj	stdio.obj       count.obj   
  @&wlib $(WLIBOPTS) $< +- "$?"
 
 
-# ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
