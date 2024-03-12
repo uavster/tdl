@@ -1,8 +1,8 @@
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 ; Graphics loader
 ;
 ; Author: Ignacio Mellado Bataller (a.k.a. B52 / The DarkRising)
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 .386p
 .model flat
 .code
@@ -16,7 +16,31 @@
 GRAPHIC_FORMATS EQU 2
 LOAD_PROCS      EQU offset PCXProcs, offset FLIProcs
 
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+CleanUpTemp proc
+		    ; Free temporary SLI        
+        mov     eax,source_sli
+        test    eax,eax
+        jz      no_source_sli
+        call    DestroySLI
+        no_source_sli:
+        
+		    ; Clean up after format handler
+        mov     edi,format_handler
+        call    [Loader ptr edi.EndProc]
+
+        ret
+endp
+
+CleanUpOutputSLI proc
+        mov     eax,our_sli
+        test    eax,eax
+        jz      no_our_sli
+        call    DestroySLI
+        no_our_sli:
+        ret
+endp
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 ; Loads a graphic file into a memory SLI
 ;
 ; INPUT  : EAX -> GFX file name
@@ -28,9 +52,12 @@ LOAD_PROCS      EQU offset PCXProcs, offset FLIProcs
 ;          CF = 1 if error
 ;               EAX = Error code
 ;               EBX = NULL
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 LoadGFX proc
         push    ebp
+        mov     source_sli,0
+        mov     our_sli,0
+
         mov     sli_c,ebx
         mov     ecx,GRAPHIC_FORMATS
         xor     esi,esi
@@ -55,7 +82,10 @@ LoadGFX proc
                 inc     esi
         loop    try_formats
         mov     eax,INVALID_FORMAT
-		jmp		load_error
+        xor     ebx,ebx
+        stc
+        pop     ebp
+        ret
 
         found_format:       
         mov     format_handler,edi
@@ -142,28 +172,22 @@ LoadGFX proc
         cmp     cur_frame, eax
         jnz     decompress_frames
         
-		; Free temporary SLI
-        mov     eax,source_sli
-        call    DestroySLI
-        jc      load_error
-        
         ; Set destination SLI to first frame
         mov     eax,our_sli
         xor     ebx,ebx
         call    SetFrame
 
-		; Cleanup 
-        mov     edi,format_handler
-        call    [Loader ptr edi.EndProc]
-        jc      load_error
+        call    CleanUpTemp
 
-		; Return values
+    		; Return values
         mov     ebx,our_sli
         clc
         pop     ebp
         ret
 
         load_error:
+        call    CleanUpTemp
+        call    CleanUpOutputSLI
         xor     ebx,ebx
         stc
         pop     ebp
