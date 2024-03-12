@@ -1,6 +1,6 @@
-/* дддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд 
+/* О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫ 
    Include file for string handling functions
-   дддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд */
+   О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫ */
 
 #ifndef _STRING_INCLUDED_
 #define _STRING_INCLUDED_
@@ -22,10 +22,11 @@ int StringLength(const char *);
 void PushToString(char *,char);
 #pragma aux PushToString "*" parm   [esi] [dl];
 
-char *strcpy(const char *src, char *dst);
-#pragma aux strcpy_ "*" parm	[esi] [edi] value [edi];
+char *strcpy(char *, const char *);
+#pragma aux strcpy "strcpya" parm	[edi] [esi] \
+                        value [edi];
 
-int sprintf(char *str, const char *format, ...);
+int sprintf(const char *str, const char *format, ...);
 
 #ifdef __cplusplus
   };

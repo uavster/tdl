@@ -18,7 +18,7 @@
 		
 		DOUBLE_STRING_NUM_DECIMAL_DIGITS	EQU 6
 
-        public  GetCommandParam,PrintFormatted,FormatString,PrintChar,CopyString,StringLength,strcpy_
+        public  GetCommandParam,PrintFormatted,FormatString,PrintChar,CopyString,StringLength,strcpya
         public  GetInteger,TransToBase,PushToString,CopyFilename
         public  SearchExtension,ReadLine,UpperCase,CompareString
         public  GetEnvironmentVar, SkipCharacters, GetHexInteger
@@ -279,7 +279,7 @@ COSLab1:
         ret
         endp
 		
-strcpy_	proc
+strcpya	proc
 		jmp		CopyString
 		endp
 
