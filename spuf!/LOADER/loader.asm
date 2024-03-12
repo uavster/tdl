@@ -26,8 +26,11 @@ CleanUpTemp proc
         
 		    ; Clean up after format handler
         mov     edi,format_handler
+        test    edi,edi
+        jz      no_format_handler
         call    [Loader ptr edi.EndProc]
-
+        no_format_handler:
+        
         ret
 endp
 
@@ -57,6 +60,7 @@ LoadGFX proc
         push    ebp
         mov     source_sli,0
         mov     our_sli,0
+        mov     format_handler,0
 
         mov     sli_c,ebx
         mov     ecx,GRAPHIC_FORMATS
