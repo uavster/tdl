@@ -259,7 +259,7 @@ void Blit(SLI *destino, SLI *fuente);
 ;               EBX = NULL
 ;�����������������������������������������������������������������������������
 */
-SLI *LoadGFX(char *name, int colorbits);
+SLI *LoadGFX(const char *name, int colorbits);
 #pragma aux LoadGFX "*" parm [eax] [ebx]\
                      modify [eax ebx ecx edx esi edi ebp]\
                      value [ebx];
