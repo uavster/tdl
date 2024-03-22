@@ -26,4 +26,11 @@ private:
 	std::string description_;
 };
 
+extern "C" ExceptionWithoutContext *GetLastExceptionPtr();
+#pragma aux GetLastExceptionPtr "*" modify [eax] \
+                                    value [eax];
+
+ExceptionWithoutContext &GetLastException();
+
+
 #endif  // __EXCEPT_HEADER__

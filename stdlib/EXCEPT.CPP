@@ -17,3 +17,5 @@ Exception::Exception(const std::string &description) : description_(description)
 const char *Exception::Description() const {
 	return description_.c_str();
 }
+
+ExceptionWithoutContext &GetLastException() { return *GetLastExceptionPtr(); }

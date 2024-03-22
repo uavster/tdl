@@ -1,10 +1,10 @@
-;дддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд
+;О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫
 ; file: c0tt.asm
 ;
 ;  A little startup code to use Watcom C with #Trouble# Team's DarkX.
 ;
 ;       by Xavier Rubio Jansana, a.k.a. Teknik / #Trouble# Team, July 1998
-;дддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд
+;О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫
 
         .386p
         .model flat
@@ -23,7 +23,7 @@ MAX_DOS_COMMAND_LINE_LENGTH		EQU 127		; Including final carry return.
 
         .code
 
-;дддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд
+;О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫
 
         include alloc.inc
         include utils.inc
@@ -68,7 +68,7 @@ GetCommandLine	proc
 endp
 	
     ; NOTA: sembla que l'WLINK vol el _cstart_, encara que no ha de ser
-    ;       per for┤a el nom del punt d'entrada.
+    ;       per forО©╫a el nom del punt d'entrada.
 
 _cstart_:
         jmp     short skip_watcom_signature
@@ -90,7 +90,9 @@ _cstart_:
 		
 		mov		eax,argc
 		mov		edx,offset argv
-        call    main_
+    ; Mark the last stack frame, so the default exception handler is called when the stack is unwound.
+    mov ebp,0
+    call    main_
 
 _cfinish_:
 		cmp		is_verbose,0
