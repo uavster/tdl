@@ -131,28 +131,30 @@ __wcpp_4_throw__:
             ; Update eax to point to the stack frame of the outer try-catch.
             mov eax,__wint_thread_data
             
-            ; If the stack frame points at the default list node, the exception has been thrown from outside a try-catch.
+            ; If the node's fork address is 0, there's no try-catch enclosing the throw.
             mov ebx,[STACK_FRAME ptr eax.current_try_catch_node]
-            cmp ebx,offset __wcpp_4_fs_handler_rtn__
+            mov edx,[TRY_CATCH_LIST_NODE ptr ebx.fork_addr]
+            test edx,edx
             je no_try_catch
 
             ; The exception has been thrown from a try-catch. 
+            
             ; The search for a handling catch block depends on whether it was thrown from a try block or a catch block.
             ; Throwing increases the try-catch's state in the stack frame; therefore, if the recorded state in the current node plus one 
             ; matches the stack frame's, the throw statement is in a try block; otherwise, it's in a catch block.
-
             mov edx,[TRY_CATCH_LIST_NODE ptr ebx.state]
             inc edx
             cmp [STACK_FRAME ptr eax.try_catch_state],edx
             je exception_handler_found    ; Exception thrown from a try block.
-                
+
             ; Exception thrown from a catch block.
             mov ebx,[TRY_CATCH_LIST_NODE ptr ebx.next_node_ptr]
             test ebx,ebx
             jz no_try_catch   ; No more outer try-catchs in this stack frame: unwind it.
 
-            ; Run the catch block of the containing try-catch.
+            ; The stack frame's try-block is now the containing one.
             mov [STACK_FRAME ptr eax.current_try_catch_node],ebx
+            ; Run the catch block of the containing try-catch.
             jmp exception_handler_found
 
             no_try_catch:
@@ -188,7 +190,7 @@ __wcpp_4_throw__:
 
 public GetLastExceptionPtr
 GetLastExceptionPtr proc
-        mov eax,__wint_thread_data        
+        mov eax,__wint_thread_data
         mov eax,[STACK_FRAME ptr eax.current_try_catch_node]
         mov eax,[TRY_CATCH_LIST_NODE ptr eax.exception_ptr]
         retn
@@ -196,6 +198,11 @@ GetLastExceptionPtr proc
 
 public __wcpp_4_catch_done__
 __wcpp_4_catch_done__:
+        ; The try-catch is now the containing one.
+        mov eax,__wint_thread_data
+        mov ebx,[STACK_FRAME ptr eax.current_try_catch_node]
+        mov ebx,[TRY_CATCH_LIST_NODE ptr ebx.next_node_ptr]
+        mov [STACK_FRAME ptr eax.current_try_catch_node],ebx
         retn
 
 public __compiled_under_generic
