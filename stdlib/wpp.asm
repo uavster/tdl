@@ -18,7 +18,7 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Modified by B52 / tDR for compatibility with TASM, WPP386 and TDL.
+;; Modified by B52 / tDR for compatibility with TASM, WPP386 and TDL, and exception support.
 
 .386p
 .model flat
@@ -40,7 +40,8 @@ fork_addr               dd ?  ; Code address after call to _setjmp_.
 exception_ptr           dd ?  ; Pointer to the exception thrown in this try-catch, or 0 if none.
 ends
 
-default_exception_handler_message db 13,10,"Uncaught exception!",13,10,"$"
+get_last_exception_cur_node         dd offset base_stack_frame
+default_exception_handler_message   db 13,10,"Uncaught exception!",13,10,"$"
 
 .code
 
@@ -137,24 +138,7 @@ __wcpp_4_throw__:
             test edx,edx
             je no_try_catch
 
-            ; The exception has been thrown from a try-catch. 
-            
-            ; The search for a handling catch block depends on whether it was thrown from a try block or a catch block.
-            ; Throwing increases the try-catch's state in the stack frame; therefore, if the recorded state in the current node plus one 
-            ; matches the stack frame's, the throw statement is in a try block; otherwise, it's in a catch block.
-            mov edx,[TRY_CATCH_LIST_NODE ptr ebx.state]
-            inc edx
-            cmp [STACK_FRAME ptr eax.try_catch_state],edx
-            je exception_handler_found    ; Exception thrown from a try block.
-
-            ; Exception thrown from a catch block.
-            mov ebx,[TRY_CATCH_LIST_NODE ptr ebx.next_node_ptr]
-            test ebx,ebx
-            jz no_try_catch   ; No more outer try-catchs in this stack frame: unwind it.
-
-            ; The stack frame's try-block is now the containing one.
-            mov [STACK_FRAME ptr eax.current_try_catch_node],ebx
-            ; Run the catch block of the containing try-catch.
+            ; The exception has been thrown from a try-catch. Run the catch block.
             jmp exception_handler_found
 
             no_try_catch:
@@ -176,7 +160,14 @@ __wcpp_4_throw__:
         jmp stack_unwinding_loop
 
         exception_handler_found:
+        ; eax=pointer to current stack frame.
         ; ebx=pointer to node with the catch block handling the exception.        
+
+        ; Remove try-catch from list; so it does not run again if, e.g., there's a throw in the catch block.
+        mov edx,[TRY_CATCH_LIST_NODE ptr ebx.next_node_ptr]
+        mov [STACK_FRAME ptr eax.current_try_catch_node],edx
+        ; GetLastExceptionPtr will return the exception in this node, despite having been unlinked from the stack frame.
+        mov get_last_exception_cur_node,ebx
         ; Store exception pointer in node.
         mov [TRY_CATCH_LIST_NODE ptr ebx.exception_ptr],ecx
         ; Overwrite return address with try-catch fork point.
@@ -190,9 +181,8 @@ __wcpp_4_throw__:
 
 public GetLastExceptionPtr
 GetLastExceptionPtr proc
-        mov eax,__wint_thread_data
-        mov eax,[STACK_FRAME ptr eax.current_try_catch_node]
-        mov eax,[TRY_CATCH_LIST_NODE ptr eax.exception_ptr]
+        mov eax,get_last_exception_cur_node
+        mov eax,[STACK_FRAME ptr eax.exception_ptr]
         retn
   endp
 
@@ -203,6 +193,10 @@ __wcpp_4_catch_done__:
         mov ebx,[STACK_FRAME ptr eax.current_try_catch_node]
         mov ebx,[TRY_CATCH_LIST_NODE ptr ebx.next_node_ptr]
         mov [STACK_FRAME ptr eax.current_try_catch_node],ebx
+        ; GetLastExceptionPtr should return the exception in the next node.
+        mov eax,get_last_exception_cur_node
+        mov eax,[STACK_FRAME ptr eax.next_node_ptr]
+        mov get_last_exception_cur_node,eax
         retn
 
 public __compiled_under_generic
