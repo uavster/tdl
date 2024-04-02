@@ -1,21 +1,24 @@
 #include "except.hpp"
 #include "stdio.h"
+#include "debug.h"
 
 int num_tests = 0;
 
-class NewTest {
+class Test {
 public:
-  NewTest(const char *name) {
+  Test(const char *name) {
     ++num_tests;
     printf("Test %dn: ", num_tests);
     printf(name);
   }
 
-  virtual ~NewTest() {
+  virtual ~Test() {
     // Test was ok if program was not interrupted.
     printf(" [OK]\n");
   }
 };
+
+#define NewTest(name) const Test test = Test(name);
 
 void CheckResultEqual(const void *actual, const void *expected) {
   if (expected == NULL) {
@@ -34,7 +37,7 @@ void CheckResultEqual(const void *actual, const void *expected) {
 		printf(" [ERROR]\nExpected: ");
 		printf(expected_str);
 		printf("\nActual:   ");
-		printf(expected_str);
+		printf(actual_str);
 		printf("\n");
 		exit(1);
 	}
@@ -57,7 +60,7 @@ void CheckResultNotEqual(const void *actual, const void *expected) {
 		printf(" [ERROR]\nExpected: != ");
 		printf(expected_str);
 		printf("\nActual:   ");
-		printf(expected_str);
+		printf(actual_str);
 		printf("\n");
 		exit(1);
 	}
@@ -136,14 +139,110 @@ int main() {
 	}
 
 	{
+		NewTest("GetLastException returns exception if previous throw.");
+    const ExceptionBase *actual = NULL;
+    const char exception_msg[] = "test exception";
+    try {
+      throw Exception(exception_msg);
+    } catch(...) {
+      actual = &GetLastException();
+    }
+    EXPECT_NE(actual, NULL);
+		EXPECT_EQ(actual->Description(), exception_msg);
+	}
+
+  {
+		NewTest("GetLastException returns right exception after two try-catch.");
+    const ExceptionBase *actual = NULL;
+    const char exception1_msg[] = "first exception";
+    const char exception2_msg[] = "second exception";
+    try {
+      throw Exception(exception1_msg);
+    } catch(...) {
+      actual = &GetLastException();
+    }
+    try {
+      throw Exception(exception2_msg);
+    } catch(...) {
+      actual = &GetLastException();
+    }
+    EXPECT_NE(actual, NULL);
+		EXPECT_EQ(actual->Description(), exception2_msg);
+	}
+
+  {
+		NewTest("Catch block gets exception after try-catch at same level.");
+    const ExceptionBase *actual = NULL;
+    const Exception decoy_exception("decoy exception");
+    const char exception_msg[] = "true exception";
+    try {
+    } catch(...) {
+      actual = &decoy_exception;
+    }
+    try {
+      throw Exception(exception_msg);
+    } catch(...) {
+      actual = &GetLastException();
+    }
+    EXPECT_NE(actual, NULL);
+		EXPECT_EQ(actual->Description(), exception_msg);
+	}
+
+  {
+		NewTest("Catch block gets exception before try-catch at same level.");
+    const ExceptionBase *actual = NULL;
+    const Exception decoy_exception("decoy exception");
+    const char exception_msg[] = "true exception";
+    try {
+      throw Exception(exception_msg);
+    } catch(...) {
+      actual = &GetLastException();
+    }
+    try {
+    } catch(...) {
+      actual = &decoy_exception;
+    }
+    EXPECT_NE(actual, NULL);
+		EXPECT_EQ(actual->Description(), exception_msg);
+	}
+
+/*
+  // This case is unsupported because the compiler does not generate any call at the end of a try block for us to 
+  // locally unwind the try-catch; therefore, the throw will target the inner try-catch instead of the containing one.
+  {
+		NewTest("GetLastExceptionPtr returns NULL when throw is after try-catch.");
+    const ExceptionBase *actual = NULL;
+    const char exception_msg[] = "test exception";
+    try {
+      try {
+      } catch(...) {
+      }
+      throw Exception(exception_msg);
+    } catch(...) {      
+    }
+    EXPECT_EQ(actual, NULL);
+	}
+*/
+
+	{
+		NewTest("GetLastExceptionPtr returns NULL after catch block.");
+    try {
+      throw Exception("test exception");
+    } catch(...) {
+    }
+    EXPECT_EQ(GetLastExceptionPtr(), NULL);
+	}
+
+	{
 		NewTest("Try calling function that throws; catch block gets exception.");
     const ExceptionBase *actual = NULL;
     try {
       ThrowException();
     } catch(...) {
-      EXPECT_NE(GetLastExceptionPtr(), NULL);
-  		EXPECT_EQ(GetLastExceptionPtr()->Description(), exception_in_func_msg);
+      actual = GetLastExceptionPtr();
     }
+    EXPECT_NE(actual, NULL);
+    EXPECT_EQ(actual->Description(), exception_in_func_msg);
   }
 
 	{
@@ -152,9 +251,10 @@ int main() {
     try {
       ThrowExceptionCatchAndRethrow();
     } catch(...) {
-      EXPECT_NE(GetLastExceptionPtr(), NULL);
-  		EXPECT_EQ(GetLastExceptionPtr()->Description(), exception_in_func_msg);
+      actual = GetLastExceptionPtr();
     }
+    EXPECT_NE(actual, NULL);
+    EXPECT_EQ(actual->Description(), exception_in_func_msg);
   }
 
 	{

@@ -40,7 +40,7 @@ fork_addr               dd ?  ; Code address after call to _setjmp_.
 exception_ptr           dd ?  ; Pointer to the exception thrown in this try-catch, or 0 if none.
 ends
 
-get_last_exception_cur_node         dd offset base_stack_frame
+get_last_exception_cur_node         dd 0
 default_exception_handler_message   db 13,10,"Uncaught exception!",13,10,"$"
 
 .code
@@ -86,10 +86,19 @@ _setjmp_:
         ; eax=pointer to stack space with at least 52 bytes. We use it to store the linked list node.
         push ebx ecx
 
-        ; __wint_thread_data points to new node, and node.next points at previous node.
+        ; A new try-catch takes the head of the list at __wint_thread_data.current_try_catch_node.
         mov ebx,__wint_thread_data
+        ; If nested in a previous try block, the containing one is linked as next node.
+        ; If nested in a previous catch block, the containing try-catch will never handle a throw, so it should not be linked.
         mov ecx,[STACK_FRAME ptr ebx.current_try_catch_node]
-        mov [TRY_CATCH_LIST_NODE ptr eax.next_node_ptr],ecx
+        mov edx,[TRY_CATCH_LIST_NODE ptr ecx.next_node_ptr]
+        mov [TRY_CATCH_LIST_NODE ptr eax.next_node_ptr],edx
+        mov edx,[STACK_FRAME ptr ebx.try_catch_state]
+        sub edx,[TRY_CATCH_LIST_NODE ptr ecx.state]
+        cmp edx,1
+        jne not_nested
+            mov [TRY_CATCH_LIST_NODE ptr eax.next_node_ptr],ecx
+        not_nested:
         mov [STACK_FRAME ptr ebx.current_try_catch_node],eax
 
         ; Set the node's try-catch state.
@@ -127,7 +136,6 @@ __wcpp_4_throw__:
         ; Store pointer to exception in ecx.
         mov ecx,eax
 
-        ; If the fork address is the default one, setjmp has not been run for this stack frame, and we should try that of the outer try-catch.
         stack_unwinding_loop:
             ; Update eax to point to the stack frame of the outer try-catch.
             mov eax,__wint_thread_data
@@ -151,10 +159,6 @@ __wcpp_4_throw__:
             ; Set the new inner stack frame in __wint_thread_data
             mov eax,[STACK_FRAME ptr eax.prev_frame_ptr]
             mov __wint_thread_data,eax
-
-            ; Since an exception was thrown, increase the new stack frame's try-catch state.
-            ; This must be done to know whether the exception was thrown from the try block or the catch block of the new stack frame.
-            inc [STACK_FRAME ptr eax.try_catch_state]
 
             ; The stack space containing the exception data stays alive until esp is restored.
         jmp stack_unwinding_loop
@@ -182,7 +186,10 @@ __wcpp_4_throw__:
 public GetLastExceptionPtr
 GetLastExceptionPtr proc
         mov eax,get_last_exception_cur_node
-        mov eax,[STACK_FRAME ptr eax.exception_ptr]
+        test eax,eax
+        jz no_last_exception
+        mov eax,[TRY_CATCH_LIST_NODE ptr eax.exception_ptr]
+        no_last_exception:
         retn
   endp
 
@@ -194,8 +201,8 @@ __wcpp_4_catch_done__:
         mov ebx,[TRY_CATCH_LIST_NODE ptr ebx.next_node_ptr]
         mov [STACK_FRAME ptr eax.current_try_catch_node],ebx
         ; GetLastExceptionPtr should return the exception in the next node.
-        mov eax,get_last_exception_cur_node
-        mov eax,[STACK_FRAME ptr eax.next_node_ptr]
+        mov eax,get_last_exception_cur_node        
+        mov eax,[TRY_CATCH_LIST_NODE ptr eax.next_node_ptr]
         mov get_last_exception_cur_node,eax
         retn
 
