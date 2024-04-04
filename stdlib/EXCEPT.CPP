@@ -1,5 +1,6 @@
 #include "except.hpp"
 #include "string.hpp"
+#include "stdio.h"
 
 const char *ExceptionBase::Description() const {
 	const static char unknown_error[] = "Unknown exception";
@@ -16,11 +17,31 @@ const char *NoExceptionThrown::Description() const {
   return no_exc_error;
 }
 
+ExceptionBase::~ExceptionBase() {
+  int t = 0xfeee;
+}
+
+ExceptionBase *ExceptionBase::CreateDeepCopy() const {
+  return new ExceptionBase;
+}
+
+ExceptionBase *MallocException::CreateDeepCopy() const {
+  return new MallocException;
+}
+
+ExceptionBase *NoExceptionThrown::CreateDeepCopy() const {
+  return new NoExceptionThrown;
+}
+
 Exception::Exception(const char *description) : description_(description) {}
 Exception::Exception(const std::string &description) : description_(description) {}
 
 const char *Exception::Description() const {
 	return description_.c_str();
+}
+
+ExceptionBase *Exception::CreateDeepCopy() const {
+  return new Exception(Description());
 }
 
 const ExceptionBase &GetLastException() { 

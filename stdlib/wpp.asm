@@ -38,6 +38,22 @@ next_node_ptr           dd ?  ; Pointer to next node, or 0 if none.
 state                   dd ?  ; Try-catch state when _setjmp_ was called.
 fork_addr               dd ?  ; Code address after call to _setjmp_.
 exception_ptr           dd ?  ; Pointer to the exception thrown in this try-catch, or 0 if none.
+reg_ebx                 dd ?
+reg_ecx                 dd ?
+reg_edx                 dd ?
+reg_esi                 dd ?
+reg_edi                 dd ?
+reg_ebp                 dd ?
+reg_esp                 dd ?
+ends
+
+EXCEPTION_OBJECT struc
+vtable                  dd ?
+ends
+
+EXCEPTION_VTABLE struc
+destruct               dd ?
+deep_copy              dd ?
 ends
 
 get_last_exception_cur_node         dd 0
@@ -112,10 +128,18 @@ _setjmp_:
         ; Clear exception pointer.
         mov [TRY_CATCH_LIST_NODE ptr eax.exception_ptr],0
 
+        pop ecx ebx
+        ; Save registers.
+        mov [TRY_CATCH_LIST_NODE ptr eax.reg_ebx],ebx
+        mov [TRY_CATCH_LIST_NODE ptr eax.reg_ecx],ecx
+        mov [TRY_CATCH_LIST_NODE ptr eax.reg_edx],edx
+        mov [TRY_CATCH_LIST_NODE ptr eax.reg_esi],esi
+        mov [TRY_CATCH_LIST_NODE ptr eax.reg_edi],edi
+        mov [TRY_CATCH_LIST_NODE ptr eax.reg_ebp],ebp
+        mov [TRY_CATCH_LIST_NODE ptr eax.reg_esp],esp
+
         ; Return != 1 to enter try block.
         xor eax,eax
-
-        pop ecx ebx
         retn
 
 public __argc
@@ -133,7 +157,11 @@ default_exception_handler:
 
 public __wcpp_4_throw__
 __wcpp_4_throw__:
-        ; Store pointer to exception in ecx.
+        ; eax = pointer to exception object.
+        ; Deep-copy the exception to access safely after destroying stack frame.
+        mov edx,[EXCEPTION_OBJECT ptr eax.vtable]
+        call dword ptr [EXCEPTION_VTABLE ptr edx.deep_copy]
+        ; ecx = pointer to deep copy of the exception.
         mov ecx,eax
 
         stack_unwinding_loop:
@@ -144,20 +172,18 @@ __wcpp_4_throw__:
             mov ebx,[STACK_FRAME ptr eax.current_try_catch_node]
             mov edx,[TRY_CATCH_LIST_NODE ptr ebx.fork_addr]
             test edx,edx
-            je no_try_catch
+            jne exception_handler_found   ; run the catch block.
 
-            ; The exception has been thrown from a try-catch. Run the catch block.
-            jmp exception_handler_found
-
-            no_try_catch:
-            ; The stack frame cannot catch the exception: unwind it.
-            mov ebp,[ebp]
-            ; No more stack frames: call the default exception handler.
-            test ebp,ebp
-            jz default_exception_handler
+            ; ; The stack frame cannot catch the exception: unwind it.            
+            ; mov ebp,[ebp]
+            ; ; No more stack frames: call the default exception handler.
+            ; test ebp,ebp
+            ; jz default_exception_handler
             
             ; Set the new inner stack frame in __wint_thread_data
             mov eax,[STACK_FRAME ptr eax.prev_frame_ptr]
+            test eax,eax
+            jz default_exception_handler
             mov __wint_thread_data,eax
 
             ; The stack space containing the exception data stays alive until esp is restored.
@@ -174,11 +200,24 @@ __wcpp_4_throw__:
         mov get_last_exception_cur_node,ebx
         ; Store exception pointer in node.
         mov [TRY_CATCH_LIST_NODE ptr ebx.exception_ptr],ecx
+
         ; Overwrite return address with try-catch fork point.
         mov eax,[TRY_CATCH_LIST_NODE ptr ebx.fork_addr]
         test eax,eax
         jz default_exception_handler
+
+        ; Restore registers as they where before the fork, including esp, which is sometimes used to reference locals.
+        mov ecx,[TRY_CATCH_LIST_NODE ptr ebx.reg_ecx]
+        mov edx,[TRY_CATCH_LIST_NODE ptr ebx.reg_edx]
+        mov esi,[TRY_CATCH_LIST_NODE ptr ebx.reg_esi]
+        mov edi,[TRY_CATCH_LIST_NODE ptr ebx.reg_edi]
+        mov ebp,[TRY_CATCH_LIST_NODE ptr ebx.reg_ebp]
+        mov esp,[TRY_CATCH_LIST_NODE ptr ebx.reg_esp]
+        mov ebx,[TRY_CATCH_LIST_NODE ptr ebx.reg_ebx]
+
+        ; Overwrite return address with try-catch fork point.
         mov ss:[esp],eax
+
         ; Simulate setjmp returning 1 to enter catch block.
         mov eax,1
         retn
@@ -193,17 +232,39 @@ GetLastExceptionPtr proc
         retn
   endp
 
+public __destroy_last_exception__
+__destroy_last_exception__:
+        push eax ebx edx
+        mov eax,get_last_exception_cur_node
+        test eax,eax
+        jz no_last_exception_to_destroy
+
+        ; Call de exception's virtual destructor.
+        mov eax,[TRY_CATCH_LIST_NODE ptr eax.exception_ptr]
+        mov ebx,[EXCEPTION_OBJECT ptr eax.vtable]
+        mov edx,2       ; Deallocate the memory.
+        call dword ptr [EXCEPTION_VTABLE ptr ebx.destruct]
+
+        ; GetLastExceptionPtr returns the exception in the next node.
+        mov eax,get_last_exception_cur_node
+        mov eax,[TRY_CATCH_LIST_NODE ptr eax.next_node_ptr]
+        mov get_last_exception_cur_node,eax
+
+        no_last_exception_to_destroy:
+        pop edx ebx eax
+        retn
+
 public __wcpp_4_catch_done__
 __wcpp_4_catch_done__:
+        push eax ebx
         ; The try-catch is now the containing one.
         mov eax,__wint_thread_data
         mov ebx,[STACK_FRAME ptr eax.current_try_catch_node]
         mov ebx,[TRY_CATCH_LIST_NODE ptr ebx.next_node_ptr]
         mov [STACK_FRAME ptr eax.current_try_catch_node],ebx
-        ; GetLastExceptionPtr should return the exception in the next node.
-        mov eax,get_last_exception_cur_node        
-        mov eax,[TRY_CATCH_LIST_NODE ptr eax.next_node_ptr]
-        mov get_last_exception_cur_node,eax
+        ; Destroy the exception object.
+        call __destroy_last_exception__
+        pop ebx eax
         retn
 
 public __compiled_under_generic

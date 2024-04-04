@@ -116,94 +116,88 @@ int main() {
 	{
 		NewTest("Catch block gets exception thrown in try block.");
     const char exception_msg[] = "test exception";
-    const ExceptionBase *actual = NULL;
+    std::string actual;
     try {
       throw Exception(exception_msg);
     } catch(...) {
-      actual = GetLastExceptionPtr();
+      // The exception object will be invalid outside the catch block; deep-copy it to access it outside.
+      actual = GetLastExceptionPtr()->Description();
     }
-    EXPECT_NE(actual, NULL);
-		EXPECT_EQ(actual->Description(), exception_msg);
+		EXPECT_EQ(actual.c_str(), exception_msg);
 	}
 
 	{
 		NewTest("GetLastException throws if no previous throw.");
-    const ExceptionBase *actual = NULL;
+    std::string actual;
     try {
       GetLastException();
     } catch(...) {
-      actual = GetLastExceptionPtr();
+      // The exception object will be invalid outside the catch block; deep-copy it to access it outside.
+      actual = GetLastExceptionPtr() ? GetLastExceptionPtr()->Description() : "";
     }
-    EXPECT_NE(actual, NULL);
-		EXPECT_EQ(actual->Description(), NoExceptionThrown().Description());
+		EXPECT_EQ(actual.c_str(), NoExceptionThrown().Description());
 	}
 
 	{
 		NewTest("GetLastException returns exception if previous throw.");
-    const ExceptionBase *actual = NULL;
+    std::string actual;
     const char exception_msg[] = "test exception";
     try {
       throw Exception(exception_msg);
     } catch(...) {
-      actual = &GetLastException();
+      actual = GetLastException().Description();
     }
-    EXPECT_NE(actual, NULL);
-		EXPECT_EQ(actual->Description(), exception_msg);
+		EXPECT_EQ(actual.c_str(), exception_msg);
 	}
 
   {
 		NewTest("GetLastException returns right exception after two try-catch.");
-    const ExceptionBase *actual = NULL;
+    std::string actual;
     const char exception1_msg[] = "first exception";
     const char exception2_msg[] = "second exception";
     try {
       throw Exception(exception1_msg);
     } catch(...) {
-      actual = &GetLastException();
+      actual = GetLastException().Description();
     }
     try {
       throw Exception(exception2_msg);
     } catch(...) {
-      actual = &GetLastException();
+      actual = GetLastException().Description();
     }
-    EXPECT_NE(actual, NULL);
-		EXPECT_EQ(actual->Description(), exception2_msg);
+		EXPECT_EQ(actual.c_str(), exception2_msg);
 	}
 
   {
 		NewTest("Catch block gets exception after try-catch at same level.");
-    const ExceptionBase *actual = NULL;
-    const Exception decoy_exception("decoy exception");
+    std::string actual;
     const char exception_msg[] = "true exception";
     try {
     } catch(...) {
-      actual = &decoy_exception;
+      actual = "decoy";
     }
     try {
       throw Exception(exception_msg);
     } catch(...) {
-      actual = &GetLastException();
+      actual = GetLastException().Description();
     }
-    EXPECT_NE(actual, NULL);
-		EXPECT_EQ(actual->Description(), exception_msg);
+		EXPECT_EQ(actual.c_str(), exception_msg);
 	}
 
   {
 		NewTest("Catch block gets exception before try-catch at same level.");
-    const ExceptionBase *actual = NULL;
-    const Exception decoy_exception("decoy exception");
+    std::string actual;
     const char exception_msg[] = "true exception";
     try {
       throw Exception(exception_msg);
     } catch(...) {
-      actual = &GetLastException();
+      actual = GetLastException().Description();
     }
     try {
     } catch(...) {
-      actual = &decoy_exception;
+      actual = "decoy";
     }
-    EXPECT_NE(actual, NULL);
-		EXPECT_EQ(actual->Description(), exception_msg);
+		EXPECT_EQ(actual.c_str(), exception_msg);
 	}
 
 /*
@@ -235,32 +229,30 @@ int main() {
 
 	{
 		NewTest("Try calling function that throws; catch block gets exception.");
-    const ExceptionBase *actual = NULL;
+    std::string actual;
     try {
       ThrowException();
     } catch(...) {
-      actual = GetLastExceptionPtr();
+      actual = GetLastException().Description();
     }
-    EXPECT_NE(actual, NULL);
-    EXPECT_EQ(actual->Description(), exception_in_func_msg);
+    EXPECT_EQ(actual.c_str(), exception_in_func_msg);
   }
 
 	{
 		NewTest("Try calling function that rethrows; catch block gets exception.");
-    const ExceptionBase *actual = NULL;
+    std::string actual;
     try {
       ThrowExceptionCatchAndRethrow();
     } catch(...) {
-      actual = GetLastExceptionPtr();
+      actual = GetLastException().Description();
     }
-    EXPECT_NE(actual, NULL);
-    EXPECT_EQ(actual->Description(), exception_in_func_msg);
+    EXPECT_EQ(actual.c_str(), exception_in_func_msg);
   }
 
 	{
 		NewTest("Outer catch block gets exception re-thrown at inner catch block.");
     const char exception_msg[] = "test exception";
-    const ExceptionBase *actual = NULL;
+    std::string actual;
     try {
       try {
         throw Exception("something else");
@@ -268,10 +260,9 @@ int main() {
         throw Exception(exception_msg);
       }
     } catch(...) {
-      actual = GetLastExceptionPtr();
+      actual = GetLastException().Description();
     }
-    EXPECT_NE(actual, NULL);
-		EXPECT_EQ(actual->Description(), exception_msg);
+    EXPECT_EQ(actual.c_str(), exception_msg);
 	}
 
 	printf("[SUCCESS] %dn tests passed.", num_tests);

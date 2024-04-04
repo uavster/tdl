@@ -32,6 +32,7 @@ MAX_DOS_COMMAND_LINE_LENGTH		EQU 127		; Including final carry return.
         INCLUDE newsgl.inc
 
         extrn   main_: near
+        extrn   __destroy_last_exception__: near
         public  _cstart_
         public  _exit_          ; B52
 
@@ -95,6 +96,8 @@ _cstart_:
     call    main_
 
 _cfinish_:
+    ; When an exception is thrown, it is deep copied in the heap: clean up the last one thrown, if any.
+    call __destroy_last_exception__
 		cmp		is_verbose,0
 		jnz		exit_verbosely
         ExitSilently
