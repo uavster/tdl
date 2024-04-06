@@ -531,6 +531,25 @@ void CreateLitTableSLI(SLI *slip, int nType, int niveles);
 #define BLACK2WHITE 2   // 0 - Negro ... 15 - Original ... 31 - Blanco
 #define ORIGINAL    3   // 0 - Original
 
+/*
+;�����������������������������������������������������������������������������
+; Creates a deep copy of a SLI
+;
+; All non-pointer SLI header fields are copied. Only those pointees in the SLI header that are intrinsically tied to
+; the image data are deep-copied.
+; Fields that are deep-copied: image frame pointers, integral image pointer.
+; Fields that are not deep-copied: span buffer pointer, lighting table pointer, alpha map pointer.
+; The fields that are not copied are not considered part of the image state.
+;
+; INPUT : EAX -> Source SLI
+; OUTPUT: EAX -> Deep copy of source SLI
+;�����������������������������������������������������������������������������
+*/
+SLI *CreateSLIDeepCopy(SLI *slip);
+#pragma aux CreateSLIDeepCopy "*" parm [eax] \
+                       modify [eax ebx ecx edx esi edi ebp] \
+                       value [ebx];
+
 #ifdef __cplusplus
   };
 #endif

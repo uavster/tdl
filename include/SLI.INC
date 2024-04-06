@@ -298,6 +298,20 @@ global  SetAnimLoopStartFrame : NEAR
 ;�����������������������������������������������������������������������������
 global  SetAnimLoopEndFrame : NEAR
 
+;�����������������������������������������������������������������������������
+; Creates a deep copy of a SLI
+;
+; All non-pointer SLI header fields are copied. Only those pointees in the SLI header that are intrinsically tied to
+; the image data are deep-copied.
+; Fields that are deep-copied: image frame pointers, integral image pointer.
+; Fields that are not deep-copied: span buffer pointer, lighting table pointer, alpha map pointer.
+; The fields that are not copied are not considered part of the image state.
+;
+; INPUT : EAX -> Source SLI
+; OUTPUT: EAX -> Deep copy of source SLI
+;�����������������������������������������������������������������������������
+global  CreateSLIDeepCopy : NEAR
+
 ;   Estructura de punto
 SLP struc
     SLPX    dd ?

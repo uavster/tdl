@@ -957,4 +957,188 @@ ClearCurrentFrame       proc
         ret
         endp
 
+;�����������������������������������������������������������������������������
+; Creates a deep copy of a SLI
+;
+; All non-pointer SLI header fields are copied. Only those pointees in the SLI header that are intrinsically tied to
+; the image data are deep-copied.
+; Fields that are deep-copied: image frame pointers, integral image pointer.
+; Fields that are not deep-copied: span buffer pointer, lighting table pointer, alpha map pointer.
+; The fields that are not copied are not considered part of the image state.
+;
+; INPUT : EAX -> Source SLI
+; OUTPUT : CF = 0 if ok
+;               EAX = NO_ERROR
+;               EBX -> SLI deep copy
+;          CF = 1 si error
+;               EAX = Error code
+;               EBX = NULL
+;�����������������������������������������������������������������������������
+CreateSLIDeepCopy proc
+    ; Create a new SLI with the same basic properties.
+    push  eax
+    mov		ebx,[SLI ptr eax.SLIYSize]
+    mov		ecx,[SLI ptr eax.SLIColorBits]		; SLIColorBits is actualy bytes per pixel
+    shl   ecx,3
+    mov		edx,[SLI ptr eax.SLITotalFrames]	; Number of frames is 16.16
+    shr		edx,16
+    mov		eax,[SLI ptr eax.SLIXSize]
+    call  CreateSLI
+    pop   esi
+    jnc   create_sli_deep_copy_ok
+          ret
+
+    create_sli_deep_copy_ok:
+    ; Copy all frames.
+    push  esi ebx
+    mov   ecx,[SLI ptr esi.SLIPitch]
+    imul  ecx,[SLI ptr esi.SLIYSize]
+    mov   eax,[SLI ptr esi.SLIPImages]
+    mov   ebx,[SLI ptr ebx.SLIPImages]
+    mov   edx,[SLI ptr esi.SLITotalFrames]
+    shr   edx,16
+    lea   eax,[eax+edx*4]
+    lea   ebx,[ebx+edx*4]
+    neg   edx
+    cld
+    copy_sli_frames:
+          push  ecx
+          mov   esi,[eax+edx*4]
+          mov   edi,[ebx+edx*4]
+          shr   ecx,2
+          rep   movsd
+          mov   ecx,ss:[esp]
+          and   ecx,NOT 3
+          sub   ecx,ss:[esp]
+          neg   ecx
+          rep   movsb
+          pop   ecx
+    inc   edx
+    jnz   copy_sli_frames
+    pop   ebx esi
+
+    ; Copy all other non-pointer properties.
+    ; esi -> source SLI, ebx -> destination SLI.
+    ; SLIMethode
+    mov   eax,[SLI ptr esi.SLIMethode]
+    mov   [SLI ptr ebx.SLIMethode],eax
+    ; SLIPos
+    mov   eax,[SLI ptr esi.SLIPos.SLRR1.SLPX]
+    mov   [SLI ptr ebx.SLIPos.SLRR1.SLPX],eax
+    mov   eax,[SLI ptr esi.SLIPos.SLRR1.SLPY]
+    mov   [SLI ptr ebx.SLIPos.SLRR1.SLPY],eax
+    mov   eax,[SLI ptr esi.SLIPos.SLRR2.SLPX]
+    mov   [SLI ptr ebx.SLIPos.SLRR2.SLPX],eax
+    mov   eax,[SLI ptr esi.SLIPos.SLRR2.SLPY]
+    mov   [SLI ptr ebx.SLIPos.SLRR2.SLPY],eax
+    ; SLIRef
+    mov   eax,[SLI ptr esi.SLIRef.SLPX]
+    mov   [SLI ptr ebx.SLIRef.SLPX],eax
+    mov   eax,[SLI ptr esi.SLIRef.SLPY]
+    mov   [SLI ptr ebx.SLIRef.SLPY],eax
+    ; SLIClip
+    mov   eax,[SLI ptr esi.SLIClip.SLRR1.SLPX]
+    mov   [SLI ptr ebx.SLIClip.SLRR1.SLPX],eax
+    mov   eax,[SLI ptr esi.SLIClip.SLRR1.SLPY]
+    mov   [SLI ptr ebx.SLIClip.SLRR1.SLPY],eax
+    mov   eax,[SLI ptr esi.SLIClip.SLRR2.SLPX]
+    mov   [SLI ptr ebx.SLIClip.SLRR2.SLPX],eax
+    mov   eax,[SLI ptr esi.SLIClip.SLRR2.SLPY]
+    mov   [SLI ptr ebx.SLIClip.SLRR2.SLPY],eax
+    ; SLIBlitType
+    mov   eax,[SLI ptr esi.SLIBlitType]
+    mov   [SLI ptr ebx.SLIBlitType],eax
+    ; SLIAlpha
+    mov   eax,[SLI ptr esi.SLIAlpha]
+    mov   [SLI ptr ebx.SLIAlpha],eax
+    ; SLIMask
+    mov   eax,[SLI ptr esi.SLIMask]
+    mov   [SLI ptr ebx.SLIMask],eax
+    ; SLIFrame
+    mov   eax,[SLI ptr esi.SLIFrame]
+    mov   [SLI ptr ebx.SLIFrame],eax
+    ; SLIFrameRate
+    mov   eax,[SLI ptr esi.SLIFrameRate]
+    mov   [SLI ptr ebx.SLIFrameRate],eax
+    ; SLIStartTicks
+    mov   eax,[SLI ptr esi.SLIStartTicks]
+    mov   [SLI ptr ebx.SLIStartTicks],eax
+    ; SLIStartFrame
+    mov   eax,[SLI ptr esi.SLIStartFrame]
+    mov   [SLI ptr ebx.SLIStartFrame],eax
+    ; SLILoopStart
+    mov   eax,[SLI ptr esi.SLILoopStart]
+    mov   [SLI ptr ebx.SLILoopStart],eax
+    ; SLILoopEnd
+    mov   eax,[SLI ptr esi.SLILoopEnd]
+    mov   [SLI ptr ebx.SLILoopEnd],eax
+    ; SLIFramePtr
+    push  ebx esi
+    mov   ebx,[SLI ptr ebx.SLIFrame]
+    call SetFrame_
+    pop   esi ebx
+    ; SLITemp
+    push  esi
+    lea   esi,[SLI ptr esi.SLITemp]
+    lea   edi,[SLI ptr ebx.SLITemp]
+    mov   ecx,SLI_TEMP_VARS
+    cld
+    rep   movsd
+    pop   esi
+    ; SLIPalette
+    push  esi
+    lea   esi,[SLI ptr esi.SLIPalette]
+    lea   edi,[SLI ptr ebx.SLIPalette]
+    mov   ecx,256
+    cld
+    rep   movsd
+    pop   esi
+    ; SLIAnimMode
+    mov   al,[SLI ptr esi.SLIAnimMode]
+    mov   [SLI ptr ebx.SLIAnimMode],al
+    ; SLIPlayingBackwards
+    mov   al,[SLI ptr esi.SLIPlayingBackwards]
+    mov   [SLI ptr ebx.SLIPlayingBackwards],al
+    ; SLIIntegralImageMultiplier
+    mov   eax,[SLI ptr esi.SLIIntegralImageMultiplier]
+    mov   [SLI ptr ebx.SLIIntegralImageMultiplier],eax
+
+    ; Deep-copy integral image.
+    cmp   [SLI ptr esi.SLIIntegralImage],0
+    jz    no_integral_image_to_copy
+    ; ecx = integral image size in bytes.
+    mov		ecx,[SLI ptr esi.SLIXSize]
+    imul	ecx,[SLI ptr esi.SLIYSize]
+    imul  ecx,[SLI ptr esi.SLIColorBits]
+    shl   ecx,2
+    ; Allocate space for integral image deep copy.
+    push	esi ebx ecx
+    call	malloc
+    pop		ecx edx esi
+    jnc   integral_image_allocated
+          ; Destroy the SLI before leaving.
+          mov   eax,edx
+          call  DestroySLI
+          mov   eax,MALLOC_ERROR
+          xor   ebx,ebx
+          stc
+          ret
+    integral_image_allocated:
+    ; Deep-copy the integral image.
+    mov		[SLI ptr edx.SLIIntegralImage],ebx
+    mov   esi,[SLI ptr esi.SLIIntegralImage]
+    mov   edi,ebx
+    shr   ecx,2   ; The integral image size is always a multiple of 4.
+    cld
+    rep   movsd
+
+    ; Output is ebx -> deep copy.
+    mov   ebx,edx
+
+    no_integral_image_to_copy:
+    mov   eax,NO_ERROR
+    clc
+    ret
+endp
+
 END

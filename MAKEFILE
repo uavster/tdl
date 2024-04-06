@@ -9,7 +9,7 @@ INCDIR = $(TDLPATH)\include
 DEFDIR = $(TDLPATH)\defaults
 
 .path.c = $(TDLPATH)\STDLIB;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\LOADER
-.path.cpp = $(TDLPATH)\STDLIB;$(TDLPATH)\WUF!\LOADER\S3M;$(TDLPATH)\WUF!\PLAYER;$(TDLPATH)\3D;$(TDLPATH)\INTERP;$(TDLPATH)\SPUF!\GFX;$(TDLPATH)\RUNNER
+.path.cpp = $(TDLPATH)\STDLIB;$(TDLPATH)\WUF!\LOADER\S3M;$(TDLPATH)\WUF!\PLAYER;$(TDLPATH)\3D;$(TDLPATH)\INTERP;$(TDLPATH)\SPUF!\GFX;$(TDLPATH)\RUNNER;$(TDLPATH)\SPUF!\SLI
 .path.asm = $(TDLPATH)\STDLIB;$(TDLPATH)\NEWSGL;$(TDLPATH)\SPUF!\BLITTER;$(TDLPATH)\SPUF!\LOADER;$(TDLPATH)\SPUF!;$(TDLPATH)\SPUF!\SLI;$(TDLPATH)\SPUF!\GFX;$(TDLPATH)\WUF!;$(TDLPATH)\WUF!\DEVICES;$(TDLPATH)\3D\RENDER;$(TDLPATH)\3D\LOADER;$(TDLPATH)\3D\SBUFFER;$(TDLPATH)\PLAYER;$(TDLPATH)\3D;$(TDLPATH)\WUF!\MIXER;$(TDLPATH)\WUF!\LOADER;$(TDLPATH)\WUF!\LOADER\WAV
 .path.obj = $(TDLPATH)\OBJS
 .path.mac = $(INCDIR)
@@ -153,6 +153,8 @@ mglc.obj:       mglc.c          tdl.h               video.h
 
 polyint.obj:    polyint.asm     polyint.inc
 
+image.obj:			image.cpp				image.hpp						sli.h					sli.inc				sli.asm
+
 #------------- 3D -----------------
 
 3ds.obj:         3ds.asm          3ds.inc          memmgr.asm      alloc.inc    filesys.inc     filesys.asm     stderror.inc    3d.inc
@@ -221,6 +223,7 @@ tdl.lib:        stdc.obj        new.obj		except.obj	string.obj	stdio.obj       c
 				vector3.obj		matrix3.obj		rotmat3.obj		vector4.obj	matrix4.obj	quatnion.obj	htmat4.obj	pose3.obj	pose3int.obj\
                 litt32.obj\
                 polyint.obj\
+								image.obj\
 #                player.obj      modload.obj     load_mod.obj\
 #                load_s3m.obj    load_xm.obj     sb.obj\
                 initg.obj       mglc.obj\
