@@ -2,6 +2,7 @@
 #define IMAGE_HPP_
 
 #include "sli.h"
+#include "palette.hpp"
 
 enum ImageBpp { kImageBpp8 = 8, kImageBpp32 = 32 };
 
@@ -30,6 +31,14 @@ public:
   int width() const { return sli_->SLIXSize; }
   int height() const { return sli_->SLIYSize; }
   ImageBpp bpp() const;
+
+  operator SLI*() { return sli_; }
+
+  PaletteView palette() { return PaletteView(sli_->SLIPalette); }
+  PaletteMutableView mutable_palette() { return PaletteMutableView(sli_->SLIPalette); }
+  
+  void CopyPaletteFrom(const SLI *sli);
+  void SetPalette(const DWORD *palette_buffer);
 
 protected:
   void CreateSLIOrThrow(int width, int height, ImageBpp bpp, int num_frames);

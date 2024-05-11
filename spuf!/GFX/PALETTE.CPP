@@ -299,3 +299,17 @@ void ExpandAlphaMaskRange(SLI *alpha_mask) {
 
   ExpandSLIPalette(alpha_mask, in_range_first, in_range_last, 0, 255);
 }
+
+Color PaletteView::operator[](int color_index) const { 
+  if (color_index < 0 || color_index > 255) {
+    throw OutOfBoundsException();
+  }
+  return Color(palette_buffer_[color_index]);
+}
+
+ColorMutableView PaletteMutableView::operator[](int color_index) const {
+  if (color_index < 0 || color_index > 255) {
+    throw OutOfBoundsException();
+  }
+  return ColorMutableView(&palette_buffer_[color_index]);
+}

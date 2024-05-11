@@ -68,3 +68,11 @@ ImageBpp Image::bpp() const {
   }
   throw Exception("Unsupported bits per pixel");
 }
+
+void Image::CopyPaletteFrom(const SLI *sli) {
+  SetPalette(sli->SLIPalette);
+}
+
+void Image::SetPalette(const DWORD *palette_buffer) {
+  memcpy(sli_->SLIPalette, palette_buffer, 256 * 4);
+}
