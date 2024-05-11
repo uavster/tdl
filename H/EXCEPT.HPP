@@ -6,7 +6,7 @@
 class ExceptionBase {
 public:
   // ATTENTION: This function must be the first virtual declaration.
-  virtual ~ExceptionBase();
+  virtual ~ExceptionBase() {}
   
   // Deep-copies itself in the heap and returns a pointer to the copy.
   // ATTENTION: This function must be the second virtual declaration.
@@ -33,6 +33,14 @@ class NoExceptionThrown : public ExceptionBase {
 public:
   // See documentation of base class for details.
   virtual ~NoExceptionThrown() {}
+  virtual ExceptionBase *CreateDeepCopy() const;
+ 	virtual const char *Description() const;
+};
+
+class OutOfBoundsException : public ExceptionBase {
+public:
+  // See documentation of base class for details.
+  virtual ~OutOfBoundsException() {}
   virtual ExceptionBase *CreateDeepCopy() const;
  	virtual const char *Description() const;
 };

@@ -17,8 +17,9 @@ const char *NoExceptionThrown::Description() const {
   return no_exc_error;
 }
 
-ExceptionBase::~ExceptionBase() {
-  int t = 0xfeee;
+const char *OutOfBoundsException::Description() const {
+	const static char oob_error[] = "Out of bounds access";
+  return oob_error;
 }
 
 ExceptionBase *ExceptionBase::CreateDeepCopy() const {
@@ -31,6 +32,10 @@ ExceptionBase *MallocException::CreateDeepCopy() const {
 
 ExceptionBase *NoExceptionThrown::CreateDeepCopy() const {
   return new NoExceptionThrown;
+}
+
+ExceptionBase *OutOfBoundsException::CreateDeepCopy() const {
+  return new OutOfBoundsException;
 }
 
 Exception::Exception(const char *description) : description_(description) {}
