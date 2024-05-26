@@ -539,7 +539,8 @@ void CreateLitTableSLI(SLI *slip, int nType, int niveles);
 ; the image data are deep-copied.
 ; Fields that are deep-copied: image frame pointers, integral image pointer.
 ; Fields that are not deep-copied: span buffer pointer, lighting table pointer, alpha map pointer.
-; The fields that are not copied are not considered part of the image state.
+; The fields that are not copied are not considered part of the image state and are left with their default values
+; after CreateSLI.
 ;
 ; INPUT : EAX -> Source SLI
 ; OUTPUT: EAX -> Deep copy of source SLI
