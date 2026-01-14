@@ -5,35 +5,41 @@
 #include "sli.h"
 #include "debug.h"
 
-volatile bool do_loop_ = true;
+volatile bool esc_pressed_ = false;
 
 int EscHandler() {
-	do_loop_ = false;
+	esc_pressed_ = true;
 	return 0; // Do not run default handler.
 }
 
 int Application::Run() {
-  do_loop_ = true;
+  status_ = kStarted;
+
 	add_key(&EscHandler, Key_ESC);
   
   // Initialize the application.
   std::string init_error;
   try {    
     Init();
+    status_ = kInitialized;
   } catch(...) {
     init_error = GetLastException().Description();
+    status_ = kFailed;
   }
 
   // Update the application in a loop until ESC is pressed.
   std::string update_error;
-  if (init_error.length() == 0) {
-    try {
-      while(do_loop_) {
-        Update();
+  try {
+    while(status_ == kUpdating || status_ == kInitialized) {
+      Update();
+      status_ = kUpdating;
+      if (options_.does_terminate_with_esc_key() && esc_pressed_) {
+        status_ = kTerminating;
       }
-    } catch(...) {
-      update_error = GetLastException().Description();
     }
+  } catch(...) {
+    update_error = GetLastException().Description();
+    status_ = kFailed;
   }
 
   remove_key(Key_ESC);
@@ -44,7 +50,9 @@ int Application::Run() {
     CleanUp();
   } catch(...) {      
     cleanup_error = GetLastException().Description();
+    status_ = kFailed;
   }
+  if (status_ == kTerminating) { status_ = kTerminated; }
 
   // Clear any video mode that might have been set and not unset.
   DestroyVideoSLI(3);
