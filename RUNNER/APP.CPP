@@ -4,6 +4,8 @@
 #include "keyb.h"
 #include "sli.h"
 #include "debug.h"
+#include "sync.h"
+#include "framerat.h"
 
 volatile bool esc_pressed_ = false;
 
@@ -54,9 +56,6 @@ int Application::Run() {
   }
   if (status_ == kTerminating) { status_ = kTerminated; }
 
-  // Clear any video mode that might have been set and not unset.
-  DestroyVideoSLI(3);
-
   if (init_error.length() != 0) {
     printf("[INIT] ");
     printf(init_error.c_str());
@@ -73,4 +72,33 @@ int Application::Run() {
     printf("\n");
   }
   return (init_error.length() || update_error.length() || cleanup_error.length()) ? 1 : 0;
+}
+
+void VideoApplication::Init() {
+  // Initialize in text mode to print errors.
+  InitBeforeVideo();
+  // Set video mode.
+  if (CreateVideoSLI(video_options_.resolution_x(), video_options_.resolution_y(), video_options_.bits_per_pixel())) {
+    throw Exception("Can't create video SLI");
+  }
+  time_ = 0;
+  StartFrameRate();
+}
+
+void VideoApplication::Update() {
+  UpdateFrame(time_);
+  ShowVideoSLI();
+  GetElapsedTime();
+  float t_inc = 1.0f / *GetSyncTimerBaseFreqPtr();
+  IncFloat(&time_, &t_inc);
+  IncFrameCounter();
+}
+
+void VideoApplication::CleanUp() {  
+  StopFrameRate();
+  DestroyVideoSLI(3);
+  CleanUpAfterVideo();
+  if (video_options_.do_print_fps_at_end()) {
+    ShowFrameRateResult();
+  }
 }
